@@ -7,7 +7,9 @@ export default function Messages() {
   const { me, sendData, setDataListeners } = useContext(PeerContext);
   React.useEffect(() => {
     const handleData = (data) => {
-      setMessages((prevMessages) => [...prevMessages, data]);
+      if (data.type === "message") {
+        setMessages((prevMessages) => [...prevMessages, data.data]);
+      }
     };
     setDataListeners((prevDataListeners) => [...prevDataListeners, handleData]);
   }, []);
@@ -34,7 +36,7 @@ export default function Messages() {
           e.preventDefault();
           const message = e.target.message.value;
           const data = { id: me.id, message };
-          sendData(data);
+          sendData({ type: "message", data });
           setMessages((prevMessages) => [...prevMessages, data]);
         }}
       >

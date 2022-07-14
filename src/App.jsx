@@ -13,12 +13,20 @@ function getRandomId() {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 function App() {
-  const [id, setId] = usePersistedState("myId");
+  const [id, setId, loading] = usePersistedState("myId");
+  console.log("id: ", id);
   const [me, setMe] = useState(null);
   const [targetPeerId, setTargetPeerId] = usePersistedState("targetPeerId");
   const [myConn, setConn] = useState(null);
   const [dataListeners, setDataListeners] = useState([]);
-  if (id === undefined) return null;
+  console.log("dataListeners: ", dataListeners);
+  const [players, setPlayers] = useState([]);
+  React.useEffect(() => {
+    if (myConn) {
+      dataListeners.map((l) => myConn.on("data", l));
+    }
+  }, [dataListeners, myConn]);
+  if (loading) return null;
 
   const cleanUp = () => {
     if (me) {
@@ -26,6 +34,12 @@ function App() {
       me.destroy();
     }
     setMe(null);
+  };
+
+  const fullReset = () => {
+    cleanUp();
+    setTargetPeerId(null);
+    setId(null);
   };
 
   const connect = (id) => {
@@ -44,11 +58,11 @@ function App() {
     setConn(null);
   };
 
-  const sendData = (message) => {
-    myConn.send(message);
+  const sendData = (data) => {
+    myConn.send(data);
   };
 
-  const peer = me ? me : id !== undefined ? new Peer(id) : new Peer();
+  const peer = me ? me : id !== null ? new Peer(id) : new Peer();
 
   peer.on("open", () => {
     console.log(`Peer ${peer.id} waiting for connection...`);
@@ -58,7 +72,7 @@ function App() {
       console.log("targetPeerId: ", targetPeerId);
       const conn = peer.connect(targetPeerId);
       setConn(conn);
-      dataListeners.map((l) => conn.on("data", l));
+      setPlayers([{ id: peer.id }, { id: targetPeerId }]);
     }
   });
 
@@ -66,7 +80,6 @@ function App() {
     console.log("connected to: ", conn);
     setTargetPeerId(conn.peer);
     setConn(conn);
-    dataListeners.map((l) => conn.on("data", l));
   });
 
   peer.on("disconnected", () => {
@@ -81,9 +94,10 @@ function App() {
 
   peer.on("error", (error) => {
     console.log("peer error", error);
-    cleanUp();
+    fullReset();
   });
   if (!me) return null;
+  console.log("players: ", players);
   return (
     <PeerContext.Provider
       value={{
@@ -102,7 +116,13 @@ function App() {
         <header className="App-header">
           <PeerJS />
           <Messages />
-          <TicTacToe />
+          <TicTacToe
+            id={id}
+            players={players}
+            setPlayers={setPlayers}
+            sendData={sendData}
+            setDataListeners={setDataListeners}
+          />
         </header>
       </div>
     </PeerContext.Provider>
