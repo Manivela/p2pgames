@@ -53,18 +53,67 @@ export default class TicTacToe extends React.Component {
       ],
       stepNumber: 0,
       xIsNext: true,
+      error: "",
     };
+    const handleData = (data) => {
+      if (data.type === "ttt") {
+        console.log("receive data: ", data);
+        if (this.state.stepNumber === 0) {
+          // assign players on the first move
+          this.props.setPlayers((prevPlayers) =>
+            prevPlayers.map((p) => {
+              if (p.id === this.props.id) {
+                return { ...p, ticTacToe: "O" };
+              } else {
+                return { ...p, ticTacToe: "X" };
+              }
+            })
+          );
+        }
+        this.setState(data.data);
+      }
+    };
+    props.setDataListeners((prevDataListeners) => [
+      ...prevDataListeners,
+      handleData,
+    ]);
   }
 
   handleClick(i) {
+    const nextPlayer = this.state.xIsNext ? "X" : "O";
+    if (this.state.stepNumber === 0) {
+      // assign players on the first move
+      this.props.setPlayers((prevPlayers) =>
+        prevPlayers.map((p) => {
+          if (p.id === this.props.id) {
+            return { ...p, ticTacToe: "X" };
+          } else {
+            return { ...p, ticTacToe: "O" };
+          }
+        })
+      );
+    } else {
+      if (
+        !(
+          this.props.players.find((p) => p.id === this.props.id).ticTacToe ===
+          nextPlayer
+        )
+      ) {
+        this.setState({
+          error: "Not your turn",
+        });
+        return;
+      }
+    }
+
     const history = this.state.history.slice(0, this.state.stepNumber + 1);
     const current = history[history.length - 1];
     const squares = current.squares.slice();
     if (calculateWinner(squares) || squares[i]) {
       return;
     }
-    squares[i] = this.state.xIsNext ? "X" : "O";
-    this.setState({
+    squares[i] = nextPlayer;
+    const newState = {
       history: history.concat([
         {
           squares: squares,
@@ -72,7 +121,10 @@ export default class TicTacToe extends React.Component {
       ]),
       stepNumber: history.length,
       xIsNext: !this.state.xIsNext,
-    });
+      error: "",
+    };
+    this.setState(newState);
+    this.props.sendData({ type: "ttt", data: newState });
   }
 
   jumpTo(step) {
@@ -115,6 +167,7 @@ export default class TicTacToe extends React.Component {
           <div>{status}</div>
           <ol>{moves}</ol>
         </div>
+        <div className="error">{this.state.error}</div>
       </div>
     );
   }

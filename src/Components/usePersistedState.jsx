@@ -1,6 +1,7 @@
 import React from "react";
 
 export default (name, defaultValue = null) => {
+  const [loading, setLoading] = React.useState(true);
   const [value, setValue] = React.useState(defaultValue);
 
   React.useEffect(() => {
@@ -13,6 +14,7 @@ export default (name, defaultValue = null) => {
       console.log("error:", e);
       setValue(defaultValue);
     }
+    setLoading(false);
   }, []);
 
   React.useEffect(() => {
@@ -23,5 +25,5 @@ export default (name, defaultValue = null) => {
     }
   }, [value]);
 
-  return [value, setValue];
+  return [value, setValue, loading];
 };
