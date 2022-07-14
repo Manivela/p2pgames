@@ -49,6 +49,7 @@ function App() {
       setTargetPeerId(id);
     });
     setConn(conn);
+    setPlayers([{ id: me.id }, { id: id }]);
     dataListeners.map((l) => conn.on("data", l));
   };
 
@@ -80,6 +81,7 @@ function App() {
     console.log("connected to: ", conn);
     setTargetPeerId(conn.peer);
     setConn(conn);
+    setPlayers([{ id: peer.id }, { id: targetPeerId }]);
   });
 
   peer.on("disconnected", () => {
