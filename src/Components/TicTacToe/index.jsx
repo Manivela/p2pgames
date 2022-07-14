@@ -95,8 +95,9 @@ export default class TicTacToe extends React.Component {
     } else {
       if (
         !(
+          this.props.players.find((p) => p.id === this.props.id) &&
           this.props.players.find((p) => p.id === this.props.id).ticTacToe ===
-          nextPlayer
+            nextPlayer
         )
       ) {
         this.setState({
