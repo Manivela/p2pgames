@@ -19,7 +19,6 @@ function App() {
   const [myConn, setConn] = useState(null);
   const [dataListeners, setDataListeners] = useState([]);
   if (id === undefined) return null;
-  console.log("id: ", id);
 
   const cleanUp = () => {
     if (me) {
@@ -41,7 +40,7 @@ function App() {
 
   const disconnect = () => {
     myConn.close();
-    setTargetPeerId(undefined);
+    setTargetPeerId(null);
     setConn(null);
   };
 
@@ -55,7 +54,7 @@ function App() {
     console.log(`Peer ${peer.id} waiting for connection...`);
     setId(peer.id);
     setMe(peer);
-    if (targetPeerId !== undefined) {
+    if (targetPeerId !== null) {
       console.log("targetPeerId: ", targetPeerId);
       const conn = peer.connect(targetPeerId);
       setConn(conn);

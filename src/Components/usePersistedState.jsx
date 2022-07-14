@@ -1,35 +1,27 @@
 import React from "react";
 
-export default (name, defaultValue) => {
+export default (name, defaultValue = null) => {
   const [value, setValue] = React.useState(defaultValue);
-  const nameRef = React.useRef(name);
 
   React.useEffect(() => {
     try {
       const storedValue = localStorage.getItem(name);
-      if (storedValue !== null) setValue(storedValue);
-      else localStorage.setItem(name, defaultValue);
-    } catch {
+      if (storedValue !== null) {
+        setValue(storedValue);
+      }
+    } catch (e) {
+      console.log("error:", e);
       setValue(defaultValue);
     }
   }, []);
 
   React.useEffect(() => {
-    try {
-      localStorage.setItem(nameRef.current, value);
-    } catch {}
-  }, [value]);
-
-  React.useEffect(() => {
-    const lastName = nameRef.current;
-    if (name !== lastName) {
-      try {
-        localStorage.setItem(name, value);
-        nameRef.current = name;
-        localStorage.removeItem(lastName);
-      } catch {}
+    if (value !== null) {
+      localStorage.setItem(name, value);
+    } else {
+      localStorage.removeItem(name);
     }
-  }, [name]);
+  }, [value]);
 
   return [value, setValue];
 };
