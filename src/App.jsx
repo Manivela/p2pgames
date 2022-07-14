@@ -4,6 +4,7 @@ import Messages from "./Components/Messages";
 import React, { useState } from "react";
 import Peer from "peerjs";
 import usePersistedState from "./Components/usePersistedState";
+import Backgammon from "./Components/Backgammon/containers/App";
 
 export const PeerContext = React.createContext();
 
@@ -119,6 +120,13 @@ function App() {
           <PeerJS />
           <Messages />
           <TicTacToe
+            id={id}
+            players={players}
+            setPlayers={setPlayers}
+            sendData={sendData}
+            setDataListeners={setDataListeners}
+          />
+          <Backgammon
             id={id}
             players={players}
             setPlayers={setPlayers}
