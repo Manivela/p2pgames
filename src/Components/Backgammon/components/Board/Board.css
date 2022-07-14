@@ -1,0 +1,24 @@
+
+#board {
+    height: 100%;
+}
+
+#leftSide {
+    position: absolute;
+    top: 2%;
+    left: 5%;
+    bottom: 2%;
+    width: 36.5%;
+    display: block;
+    background-image: url(../../assets/fabric.jpg);
+}
+
+#rightSide {
+    position: absolute;
+    top: 2%;
+    left: 50%;
+    bottom: 2%;
+    width: 36.5%;
+    display: block;
+    background-image: url(../../assets/fabric.jpg);
+}
