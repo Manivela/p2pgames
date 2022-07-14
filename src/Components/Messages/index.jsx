@@ -38,6 +38,7 @@ export default function Messages() {
           const data = { id: me.id, message };
           sendData({ type: "message", data });
           setMessages((prevMessages) => [...prevMessages, data]);
+          e.target.reset();
         }}
       >
         <input name="message"></input>
