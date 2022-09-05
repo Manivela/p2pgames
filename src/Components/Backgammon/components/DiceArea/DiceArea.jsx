@@ -23,6 +23,7 @@ const diceArea = (props) => {
 
   let noMove = null;
   if (props.gameStatus === 50) {
+    // burda p2 p1 in düğmesine basamasın
     noMove = <RollButton label="No Moves available" />;
   }
 
