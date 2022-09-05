@@ -20,3 +20,12 @@ npm run dev
 ## All players look the same in backgammon?
 
 disable dark mode extensions
+
+# BUGS
+
+## Backgammon
+
+- "No moves available" da p2 p1 yerine zar atabiliyor.
+- p2 p1 yerine undo yapabiliyor.
+- p1 boardun üstüne topluyor taşları p1 in ters görmesi lazımki iki tarafta sağ alta toplasın.
+- sıra gelince ve zar atınca ses eklenebilir.
