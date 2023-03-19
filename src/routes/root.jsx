@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import Awareness from "../components/Awareness";
+import Awareness from "../Components/Awareness";
 
 export default function Root() {
   return (
