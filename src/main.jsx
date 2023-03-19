@@ -12,7 +12,7 @@ import ErrorPage from "./error-page";
 import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
-import TicTacToe from "./components/TicTacToe";
+import TicTacToe from "./Components/TicTacToe";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
