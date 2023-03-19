@@ -1,180 +1,6 @@
-import React from "react";
+import { useArray, useMap } from "@joebobmiles/y-react";
+import { useEffect, useState } from "react";
 import "./ttt.modules.css";
-
-function Square(props) {
-  return (
-    <button className="square" onClick={props.onClick}>
-      {props.value}
-    </button>
-  );
-}
-
-class Board extends React.Component {
-  renderSquare(i) {
-    return (
-      <Square
-        value={this.props.squares[i]}
-        onClick={() => this.props.onClick(i)}
-      />
-    );
-  }
-
-  render() {
-    return (
-      <div>
-        <div className="board-row">
-          {this.renderSquare(0)}
-          {this.renderSquare(1)}
-          {this.renderSquare(2)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(3)}
-          {this.renderSquare(4)}
-          {this.renderSquare(5)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(6)}
-          {this.renderSquare(7)}
-          {this.renderSquare(8)}
-        </div>
-      </div>
-    );
-  }
-}
-
-export default class TicTacToe extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      history: [
-        {
-          squares: Array(9).fill(null),
-        },
-      ],
-      stepNumber: 0,
-      xIsNext: true,
-      error: "",
-    };
-    const handleData = (data) => {
-      if (data.type === "ttt") {
-        console.log("receive data: ", data);
-        if (this.state.stepNumber === 0) {
-          // assign players on the first move
-          this.props.setPlayers((prevPlayers) =>
-            prevPlayers.map((p) => {
-              if (p.id === this.props.id) {
-                return { ...p, ticTacToe: "O" };
-              } else {
-                return { ...p, ticTacToe: "X" };
-              }
-            })
-          );
-        }
-        this.setState(data.data);
-      }
-    };
-    props.setDataListeners((prevDataListeners) => [
-      ...prevDataListeners,
-      handleData,
-    ]);
-  }
-
-  handleClick(i) {
-    const nextPlayer = this.state.xIsNext ? "X" : "O";
-    if (this.state.stepNumber === 0) {
-      // assign players on the first move
-      this.props.setPlayers((prevPlayers) =>
-        prevPlayers.map((p) => {
-          if (p.id === this.props.id) {
-            return { ...p, ticTacToe: "X" };
-          } else {
-            return { ...p, ticTacToe: "O" };
-          }
-        })
-      );
-    } else {
-      if (
-        !(
-          this.props.players.find((p) => p.id === this.props.id) &&
-          this.props.players.find((p) => p.id === this.props.id).ticTacToe ===
-            nextPlayer
-        )
-      ) {
-        this.setState({
-          error: "Not your turn",
-        });
-        return;
-      }
-    }
-
-    const history = this.state.history.slice(0, this.state.stepNumber + 1);
-    const current = history[history.length - 1];
-    const squares = current.squares.slice();
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    squares[i] = nextPlayer;
-    const newState = {
-      history: history.concat([
-        {
-          squares: squares,
-        },
-      ]),
-      stepNumber: history.length,
-      xIsNext: !this.state.xIsNext,
-      error: "",
-    };
-    this.setState(newState);
-    this.props.sendData({ type: "ttt", data: newState });
-  }
-
-  jumpTo(step) {
-    this.setState({
-      stepNumber: step,
-      xIsNext: step % 2 === 0,
-    });
-  }
-
-  render() {
-    const history = this.state.history;
-    const current = history[this.state.stepNumber];
-    const winner = calculateWinner(current.squares);
-
-    const moves = history.map((step, move) => {
-      const desc = move ? "Go to move #" + move : "Go to game start";
-      return (
-        <li key={move}>
-          <button onClick={() => this.jumpTo(move)}>{desc}</button>
-        </li>
-      );
-    });
-
-    let status;
-    if (winner) {
-      status = "Winner: " + winner;
-    } else {
-      status = "Next player: " + (this.state.xIsNext ? "X" : "O");
-    }
-
-    return (
-      <>
-        <div className="game">
-          <div className="game-board">
-            <Board
-              squares={current.squares}
-              onClick={(i) => this.handleClick(i)}
-            />
-          </div>
-          <div className="game-info">
-            <div>{status}</div>
-            <ol>{moves}</ol>
-          </div>
-        </div>
-        <div className="error">{this.state.error}</div>
-      </>
-    );
-  }
-}
 
 function calculateWinner(squares) {
   const lines = [
@@ -194,4 +20,109 @@ function calculateWinner(squares) {
     }
   }
   return null;
+}
+
+function Square({ value, onSquareClick }) {
+  return (
+    <button className="square" onClick={onSquareClick}>
+      {value}
+    </button>
+  );
+}
+
+function Board({ xIsNext, squares, onPlay }) {
+  function handleClick(i) {
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
+    const nextSquares = squares.slice();
+    if (xIsNext) {
+      nextSquares[i] = "X";
+    } else {
+      nextSquares[i] = "O";
+    }
+    onPlay(nextSquares);
+  }
+
+  const winner = calculateWinner(squares);
+  let status;
+  if (winner) {
+    status = `Winner: ${winner}`;
+  } else {
+    status = `Next player: ${xIsNext ? "X" : "O"}`;
+  }
+
+  return (
+    <>
+      <div className="status">{status}</div>
+      <div className="board-row">
+        <Square value={squares[0]} onSquareClick={() => handleClick(0)} />
+        <Square value={squares[1]} onSquareClick={() => handleClick(1)} />
+        <Square value={squares[2]} onSquareClick={() => handleClick(2)} />
+      </div>
+      <div className="board-row">
+        <Square value={squares[3]} onSquareClick={() => handleClick(3)} />
+        <Square value={squares[4]} onSquareClick={() => handleClick(4)} />
+        <Square value={squares[5]} onSquareClick={() => handleClick(5)} />
+      </div>
+      <div className="board-row">
+        <Square value={squares[6]} onSquareClick={() => handleClick(6)} />
+        <Square value={squares[7]} onSquareClick={() => handleClick(7)} />
+        <Square value={squares[8]} onSquareClick={() => handleClick(8)} />
+      </div>
+    </>
+  );
+}
+
+export default function Game() {
+  const ymap = useMap("tictactoe-state");
+  let currentMove = ymap.get("currentMove");
+  const setCurrentMove = (value) => ymap.set("currentMove", value);
+  let history = ymap.get("history");
+  const setHistory = (value) => ymap.set("history", value);
+  if (history === undefined) {
+    history = [Array(9).fill(null)];
+    setHistory(history);
+  }
+  if (currentMove === undefined) {
+    currentMove = 0;
+    setCurrentMove(currentMove);
+  }
+  const xIsNext = currentMove % 2 === 0;
+  const currentSquares = history[currentMove];
+
+  function handlePlay(nextSquares) {
+    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    setHistory(nextHistory);
+    setCurrentMove(nextHistory.length - 1);
+  }
+
+  function jumpTo(nextMove) {
+    setCurrentMove(nextMove);
+  }
+
+  const moves = history.map((squares, move) => {
+    let description;
+    if (move > 0) {
+      description = `Go to move #${move}`;
+    } else {
+      description = "Go to game start";
+    }
+    return (
+      <li key={move}>
+        <button onClick={() => jumpTo(move)}>{description}</button>
+      </li>
+    );
+  });
+
+  return (
+    <div className="game">
+      <div className="game-board">
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+      </div>
+      <div className="game-info">
+        <ol>{moves}</ol>
+      </div>
+    </div>
+  );
 }

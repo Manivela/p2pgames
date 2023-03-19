@@ -1,0 +1,37 @@
+{
+  "extends": ["airbnb", "prettier"],
+  "plugins": ["prettier"],
+  "rules": {
+    "prettier/prettier": [
+      "error",
+      {
+        "endOfLine": "auto"
+      }
+    ],
+    "react/react-in-jsx-scope": "off",
+    "no-console": "off",
+    "jsx-a11y/anchor-is-valid": "off",
+    "no-nested-ternary": "off",
+    "import/prefer-default-export": "off",
+    "react/button-has-type": "off",
+    "react/prop-types": "off",
+    "no-unused-vars": "off",
+    "react/jsx-no-constructed-context-values": "off",
+    "import/no-cycle": "off",
+    "no-plusplus": "off",
+    "react/destructuring-assignment": "off",
+    "react/no-array-index-key": "off",
+    "react/jsx-no-bind": "off"
+  },
+  "env": {
+    "browser": true
+  },
+  "parser": "@babel/eslint-parser",
+  "parserOptions": {
+    "ecmaVersion": 8,
+    "requireConfigFile": false,
+    "babelOptions": {
+      "presets": ["@babel/preset-react"]
+    }
+  }
+}
