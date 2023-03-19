@@ -9,7 +9,6 @@ import {
 import { DocumentProvider } from "@joebobmiles/y-react";
 import Root from "./routes/root";
 import ErrorPage from "./error-page";
-import App from "./components/Awareness";
 import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";

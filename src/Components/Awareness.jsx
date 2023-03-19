@@ -1,10 +1,9 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { useDoc, useWebRtc, useAwareness } from "@joebobmiles/y-react";
+import { useWebRtc, useAwareness } from "@joebobmiles/y-react";
 import { useAuthStore } from "../hooks/useStore";
 
 export default function Awareness() {
-  const doc = useDoc();
   const { roomId } = useParams();
 
   const provider = useWebRtc(roomId);
