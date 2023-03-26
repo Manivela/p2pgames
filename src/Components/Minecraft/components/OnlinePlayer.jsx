@@ -4,7 +4,7 @@ import { useAwareness, useWebRtc } from "@joebobmiles/y-react";
 import { useFrame, extend, useThree } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry";
 import { Text } from "@react-three/drei";
-import { Euler, Matrix4, Quaternion, Vector3 } from "three";
+import { signalingServers } from "../../../constants";
 
 extend({ TextGeometry });
 
@@ -41,7 +41,9 @@ function OnlinePlayer({ position, color, name }) {
 export function OnlinePlayers() {
   const { roomId } = useParams();
 
-  const provider = useWebRtc(roomId);
+  const provider = useWebRtc(roomId, {
+    signaling: signalingServers,
+  });
   const { states, localID } = useAwareness(provider.awareness);
 
   return Array.from(states.entries())

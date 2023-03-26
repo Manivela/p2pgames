@@ -6,13 +6,16 @@ import { PointerLockControls } from "@react-three/drei";
 import { useParams } from "react-router-dom";
 import { useAwareness, useWebRtc } from "@joebobmiles/y-react";
 import { useKeyboardControls } from "../hooks/useKeyboardControls";
+import { signalingServers } from "../../../constants";
 
 const SPEED = 6;
 
 export function Player(props) {
   const { roomId } = useParams();
 
-  const provider = useWebRtc(roomId);
+  const provider = useWebRtc(roomId, {
+    signaling: signalingServers,
+  });
   const { setLocalState } = useAwareness(provider.awareness);
   const { camera } = useThree();
   const { moveForward, moveBackward, moveLeft, moveRight, jump } =

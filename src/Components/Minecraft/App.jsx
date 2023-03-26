@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Box, Sky } from "@react-three/drei";
+import { Sky, Stats } from "@react-three/drei";
 import { Physics } from "@react-three/cannon";
 
 import { Ground } from "./components/Ground";
