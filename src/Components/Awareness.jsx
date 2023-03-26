@@ -2,13 +2,17 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { useWebRtc, useAwareness } from "@joebobmiles/y-react";
 import { useAuthStore } from "../hooks/useStore";
+import { signalingServers } from "../constants";
 
 const colors = ["orange", "blue", "yellow", "green"];
 
 export default function Awareness() {
   const { roomId } = useParams();
+  console.log("roomId: ", roomId);
 
-  const provider = useWebRtc(roomId);
+  const provider = useWebRtc(roomId, {
+    signaling: signalingServers,
+  });
   const { states, localID, setLocalState } = useAwareness(provider.awareness);
   const [currentUser] = useAuthStore((state) => [state.currentUser]);
 
@@ -18,14 +22,14 @@ export default function Awareness() {
       ...prevState,
       user: currentUser,
     }));
-    // window.addEventListener("pointermove", (e) => {
-    //   setLocalState((prevState) => ({
-    //     ...prevState,
-    //     x: e.clientX,
-    //     y: e.clientY,
-    //     user: currentUser,
-    //   }));
-    // });
+    window.addEventListener("pointermove", (e) => {
+      setLocalState((prevState) => ({
+        ...prevState,
+        x: e.clientX,
+        y: e.clientY,
+        user: currentUser,
+      }));
+    });
   }, []);
 
   return (
