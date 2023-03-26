@@ -21,7 +21,13 @@
     "no-plusplus": "off",
     "react/destructuring-assignment": "off",
     "react/no-array-index-key": "off",
-    "react/jsx-no-bind": "off"
+    "react/jsx-no-bind": "off",
+    "react/jsx-filename-extension": "off",
+    "no-return-assign": "off",
+    "react/no-unknown-property": "off",
+    "no-unused-expressions": "off",
+    "react/jsx-props-no-spreading": "off",
+    "consistent-return": "off"
   },
   "env": {
     "browser": true

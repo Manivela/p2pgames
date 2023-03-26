@@ -15,14 +15,14 @@ export default function Awareness() {
       ...prevState,
       user: currentUser,
     }));
-    window.addEventListener("pointermove", (e) => {
-      setLocalState((prevState) => ({
-        ...prevState,
-        x: e.clientX,
-        y: e.clientY,
-        user: currentUser,
-      }));
-    });
+    // window.addEventListener("pointermove", (e) => {
+    //   setLocalState((prevState) => ({
+    //     ...prevState,
+    //     x: e.clientX,
+    //     y: e.clientY,
+    //     user: currentUser,
+    //   }));
+    // });
   }, []);
 
   return (
