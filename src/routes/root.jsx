@@ -37,6 +37,16 @@ export default function Root() {
                 Backgammon
               </NavLink>
             </li>
+            <li>
+              <NavLink
+                to="minecraft"
+                className={({ isActive, isPending }) =>
+                  isActive ? "active" : isPending ? "pending" : ""
+                }
+              >
+                Minecraft
+              </NavLink>
+            </li>
           </ul>
         </nav>
         <div style={{ flexGrow: 1 }} />
