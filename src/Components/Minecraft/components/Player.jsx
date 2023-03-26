@@ -35,13 +35,6 @@ export function Player(props) {
   );
 
   useFrame(() => {
-    if (velocity.current.some((c) => c > 0)) {
-      console.log("velocity.current: ", velocity.current);
-      setLocalState((prevState) => ({
-        ...prevState,
-        pos: pos.current,
-      }));
-    }
     camera.position.copy(
       new Vector3(pos.current[0], pos.current[1], pos.current[2])
     );
@@ -68,6 +61,12 @@ export function Player(props) {
 
     if (jump && Math.abs(velocity.current[1].toFixed(2)) < 0.05) {
       api.velocity.set(velocity.current[0], 8, velocity.current[2]);
+    }
+    if (moveForward || moveBackward || moveLeft || moveRight || jump) {
+      setLocalState((prevState) => ({
+        ...prevState,
+        pos: pos.current,
+      }));
     }
   });
   return (

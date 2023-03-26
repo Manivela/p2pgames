@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { useWebRtc, useAwareness } from "@joebobmiles/y-react";
 import { useAuthStore } from "../hooks/useStore";
 
+const colors = ["orange", "blue", "yellow", "green"];
+
 export default function Awareness() {
   const { roomId } = useParams();
 
@@ -12,6 +14,7 @@ export default function Awareness() {
 
   React.useEffect(() => {
     setLocalState((prevState) => ({
+      color: colors[states.length],
       ...prevState,
       user: currentUser,
     }));
@@ -41,7 +44,7 @@ export default function Awareness() {
         }}
       >
         {Array.from(states.entries())
-          .filter(([id]) => id !== localID)
+          .filter(([id, state]) => id !== localID && state.x)
           .map(([id, state]) => (
             <g key={id}>
               <circle cx={state.x} cy={state.y} r={5} />

@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../hooks/useStore";
 import { customNanoid } from "../utils/customNanoid";
 
+const colors = ["red", "green", "blue", "orange", "yellow"];
+
 export default function Login() {
   const [currentUser, login] = useAuthStore((state) => [
     state.currentUser,
@@ -28,6 +30,7 @@ export default function Login() {
           const newUser = {
             id: customNanoid(),
             name: event.target.username.value,
+            color: colors[Math.floor(Math.random() * colors.length)],
           };
           login(newUser);
           navigate(from || `/${newUser.id}/`, { replace: true });
