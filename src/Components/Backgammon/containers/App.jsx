@@ -6,7 +6,6 @@ import OutSideBar from "../components/OutSideBar/OutSideBar";
 import Board from "../components/Board/Board";
 import Status from "../components/Status/Status";
 import Menu from "../components/Menu/Menu";
-import _ from "lodash";
 import { useAuthStore } from "../../../hooks/useStore";
 import { useMap } from "@joebobmiles/y-react";
 

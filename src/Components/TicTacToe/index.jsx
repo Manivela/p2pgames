@@ -1,8 +1,7 @@
-import { useArray, useMap } from "@joebobmiles/y-react";
-import { useEffect, useState } from "react";
-import "./ttt.modules.css";
+import { useMap } from "@joebobmiles/y-react";
 import { toast } from "react-hot-toast";
 import { useAuthStore } from "../../hooks/useStore";
+import "./ttt.modules.css";
 
 function calculateWinner(squares) {
   const lines = [
