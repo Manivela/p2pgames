@@ -7,6 +7,7 @@ import {
   Route,
 } from "react-router-dom";
 import { DocumentProvider } from "@joebobmiles/y-react";
+import { Toaster } from "react-hot-toast";
 import Root from "./routes/root";
 import ErrorPage from "./error-page";
 import "./index.css";
@@ -40,6 +41,7 @@ const router = createBrowserRouter(
 ReactDOM.createRoot(document.getElementById("root")).render(
   // <React.StrictMode>
   <DocumentProvider>
+    <Toaster />
     <RouterProvider router={router} />
   </DocumentProvider>
   // </React.StrictMode>

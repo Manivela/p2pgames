@@ -1,6 +1,8 @@
 import { useArray, useMap } from "@joebobmiles/y-react";
 import { useEffect, useState } from "react";
 import "./ttt.modules.css";
+import { toast } from "react-hot-toast";
+import { useAuthStore } from "../../hooks/useStore";
 
 function calculateWinner(squares) {
   const lines = [
@@ -80,6 +82,15 @@ export default function Game() {
   const setCurrentMove = (value) => ymap.set("currentMove", value);
   let history = ymap.get("history");
   const setHistory = (value) => ymap.set("history", value);
+  let users = ymap.get("users");
+  const setUsers = (value) => ymap.set("users", value);
+  const [currentUser] = useAuthStore((state) => [state.currentUser]);
+
+  if (users === undefined) {
+    users = { x: null, o: null };
+    setUsers(users);
+  }
+
   if (history === undefined) {
     history = [Array(9).fill(null)];
     setHistory(history);
@@ -92,6 +103,22 @@ export default function Game() {
   const currentSquares = history[currentMove];
 
   function handlePlay(nextSquares) {
+    // assign players
+    if (xIsNext && !users.x && users.o?.id !== currentUser.id) {
+      setUsers({ ...users, x: currentUser });
+    } else if (!xIsNext && !users.o && users.x?.id !== currentUser.id) {
+      setUsers({ ...users, o: currentUser });
+    } else {
+      // players assigned > check turn
+      if (xIsNext && users.x?.id !== currentUser.id) {
+        toast("Not your turn");
+        return;
+      }
+      if (!xIsNext && users.o?.id !== currentUser.id) {
+        toast("Not your turn");
+        return;
+      }
+    }
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
@@ -116,13 +143,47 @@ export default function Game() {
   });
 
   return (
-    <div className="game">
-      <div className="game-board">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+    <>
+      <ul>
+        <li>
+          X: <span>{users.x?.name}</span>
+          {users.x && users.x.id === currentUser.id && (
+            <button
+              style={{ marginLeft: 8 }}
+              onClick={() => {
+                setUsers({ ...users, x: null });
+              }}
+            >
+              leave
+            </button>
+          )}
+        </li>
+        <li>
+          O: <span>{users.o?.name}</span>
+          {users.o && users.o.id === currentUser.id && (
+            <button
+              style={{ marginLeft: 8 }}
+              onClick={() => {
+                setUsers({ ...users, o: null });
+              }}
+            >
+              leave
+            </button>
+          )}
+        </li>
+      </ul>
+      <div className="game">
+        <div className="game-board">
+          <Board
+            xIsNext={xIsNext}
+            squares={currentSquares}
+            onPlay={handlePlay}
+          />
+        </div>
+        <div className="game-info">
+          <ol>{moves}</ol>
+        </div>
       </div>
-      <div className="game-info">
-        <ol>{moves}</ol>
-      </div>
-    </div>
+    </>
   );
 }

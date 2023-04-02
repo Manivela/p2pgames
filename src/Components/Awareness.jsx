@@ -8,7 +8,6 @@ const colors = ["orange", "blue", "yellow", "green"];
 
 export default function Awareness() {
   const { roomId } = useParams();
-  console.log("roomId: ", roomId);
 
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
