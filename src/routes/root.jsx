@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import Awareness from "../Components/Awareness";
+import Credits from "../Components/Credits";
 
 export default function Root() {
   return (
@@ -9,7 +10,7 @@ export default function Root() {
           <ul>
             <li>
               <NavLink
-                to=""
+                to="tictactoe"
                 className={({ isActive, isPending }) =>
                   isActive ? "active" : isPending ? "pending" : ""
                 }
@@ -50,6 +51,7 @@ export default function Root() {
           </ul>
         </nav>
         <div style={{ flexGrow: 1 }} />
+        <Credits />
         <Awareness />
       </div>
       <div id="detail">
