@@ -45,7 +45,7 @@ const Status = (props) => {
             <div id="game-score">
                 <div className="player-score-container">
                     <div className="player-score-name">
-                        <p>{props.players.p1}</p>
+                        <p>{props.players.p1.name}</p>
                     </div>
                     <div className="player-score-checker">
                         <Checker player={1} count={1} />
@@ -56,7 +56,7 @@ const Status = (props) => {
                 </div>
                 <div className="player-score-container">
                     <div className="player-score-name">
-                        <p>{props.players.p2}</p>
+                        <p>{props.players.p2.name}</p>
                     </div>
                     <div className="player-score-checker">
                         <Checker player={2} count={1} />

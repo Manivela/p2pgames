@@ -16,6 +16,7 @@ import { RequireAuth } from "./routes/RequireAuth";
 import TicTacToe from "./Components/TicTacToe";
 import Minecraft from "./Components/Minecraft/App";
 import Chat from "./Components/Chat";
+import Backgammon from "./Components/Backgammon/containers/App";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -35,6 +36,7 @@ const router = createBrowserRouter(
           <Route path="tictactoe" element={<TicTacToe />} />
           <Route path="minecraft" element={<Minecraft />} />
           <Route path="chat" element={<Chat />} />
+          <Route path="backgammon" element={<Backgammon />} />
         </Route>
       </Route>
     </Route>

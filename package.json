@@ -26,6 +26,7 @@
     "react-merge-refs": "^2.0.1",
     "react-router-dom": "^6.9.0",
     "react-scripts": "^5.0.1",
+    "react-serialize": "^0.2.1",
     "react-spring": "^9.7.1",
     "three": "^0.150.1",
     "vite": "^4.2.0",
