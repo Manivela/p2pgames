@@ -1,6 +1,6 @@
 # p2pgames
 
-Collection of games modified to work over webRTC using [YJS](https://github.com/yjs/yjs) (and peerJS on the [peerjs](/Manivela/p2pgames/tree/peerjs) branch)
+Collection of games modified to work over webRTC using [YJS](https://github.com/yjs/yjs) (and peerJS on the [peerjs](https://github.com/Manivela/p2pgames/tree/peerjs) branch)
 
 demo: https://p2p.yunusgulcu.com/
 
