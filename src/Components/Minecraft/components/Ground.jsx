@@ -10,7 +10,7 @@ import {
 import grass from "../images/grass.jpg";
 import { useStore } from "../hooks/useStore";
 
-export function Ground(props) {
+export function Ground({ addCube, ...props }) {
   const [ref] = usePlane(() => ({ rotation: [-Math.PI / 2, 0, 0], ...props }));
   const texture = useMemo(() => {
     const t = new TextureLoader().load(grass);
@@ -20,10 +20,7 @@ export function Ground(props) {
     return t;
   }, []);
 
-  const [addCube, activeTexture] = useStore((state) => [
-    state.addCube,
-    state.texture,
-  ]);
+  const [activeTexture] = useStore((state) => [state.texture]);
   texture.magFilter = NearestFilter;
   texture.minFilter = LinearMipMapLinearFilter;
   texture.wrapS = RepeatWrapping;

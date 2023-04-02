@@ -2,10 +2,12 @@ import React, { memo, useState } from "react";
 import { useBox } from "@react-three/cannon";
 
 import * as textures from "../textures";
+import { useStore } from "../hooks/useStore";
 
-function Cube({ position, texture, addCube, removeCube }) {
+function Cube({ position, texture, addCube: addCubeProp, removeCube }) {
+  const [activeTexture] = useStore((state) => [state.texture]);
   const [hover, setHover] = useState(null);
-
+  const addCube = (x, y, z) => addCubeProp(x, y, z, activeTexture);
   const [ref] = useBox(() => ({
     type: "Static",
     position,
