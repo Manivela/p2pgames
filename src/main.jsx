@@ -13,10 +13,13 @@ import ErrorPage from "./error-page";
 import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
-import TicTacToe from "./Components/TicTacToe";
-import Minecraft from "./Components/Minecraft/App";
-import Chat from "./Components/Chat";
-import Backgammon from "./Components/Backgammon/containers/App";
+
+const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
+const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
+const Chat = React.lazy(() => import("./Components/Chat"));
+const Backgammon = React.lazy(() =>
+  import("./Components/Backgammon/containers/App")
+);
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -33,10 +36,38 @@ const router = createBrowserRouter(
         errorElement={<ErrorPage />}
       >
         <Route errorElement={<ErrorPage />}>
-          <Route path="tictactoe" element={<TicTacToe />} />
-          <Route path="minecraft" element={<Minecraft />} />
-          <Route path="chat" element={<Chat />} />
-          <Route path="backgammon" element={<Backgammon />} />
+          <Route
+            path="tictactoe"
+            element={
+              <React.Suspense fallback={<>...</>}>
+                <TicTacToe />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="minecraft"
+            element={
+              <React.Suspense fallback={<>...</>}>
+                <Minecraft />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="chat"
+            element={
+              <React.Suspense fallback={<>...</>}>
+                <Chat />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="backgammon"
+            element={
+              <React.Suspense fallback={<>...</>}>
+                <Backgammon />
+              </React.Suspense>
+            }
+          />
         </Route>
       </Route>
     </Route>
