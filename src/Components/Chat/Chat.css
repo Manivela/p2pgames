@@ -1,0 +1,17 @@
+.message-box {
+  width: 300px;
+  height: 200px;
+  border: 1px solid #ccc;
+  padding: 5px;
+  overflow: scroll;
+  scrollbar-width: none;
+}
+
+.message-box::-webkit-scrollbar {
+  display: none;
+}
+
+.message-input {
+  width: 300px;
+  border: 1px solid #ccc;
+}

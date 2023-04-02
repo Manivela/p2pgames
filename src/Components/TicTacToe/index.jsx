@@ -83,7 +83,14 @@ export default function Game() {
   let history = ymap.get("history");
   const setHistory = (value) => ymap.set("history", value);
   let users = ymap.get("users");
-  const setUsers = (value) => ymap.set("users", value);
+  const setUsers = (value) => {
+    if (!value.x && !value.o) {
+      // no users left reset game
+      setCurrentMove(0);
+      setHistory([Array(9).fill(null)]);
+    }
+    ymap.set("users", value);
+  };
   const [currentUser] = useAuthStore((state) => [state.currentUser]);
 
   if (users === undefined) {

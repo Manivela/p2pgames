@@ -1,15 +1,15 @@
-import React, { useRef } from "react";
-import { Canvas } from "@react-three/fiber";
-import { Sky, Stats } from "@react-three/drei";
 import { Physics } from "@react-three/cannon";
+import { Sky } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import React from "react";
 
 import { useMap } from "@joebobmiles/y-react";
 import { nanoid } from "nanoid";
-import { Ground } from "./components/Ground";
 import Cubes from "./components/Cubes";
-import { Player } from "./components/Player";
+import { Ground } from "./components/Ground";
 import { Hud } from "./components/Hud";
 import { OnlinePlayers } from "./components/OnlinePlayer";
+import { Player } from "./components/Player";
 
 function Minecraft() {
   const ymap = useMap("minecraft-state");

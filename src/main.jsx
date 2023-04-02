@@ -15,6 +15,7 @@ import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
 import TicTacToe from "./Components/TicTacToe";
 import Minecraft from "./Components/Minecraft/App";
+import Chat from "./Components/Chat";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -31,8 +32,9 @@ const router = createBrowserRouter(
         errorElement={<ErrorPage />}
       >
         <Route errorElement={<ErrorPage />}>
-          <Route index element={<TicTacToe />} />
+          <Route path="tictactoe" element={<TicTacToe />} />
           <Route path="minecraft" element={<Minecraft />} />
+          <Route path="chat" element={<Chat />} />
         </Route>
       </Route>
     </Route>
