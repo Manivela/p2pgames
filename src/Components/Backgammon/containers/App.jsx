@@ -7,6 +7,68 @@ import Board from "../components/Board/Board";
 import Status from "../components/Status/Status";
 import Menu from "../components/Menu/Menu";
 import _ from "lodash";
+import { useAuthStore } from "../../../hooks/useStore";
+import { useMap } from "@joebobmiles/y-react";
+
+function withHooksAndPlayers(Component) {
+  return function WrappedComponent(props) {
+    const [currentUser] = useAuthStore((state) => [state.currentUser]);
+    const ymap = useMap("tictactoe-state");
+    const state = ymap.get("game-state");
+    const setState = (value) => ymap.set("game-state", value);
+    let users = ymap.get("users");
+    const setUsers = (value) => {
+      ymap.set("users", value);
+    };
+
+    if (users === undefined) {
+      users = { p1: null, p2: null };
+      setUsers(users);
+    }
+    if (!users.p1 || !users.p2) {
+      return (
+        <div>
+          {users.p1 ? (
+            <span>{users.p1.name}</span>
+          ) : (
+            <button
+              onClick={() => {
+                if (users.p2?.id !== currentUser.id) {
+                  setUsers({ ...users, p1: currentUser });
+                }
+              }}
+            >
+              Play as Player One
+            </button>
+          )}{" "}
+          VS{" "}
+          <button
+            onClick={() => {
+              if (users.p1?.id !== currentUser.id) {
+                setUsers({ ...users, p2: currentUser });
+              }
+            }}
+          >
+            Play as Player Two
+          </button>
+        </div>
+      );
+    }
+
+    return (<>
+      <button onClick={()=>{
+        setUsers({p1:null,p2:null})
+      }}>Reset Players</button>
+      <Component
+        {...props}
+        currentUser={currentUser}
+        state={state}
+        setState={setState}
+        users={users}
+      /></>
+    );
+  };
+}
 
 class App extends Component {
   constructor(props) {
@@ -22,19 +84,14 @@ class App extends Component {
       grayBar: { checkersP1: 0, checkersP2: 0 },
       outSideBar: { checkersP1: 15, checkersP2: 15 },
       movingChecker: false,
-      players: { p1: "Player 1", p2: "Player 2" },
+      players: { p1: this.props.users.p1, p2: this.props.users.p2 },
       showMenu: true,
     };
-    const handleData = (data) => {
-      if (data.type === "backgammon") {
-        console.log("backgammon: ", data);
-        this.setState(data.data);
-      }
-    };
-    props.setDataListeners((prevDataListeners) => [
-      ...prevDataListeners,
-      handleData,
-    ]);
+  }
+  componentDidUpdate(prevProps) {
+    if (this.props.state !== prevProps.state) {
+      this.setState(this.props.state);
+    }
   }
 
   //Toggle menu
@@ -46,16 +103,7 @@ class App extends Component {
 
   setSharedState = (newState) => {
     this.setState(newState);
-    function customizer(value) {
-      if (_.isFunction(value)) {
-        return false;
-      }
-    }
-    const withoutFunc = _.cloneDeepWith(newState, customizer);
-    this.props.sendData({
-      type: "backgammon",
-      data: withoutFunc,
-    });
+    this.props.setState(newState);
   };
 
   //set up new game
@@ -70,11 +118,6 @@ class App extends Component {
     const outSideBar = { checkersP1: 0, checkersP2: 0 };
     const movingChecker = false;
     const showMenu = false;
-
-    const players = {
-      p1: this.props.id,
-      p2: this.props.players.find((p) => p.id !== this.props.id).id,
-    };
 
     history.push(this.setHistory(p1IsNext, dice, points, grayBar, outSideBar));
 
@@ -100,7 +143,6 @@ class App extends Component {
       outSideBar: outSideBar,
       movingChecker: movingChecker,
       showMenu: showMenu,
-      players: players,
     });
   };
 
@@ -662,7 +704,7 @@ class App extends Component {
               dice={this.state.dice}
               points={this.state.points}
               p1IsNext={this.state.p1IsNext}
-              isP1={this.state.players.p1 === this.props.id}
+              isP1={this.state.players.p1.id === this.props.currentUser.id}
               gameStatus={this.state.gameStatus}
             >
               <Graybar checkers={this.state.grayBar} />
@@ -680,4 +722,4 @@ class App extends Component {
   }
 }
 
-export default App;
+export default withHooksAndPlayers(App);

@@ -3,6 +3,21 @@ import { useLocation, useMatch } from "react-router-dom";
 function Credits() {
   const isTicTacToe = useMatch("/:roomId/tictactoe");
   const isMinecraft = useMatch("/:roomId/minecraft");
+  const isBackgammon = useMatch("/:roomId/backgammon");
+  if (isBackgammon) {
+    return (
+      <div style={{ flexDirection: "column" }}>
+        <div>Credits for this example:</div>
+        <a
+          href="https://github.com/bnunesc/react-backgammon"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Bruno Nunes
+        </a>
+      </div>
+    );
+  }
   if (isTicTacToe) {
     return (
       <div style={{ flexDirection: "column" }}>

@@ -16,7 +16,7 @@ class Menu extends Component {
             footer: content.footer,
             menuWidth: content.width,
             canClose: content.canClose,
-            playerNames: { p1: this.props.players.p1, p2: this.props.players.p2 },
+            playerNames: { p1: this.props.players.p1.name, p2: this.props.players.p2.name },
             playerStarts: 1,
         }
     }
@@ -68,7 +68,7 @@ class Menu extends Component {
 
         content.body = <React.Fragment>
             <img src="./assets/congratulation.png" alt="congratulation" />
-            <p className="modal-body-centralized">{gameStatus === 60 ? players.p1 : players.p2} wins!</p>
+            <p className="modal-body-centralized">{gameStatus === 60 ? players.p1.name : players.p2.name} wins!</p>
         </React.Fragment>
 
         content.footer = this.getRegularFooter();
@@ -96,6 +96,7 @@ class Menu extends Component {
 
     //Get a new game
     getNewGame = (gameStatus, players, playerStarts) => {
+        console.log('players: ', players);
         const content = {};
 
         const p1Starts = playerStarts === 1 ? 'btn-info' : 'btn-default';
@@ -112,7 +113,8 @@ class Menu extends Component {
                 <input type="text"
                     className="form-control modal-body-t2"
                     value={players.p1}
-                    onChange={this.changePlayerName.bind(this, 1)}
+                    // onChange={this.changePlayerName.bind(this, 1)}
+                    disabled
                 />
                 <div className="input-group-btn">
                     <button className={'btn ' + p1Starts}
@@ -126,7 +128,8 @@ class Menu extends Component {
                 <input type="text"
                     className="form-control modal-body-t2"
                     value={players.p2}
-                    onChange={this.changePlayerName.bind(this, 2)}
+                    // onChange={this.changePlayerName.bind(this, 2)}
+                    disabled
                 />
                 <div className="input-group-btn">
                     <button className={'btn ' + p2Starts}

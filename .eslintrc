@@ -27,7 +27,14 @@
     "react/no-unknown-property": "off",
     "no-unused-expressions": "off",
     "react/jsx-props-no-spreading": "off",
-    "consistent-return": "off"
+    "consistent-return": "off",
+    "no-lonely-if": "off",
+    "no-restricted-syntax": "off",
+    "prefer-destructuring": "off",
+    "no-multi-assign": "off",
+    "class-methods-use-this": "off",
+    "react/no-access-state-in-setstate": "off",
+    "array-callback-return": "off"
   },
   "env": {
     "browser": true
