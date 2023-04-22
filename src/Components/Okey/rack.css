@@ -1,0 +1,7 @@
+.rack {
+  width: 750px;
+  height: 600px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
