@@ -1,7 +1,12 @@
 .rack {
+  margin: 10px;
   width: 750px;
-  height: 600px;
+  height: 200px;
   display: flex;
   flex-wrap: wrap;
-  align-content: flex-start;
+  align-content: space-between;
+  justify-content: space-between;
+  /* background-color: #d2b48c;
+  border: 4px solid #8b5a2b;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); */
 }
