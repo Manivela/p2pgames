@@ -13,6 +13,7 @@ import ErrorPage from "./error-page";
 import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
+import Tile from "./Components/Okey";
 
 const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
 const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
@@ -24,7 +25,7 @@ const Backgammon = React.lazy(() =>
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route errorElement={<ErrorPage />}>
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<Tile />} />
       <Route path="/login" element={<Login />} />
       <Route
         path="/:roomId/"
