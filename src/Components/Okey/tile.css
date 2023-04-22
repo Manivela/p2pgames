@@ -7,13 +7,9 @@
   align-items: center;
   background-color: #fbf3df;
   border-radius: 3px;
-  pointer-events: none;
 }
 
 .rank {
-  user-select: none;
-  draggable: false;
-  pointer-events: none;
   font-family: "Arial";
   font-weight: 800;
   font-size: 36px;
@@ -21,9 +17,6 @@
 }
 
 .heart {
-  user-select: none;
-  draggable: false;
-  pointer-events: none;
   width: 25px;
   height: 25px;
   font-size: 20px;
