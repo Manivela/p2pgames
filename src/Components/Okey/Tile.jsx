@@ -1,9 +1,20 @@
+import { useDrag } from "react-dnd";
 import "./tile.css";
 
-function Tile({ rank = 1, color }) {
+function Tile({ tile, isDragging }) {
+  const [{ opacity }, dragRef] = useDrag(
+    () => ({
+      type: "TILE",
+      item: { tile },
+      collect: (monitor) => ({
+        opacity: monitor.isDragging() ? 0.5 : 1,
+      }),
+    }),
+    []
+  );
   return (
-    <div className="tile" style={{ color }}>
-      <div className="rank">{rank}</div>
+    <div ref={dragRef} className="tile" style={{ color: tile.color, opacity }}>
+      <div className="rank">{tile.rank}</div>
       <div className="heart">♥</div>
     </div>
   );
