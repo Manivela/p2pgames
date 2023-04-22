@@ -3,8 +3,8 @@ import "./tile.css";
 function Tile({ rank = 1, color }) {
   return (
     <div className="tile" style={{ color }}>
-      <span className="rank">{rank}</span>
-      <span className="heart">♥</span>
+      <div className="rank">{rank}</div>
+      <div className="heart">♥</div>
     </div>
   );
 }
