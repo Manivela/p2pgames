@@ -10,7 +10,7 @@ function Tile({ tile, isDragging }) {
         opacity: monitor.isDragging() ? 0.5 : 1,
       }),
     }),
-    []
+    [tile]
   );
   return (
     <div ref={dragRef} className="tile" style={{ color: tile.color, opacity }}>
