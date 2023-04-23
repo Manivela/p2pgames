@@ -1,33 +1,44 @@
 import _ from "lodash";
-import { useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import Tile from "./Tile";
+import Rack from "./Rack";
 import { colors, ranks } from "./constants";
 import "./rack.css";
-import Slot from "./Slot";
 
-const allTiles = [];
+const drawPile = [];
 
-colors.forEach((color) =>
-  ranks.forEach((rank) => allTiles.push({ color, rank, id: `${color + rank}` }))
-);
+// create the tiles
+for (let i = 0; i < 2; i++) {
+  colors.forEach((color) =>
+    ranks.forEach((rank) =>
+      drawPile.push({
+        color,
+        rank,
+        id: `${color + rank}`,
+      })
+    )
+  );
+}
 
+const maxHandSize = 26;
+function dealHand() {
+  // Create a new array with 3 randomly selected elements
+  const sampledArray = _.sampleSize(drawPile, 14);
+
+  // Remove the selected elements from the original array
+  _.pullAll(drawPile, sampledArray);
+  return sampledArray.concat(
+    Array(maxHandSize - sampledArray.length).fill(null)
+  );
+}
 function Okey() {
-  const [hand, setHand] = useState(_.sampleSize(allTiles, 13));
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="rack">
-        <div className="top">
-          {hand.slice(0, 13).map((tile, index) => (
-            <Tile key={tile.id} index={index} tile={tile} />
-          ))}
-        </div>
-        <div className="bottom">
-          {Array.from({ length: 13 }).map((tile, index) => (
-            <Slot key={index} index={index} />
-          ))}
-        </div>
+      <div>
+        <Rack initialHand={() => dealHand()} />
+        <Rack initialHand={() => dealHand()} />
+        <Rack initialHand={() => dealHand()} />
+        <Rack initialHand={() => dealHand()} />
       </div>
     </DndProvider>
   );
