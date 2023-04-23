@@ -1,7 +1,13 @@
 import { useDrag } from "react-dnd";
 import "./tile.css";
+import { useState } from "react";
 
-function Tile({ tile, isDragging }) {
+function Tile({ tile }) {
+  const [hidden, setHidden] = useState(false);
+  function handleClick(e) {
+    e.preventDefault();
+    setHidden(!hidden);
+  }
   const [{ opacity }, dragRef] = useDrag(
     () => ({
       type: "TILE",
@@ -13,9 +19,18 @@ function Tile({ tile, isDragging }) {
     [tile]
   );
   return (
-    <div ref={dragRef} className="tile" style={{ color: tile.color, opacity }}>
-      <div className="rank">{tile.rank}</div>
-      <div className="heart">♥</div>
+    <div
+      ref={dragRef}
+      className="tile"
+      style={{ color: tile.color, opacity }}
+      onContextMenu={handleClick}
+    >
+      {!hidden && (
+        <>
+          <div className="rank">{tile.rank}</div>
+          <div className="heart">♥</div>
+        </>
+      )}
     </div>
   );
 }

@@ -28,3 +28,24 @@
   align-items: flex-end;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
+
+.board {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background-color: #28641c;
+}
+
+.drawPile {
+  left: 50%;
+  top: 50%;
+  position: absolute;
+  margin-left: -27px;
+  margin-top: -37.5px;
+}
+
+.discardPile {
+  position: absolute;
+  top: -200px;
+  right: -100px;
+}
