@@ -1,4 +1,4 @@
-import { useDrag, useDrop } from "react-dnd";
+import { useDrop } from "react-dnd";
 import "./slot.css";
 import Tile from "./Tile";
 
@@ -10,19 +10,22 @@ function Slot({
   showBorder,
   className,
   canDiscard,
+  disabled,
   ...props
 }) {
   const [{ isOver, canDrop }, drop] = useDrop(
     () => ({
       accept: "TILE",
       drop: (e) => onDrop(e.tile, index),
-      canDrop: () => (type === "DISCARD" ? canDiscard : true),
+      // canDrop: (e) =>
+      //   (type === "DRAW" ? e.tile.source.includes("hand") : false) &&
+      //   (type === "DISCARD" ? canDiscard : true),
       collect: (monitor) => ({
         isOver: !!monitor.isOver(),
         canDrop: !!monitor.canDrop(),
       }),
     }),
-    [index, canDiscard]
+    [index, canDiscard, onDrop]
   );
   return (
     <div
@@ -30,7 +33,7 @@ function Slot({
       className={`slot ${showBorder && "border"} ${className}`}
       {...props}
     >
-      {tile && <Tile tile={tile} />}
+      {tile && <Tile tile={tile} disabled={disabled} />}
     </div>
   );
 }

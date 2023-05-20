@@ -3,8 +3,23 @@ import { OkeyContext } from "./OkeyContext";
 import Rack from "./Rack";
 import Slot from "./Slot";
 import "./rack.css";
+import Tile from "./Tile";
 
 const playerPositions = [
+  {
+    left: "50%",
+    bottom: "0px",
+    marginLeft: "-358px",
+    position: "absolute",
+  },
+  {
+    top: "50%",
+    right: "0px",
+    position: "absolute",
+    marginRight: "-258px",
+    marginTop: "-100px",
+    transform: "rotate(-90deg)",
+  },
   {
     left: "50%",
     marginLeft: "-358px",
@@ -18,28 +33,29 @@ const playerPositions = [
     position: "absolute",
     transform: "rotate(90deg)",
   },
-  {
-    top: "50%",
-    right: "0px",
-    position: "absolute",
-    marginRight: "-258px",
-    marginTop: "-100px",
-    transform: "rotate(-90deg)",
-  },
-  {
-    left: "50%",
-    bottom: "0px",
-    marginLeft: "-358px",
-    position: "absolute",
-  },
 ];
 
 function Board() {
-  const { okeyState, nextDrawTile } = useContext(OkeyContext);
+  const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
 
   return (
     <div className="board">
-      <Slot className="drawPile" showBorder tile={nextDrawTile} />
+      <Slot
+        className="drawPile"
+        showBorder
+        tile={nextDrawTile}
+        type="DRAW"
+        onDrop={finishGame}
+      />
+      <Tile
+        className="drawPile"
+        style={{ marginLeft: 40 }}
+        tile={okeyState.okeyTile}
+        disabled
+      />
+      <h1 className="drawPile" style={{ marginLeft: 100 }}>
+        Current Player: {okeyState.currentPlayer}
+      </h1>
       {okeyState.players.map((player, index) => (
         <Rack
           key={player.id}

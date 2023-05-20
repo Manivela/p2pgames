@@ -2,8 +2,8 @@ import { useDrag } from "react-dnd";
 import "./tile.css";
 import { useState } from "react";
 
-function Tile({ tile }) {
-  const [hidden, setHidden] = useState(false);
+function Tile({ tile, disabled, className, style }) {
+  const [hidden, setHidden] = useState(tile.hidden);
   function handleClick(e) {
     e.preventDefault();
     setHidden(!hidden);
@@ -12,6 +12,7 @@ function Tile({ tile }) {
     () => ({
       type: "TILE",
       item: { tile },
+      canDrag: !disabled,
       collect: (monitor) => ({
         opacity: monitor.isDragging() ? 0.5 : 1,
       }),
@@ -21,8 +22,8 @@ function Tile({ tile }) {
   return (
     <div
       ref={dragRef}
-      className="tile"
-      style={{ color: tile.color, opacity }}
+      className={`${className} tile`}
+      style={{ ...style, color: tile.color, opacity }}
       onContextMenu={handleClick}
     >
       {!hidden && (
