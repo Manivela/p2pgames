@@ -4,28 +4,42 @@ function areNeighbors(a, b) {
 export const checkFinished = (hand) => {
   let finished = true;
   let prevTile = null;
-  //   const doubles = false;
+  let doubles = false;
   let streak = 0;
   for (const currentTile of hand) {
-    console.log("prevTile: ", prevTile);
     if (prevTile && currentTile) {
       streak++;
-      if (prevTile.color !== currentTile.color) {
-        if (streak < 2) {
+      if (
+        prevTile.color === currentTile.color &&
+        prevTile.rank === currentTile.rank
+      ) {
+        doubles = true;
+      }
+      if (doubles && streak > 2) {
+        finished = false;
+        break;
+      }
+      if (
+        prevTile.color !== currentTile.color &&
+        prevTile.rank !== currentTile.rank
+      ) {
+        if (streak < (doubles ? 1 : 3)) {
           finished = false;
           break;
         }
         streak = 0;
-      } else if (!areNeighbors(prevTile, currentTile)) {
-        if (streak < 2) {
+      } else if (
+        !areNeighbors(prevTile, currentTile) &&
+        prevTile.rank !== currentTile.rank
+      ) {
+        if (streak < (doubles ? 1 : 3)) {
           finished = false;
           break;
         }
         streak = 0;
       }
-      console.log("streak: ", streak);
     } else {
-      if (streak !== 0 && streak < 2) {
+      if (streak !== 0 && streak < (doubles ? 1 : 2)) {
         finished = false;
         break;
       }
@@ -33,7 +47,7 @@ export const checkFinished = (hand) => {
     }
     prevTile = currentTile;
   }
-  if (streak < 2) {
+  if (streak !== 0 && streak < (doubles ? 1 : 2)) {
     finished = false;
   }
   return finished;

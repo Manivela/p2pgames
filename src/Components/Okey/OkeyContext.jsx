@@ -3,7 +3,7 @@ import _, { cloneDeep } from "lodash";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 
-const maxHandSize = 26;
+export const maxHandSize = 26;
 const startingPlayer = 1;
 
 export const OkeyContext = createContext({});
@@ -50,6 +50,14 @@ function arrayRotate(arr, reverse) {
 
 const DEBUG = true;
 
+export const createTile = (color, rank, i) => ({
+  color,
+  rank,
+  id: `${color + rank}-${i}`,
+  // hidden: true,
+  source: "draw-pile",
+});
+
 export function OkeyProvider({ children }) {
   const [okeyState, setOkeyState] = useState(() => {
     const me = startingPlayer;
@@ -57,15 +65,7 @@ export function OkeyProvider({ children }) {
     // create the tiles
     for (let i = 0; i < 2; i++) {
       colors.forEach((color) =>
-        ranks.forEach((rank) =>
-          drawPile.push({
-            color,
-            rank,
-            id: `${color + rank}-${i}`,
-            // hidden: true,
-            source: "draw-pile",
-          })
-        )
+        ranks.forEach((rank) => drawPile.push(createTile(color, rank, i)))
       );
     }
     function dealHand(player) {
