@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import Awareness from "../Components/Awareness";
 import Credits from "../Components/Credits";
 
@@ -61,6 +62,14 @@ export default function Root() {
           </ul>
         </nav>
         <div style={{ flexGrow: 1 }} />
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success("Copied!");
+          }}
+        >
+          Share Link
+        </button>
         <Credits />
         <Awareness />
       </div>
