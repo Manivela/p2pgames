@@ -32,7 +32,7 @@ function Rack({ initialHand, ...props }) {
 
   return (
     <div className="rack" {...props}>
-      {me === props.player && (
+      {(me === props.player || okeyState.gameState === "finish") && (
         <>
           <div className="top">
             {myHand(props.player)
