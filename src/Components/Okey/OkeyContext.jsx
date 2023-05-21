@@ -48,7 +48,7 @@ function arrayRotate(arr, reverse) {
   return arr;
 }
 
-const DEBUG = true;
+const DEBUG = false;
 
 export const createTile = (color, rank, i) => ({
   color,
@@ -224,7 +224,7 @@ export function OkeyProvider({ children }) {
     const hand = [...myHand(okeyState.me)];
     hand[discardIndex] = null;
 
-    const finished = checkFinished(hand);
+    const finished = checkFinished(hand, okeyState.okeyTile);
     if (finished) {
       console.log(`${okeyState.me} wins!`);
       setOkeyState((state) => ({ ...state, winner: okeyState.me }));
