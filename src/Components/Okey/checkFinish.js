@@ -27,16 +27,6 @@ export const checkFinished = (hand, indicator) => {
   for (const currentTile of hand) {
     if (prevTile && currentTile) {
       streak++;
-      console.log(
-        "currentTile?.color === okey.color: ",
-        currentTile?.color === indicator.color
-      );
-      console.log(
-        "currentTile?.rank === (okey.rank + 1) % 13: ",
-        currentTile?.rank === (indicator.rank + 1) % 13
-      );
-      console.log("indicator.rank: ", indicator.rank);
-      console.log("currentTile?.rank: ", currentTile?.rank);
       if (
         !(
           currentTile?.color === indicator.color &&
