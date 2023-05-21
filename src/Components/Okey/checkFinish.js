@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { toast } from "react-hot-toast";
 
 function areNeighbors(a, b) {
   return Math.abs(a.rank - b.rank) === 1;
@@ -21,10 +22,6 @@ export const checkFinished = (hand, okey) => {
   for (const currentTile of hand) {
     if (prevTile && currentTile) {
       streak++;
-      // if (doubles && streak > 2) {
-      //   finished = false;
-      //   break;
-      // }
       if (currentTile?.id !== okey.id && prevTile?.id !== okey.id) {
         if (
           prevTile.color !== currentTile.color &&
@@ -32,6 +29,7 @@ export const checkFinished = (hand, okey) => {
         ) {
           if (streak < 3) {
             finished = false;
+            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
             break;
           }
           streak = 0;
@@ -41,6 +39,7 @@ export const checkFinished = (hand, okey) => {
         ) {
           if (streak < 3) {
             finished = false;
+            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
             break;
           }
           streak = 0;
@@ -49,14 +48,16 @@ export const checkFinished = (hand, okey) => {
     } else {
       if (streak !== 0 && streak < 2) {
         finished = false;
+        toast(`Unfinished sequence ${prevTile.name}>...`);
         break;
       }
       streak = 0;
     }
     prevTile = currentTile;
   }
-  if (streak !== 0 && streak < 2) {
-    finished = false;
-  }
+  // if (streak !== 0 && streak < 2) {
+  //   toast(`Unfinished sequence ${prevTile.id}>...`);
+  //   finished = false;
+  // }
   return finished;
 };

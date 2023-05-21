@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 import { useAuthStore } from "../../hooks/useStore";
+import { createTile, maxHandSize } from "./utils";
 // TODO:
 // reset game sadece oyun bitince gözükçek
 // tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
@@ -22,8 +23,7 @@ import { useAuthStore } from "../../hooks/useStore";
 // milletin isimleri ve attıkları taşlar oyuncuya düzgün görünsün tepetakla gözükmesin
 // aynı taştan 4 tane oldu birşekilde
 // okey ekranında mouse takibi kapat
-
-export const maxHandSize = 26;
+// oyunculardan biri çıkınca oyun pause state ine geçip çıkan kişinin koltuktan kalkması lazım yeni birinin oturmasını beklemesi lazım.
 
 export const OkeyContext = createContext({});
 
@@ -59,14 +59,6 @@ function insertItem(array, toIndex, item) {
 }
 
 const DEBUG = false;
-
-export const createTile = (color, rank, i) => ({
-  color,
-  rank,
-  id: `${color + rank}-${i}`,
-  // hidden: true,
-  source: "draw-pile",
-});
 
 function dealHand(drawPile, player, index) {
   // Create a new array with 3 randomly selected elements
