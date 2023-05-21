@@ -11,7 +11,7 @@ const disabledPaths = ["okey", "minecraft"];
 export default function Awareness() {
   const { roomId } = useParams();
   const location = useLocation();
-  const disabled = !disabledPaths.some((d) => location.pathname.includes(d));
+  const disabled = disabledPaths.some((d) => location.pathname.includes(d));
 
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
@@ -27,7 +27,7 @@ export default function Awareness() {
     }));
   }
   React.useEffect(() => {
-    if (disabled) {
+    if (!disabled) {
       setLocalState((prevState) => ({
         color: colors[states.length],
         ...prevState,
@@ -40,7 +40,7 @@ export default function Awareness() {
 
   return (
     <main>
-      {disabled && (
+      {!disabled && (
         <svg
           style={{
             position: "absolute",
