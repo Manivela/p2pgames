@@ -9,7 +9,8 @@ function makeHand(hand) {
   return paddedHand;
 }
 
-const okey = createTile("black", 13, 1);
+const indicator = createTile("black", 13, 1);
+const okey = createTile("black", 1, 1);
 
 test("1 and 13 counts for series", () => {
   assert.isTrue(
@@ -33,7 +34,7 @@ test("1 and 13 counts for series", () => {
         createTile("black", 13),
         createTile("yellow", 13),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -57,7 +58,7 @@ test("pairs and unfinished series combined can't win", () => {
         createTile("red", 5),
         createTile("red", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -74,14 +75,14 @@ test("pairs and unfinished series combined can't win with okey", () => {
         createTile("yellow", 13, 2),
         createTile("blue", 4, 1),
         createTile("blue", 4, 2),
-        createTile("black", 1, 1),
-        createTile("black", 1, 2),
+        createTile("black", 3, 1),
+        createTile("black", 3, 2),
         createTile("red", 3, 1),
         createTile("red", 3, 2),
         createTile("red", 5),
         okey,
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -105,7 +106,7 @@ test("pairs and series combined can't win", () => {
         createTile("red", 5),
         createTile("red", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -129,7 +130,7 @@ test("pairs and series combined can't win with okey", () => {
         createTile("red", 5),
         createTile("red", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -153,7 +154,7 @@ test("pairs can win", () => {
         createTile("blue", 11, 1),
         createTile("blue", 11, 2),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -177,7 +178,7 @@ test("same color sequences and multiple colors can win with okey", () => {
         createTile("yellow", 3),
         createTile("blue", 3),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -201,7 +202,7 @@ test("same color sequences and multiple colors can win", () => {
         createTile("yellow", 3),
         createTile("blue", 3),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -225,7 +226,7 @@ test("same color sequences can win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -249,7 +250,7 @@ test("same color sequences can win with okey", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -273,7 +274,7 @@ test("same color sequences can win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -299,7 +300,7 @@ test("sequence of 2 can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -323,7 +324,7 @@ test("sequence of 2 without spaces can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -347,7 +348,7 @@ test("alternating colors can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -371,7 +372,7 @@ test("different color sequences can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });
@@ -382,7 +383,7 @@ test("different color sequences can't win", () => {
       makeHand([
         createTile("red", 1),
         createTile("black", 2),
-        okey,
+        indicator,
         createTile("red", 4),
         createTile("red", 5),
         createTile("red", 6),
@@ -395,7 +396,7 @@ test("different color sequences can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      okey
+      indicator
     )
   );
 });

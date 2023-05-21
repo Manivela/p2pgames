@@ -9,7 +9,7 @@ function areNeighbors(a, b) {
   return Math.abs(a.rank - b.rank) === 1;
 }
 
-export const checkFinished = (hand, okey) => {
+export const checkFinished = (hand, indicator) => {
   let finished = true;
   let prevTile = null;
   // check doubles
@@ -27,7 +27,26 @@ export const checkFinished = (hand, okey) => {
   for (const currentTile of hand) {
     if (prevTile && currentTile) {
       streak++;
-      if (currentTile?.id !== okey.id && prevTile?.id !== okey.id) {
+      console.log(
+        "currentTile?.color === okey.color: ",
+        currentTile?.color === indicator.color
+      );
+      console.log(
+        "currentTile?.rank === (okey.rank + 1) % 13: ",
+        currentTile?.rank === (indicator.rank + 1) % 13
+      );
+      console.log("indicator.rank: ", indicator.rank);
+      console.log("currentTile?.rank: ", currentTile?.rank);
+      if (
+        !(
+          currentTile?.color === indicator.color &&
+          currentTile?.rank === (indicator.rank + 1) % 13
+        ) &&
+        !(
+          prevTile?.color === indicator.color &&
+          prevTile?.rank === (indicator.rank + 1) % 13
+        )
+      ) {
         if (
           prevTile.color !== currentTile.color &&
           prevTile.rank !== currentTile.rank
