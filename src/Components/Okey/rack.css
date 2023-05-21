@@ -46,6 +46,16 @@
 
 .discardPile {
   position: absolute;
-  top: -200px;
-  right: -100px;
+  top: -100px;
+  right: 0px;
+}
+
+.playerName {
+  left: 40%;
+  position: absolute;
+  top: -75px;
+}
+
+.active {
+  color: red;
 }

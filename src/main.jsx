@@ -25,7 +25,7 @@ const Backgammon = React.lazy(() =>
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route errorElement={<ErrorPage />}>
-      <Route path="/" element={<Okey />} />
+      <Route path="/" element={<Login />} />
       <Route path="/login" element={<Login />} />
       <Route
         path="/:roomId/"
@@ -66,6 +66,14 @@ const router = createBrowserRouter(
             element={
               <React.Suspense fallback={<>...</>}>
                 <Backgammon />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="okey"
+            element={
+              <React.Suspense fallback={<>...</>}>
+                <Okey />
               </React.Suspense>
             }
           />

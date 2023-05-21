@@ -1,9 +1,10 @@
+import _ from "lodash";
 import { useContext } from "react";
 import { OkeyContext } from "./OkeyContext";
 import Rack from "./Rack";
 import Slot from "./Slot";
-import "./rack.css";
 import Tile from "./Tile";
+import "./rack.css";
 
 const playerPositions = [
   {
@@ -35,9 +36,39 @@ const playerPositions = [
   },
 ];
 
-function Board() {
-  const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
+function rotateArray(array, x) {
+  // Normalize the rotation count
+  const rotations = x % array.length;
 
+  // Handle negative rotations
+  const normalizedRotations =
+    rotations >= 0 ? rotations : array.length + rotations;
+
+  // Handle rotation count of 1 separately
+  if (normalizedRotations === 1) {
+    return _.concat(_.tail(array), _.head(array));
+  }
+
+  // Split the array into two parts based on the rotation count
+  const [head, tail] = _.chunk(array, normalizedRotations);
+
+  // If either head or tail is undefined, return the original array
+  if (head === undefined || tail === undefined) {
+    return array;
+  }
+
+  // Rearrange the array by concatenating the tail with the head
+  return _.concat(tail, head);
+}
+
+function Board() {
+  const { okeyState, nextDrawTile, finishGame, startGame, myIndex, resetGame } =
+    useContext(OkeyContext);
+  const rotatedPlayers =
+    myIndex !== -1
+      ? rotateArray(okeyState.players, myIndex)
+      : okeyState.players;
+  console.log("okeyState: ", okeyState);
   return (
     <div className="board">
       <Slot
@@ -47,21 +78,46 @@ function Board() {
         type="DRAW"
         onDrop={finishGame}
       />
-      <Tile
-        className="drawPile"
-        style={{ marginLeft: 40 }}
-        tile={okeyState.okeyTile}
-        disabled
-      />
-      <h1 className="drawPile" style={{ marginLeft: 100 }}>
-        Current Player: {okeyState.currentPlayer}
-      </h1>
-      {okeyState.players.map((player, index) => (
+      {okeyState.message && (
+        <h1
+          className="drawPile"
+          style={{ marginTop: -100, transform: "translateX(-45%)" }}
+        >
+          {okeyState.message}
+        </h1>
+      )}
+      {okeyState.okeyTile && (
+        <Tile
+          className="drawPile"
+          style={{ marginLeft: 40 }}
+          tile={okeyState.okeyTile}
+          disabled
+        />
+      )}
+      {okeyState.gameState === "start" && (
+        <button
+          className="drawPile"
+          style={{ marginLeft: 150 }}
+          onClick={startGame}
+        >
+          Start Game
+        </button>
+      )}
+      {okeyState.gameState === "play" && (
+        <button
+          className="drawPile"
+          style={{ marginLeft: 150 }}
+          onClick={resetGame}
+        >
+          Reset Game
+        </button>
+      )}
+      {rotatedPlayers.map((player, index) => (
         <Rack
           key={player.id}
           player={player.id}
           initialHand={player.hand}
-          style={playerPositions[index]}
+          style={playerPositions[player.id - 1]}
         />
       ))}
     </div>
