@@ -1,6 +1,6 @@
 import { assert, test } from "vitest";
 import { checkFinished } from "./checkFinish";
-import { createTile, maxHandSize } from "./OkeyContext";
+import { createTile, maxHandSize } from "./utils";
 
 function makeHand(hand) {
   const paddedHand = hand.concat(Array(maxHandSize - hand.length));
@@ -10,6 +10,33 @@ function makeHand(hand) {
 }
 
 const okey = createTile("black", 13, 1);
+
+test("1 and 13 counts for series", () => {
+  assert.isTrue(
+    checkFinished(
+      makeHand([
+        createTile("red", 9),
+        createTile("blue", 9),
+        createTile("yellow", 9),
+        createTile("black", 9),
+        null,
+        createTile("red", 11),
+        createTile("red", 12),
+        createTile("red", 13),
+        createTile("red", 1),
+        null,
+        createTile("red", 6),
+        createTile("red", 7),
+        createTile("red", 8),
+        null,
+        createTile("blue", 13),
+        createTile("black", 13),
+        createTile("yellow", 13),
+      ]),
+      okey
+    )
+  );
+});
 
 test("pairs and unfinished series combined can't win", () => {
   assert.isFalse(
