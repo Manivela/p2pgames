@@ -1,6 +1,7 @@
 import { createContext } from "react";
 import _, { cloneDeep } from "lodash";
 import { useMap } from "@joebobmiles/y-react";
+import { toast } from "react-hot-toast";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 import { useAuthStore } from "../../hooks/useStore";
@@ -11,7 +12,6 @@ export const OkeyContext = createContext({});
 
 function removeItem(array, tile) {
   const fromIndex = array.findIndex((h) => h?.id === tile.id);
-  console.log("removeItem: ", fromIndex);
   const newArray = [...array]; // Create a new array using the spread operator
 
   // Swap the items in the new array
@@ -21,7 +21,6 @@ function removeItem(array, tile) {
 }
 
 function swapItems(array, fromIndex, toIndex) {
-  console.log("swapItems: ", fromIndex, toIndex);
   const newArray = [...array]; // Create a new array using the spread operator
 
   // Swap the items in the new array
@@ -34,7 +33,6 @@ function swapItems(array, fromIndex, toIndex) {
 }
 
 function insertItem(array, toIndex, item) {
-  console.log("insertItem: ", toIndex, item);
   const newArray = [...array]; // Create a new array using the spread operator
 
   // Swap the items in the new array
@@ -144,11 +142,11 @@ export function OkeyProvider({ children }) {
     okeyState.players.find((p) => p.id === player).discardPile;
   const drawTile = (player, tile, toIndex) => {
     if (!isMyTurn()) {
-      console.log("Not your turn");
+      toast("Not your turn");
       return;
     }
     if (!canDrawTile(player)) {
-      console.log("Can't draw more tiles");
+      toast("Can't draw more tiles");
       return;
     }
     const newState = cloneDeep(okeyState);
@@ -171,9 +169,8 @@ export function OkeyProvider({ children }) {
     setOkeyState(newState);
   };
   const swapTile = (player, tile, toIndex) => {
-    console.log("tile.source: ", tile.source);
     if (tile.source !== `hand-${me}`) {
-      console.log("Can't move other players tiles");
+      toast("Can't move other players tiles");
       return;
     }
     const newState = cloneDeep(okeyState);
@@ -184,15 +181,15 @@ export function OkeyProvider({ children }) {
   };
   const discardTile = (player, tile) => {
     if (!isMyTurn()) {
-      console.log("Not your turn");
+      toast("Not your turn");
       return;
     }
     if (!canDiscardTile(player)) {
-      console.log("Can't discard before drawing");
+      toast("Can't discard before drawing");
       return;
     }
     if (!tile.source.includes("hand")) {
-      console.log("Invalid discard source");
+      toast("Invalid discard source");
       return;
     }
     const newState = cloneDeep(okeyState);
@@ -210,15 +207,15 @@ export function OkeyProvider({ children }) {
   };
   const finishGame = (tile) => {
     if (!isMyTurn()) {
-      console.log("Not your turn");
+      toast("Not your turn");
       return;
     }
     if (!canDiscardTile(me)) {
-      console.log("Can't discard before drawing");
+      toast("Can't discard before drawing");
       return;
     }
     if (tile.source !== `hand-${me}`) {
-      console.log("Can't move other players tiles");
+      toast("Can't move other players tiles");
       return;
     }
     const discardIndex = myHand(me).findIndex((h) => h?.id === tile.id);

@@ -36,6 +36,21 @@ const playerPositions = [
   },
 ];
 
+const playerPositionsFor2 = [
+  {
+    left: "50%",
+    bottom: "0px",
+    marginLeft: "-358px",
+    position: "absolute",
+  },
+  {
+    left: "50%",
+    marginLeft: "-358px",
+    position: "absolute",
+    transform: "rotate(180deg)",
+  },
+];
+
 function rotateArray(array, x) {
   // Normalize the rotation count
   const rotations = x % array.length;
@@ -68,7 +83,6 @@ function Board() {
     myIndex !== -1
       ? rotateArray(okeyState.players, myIndex)
       : okeyState.players;
-  console.log("okeyState: ", okeyState);
   return (
     <div className="board">
       <Slot
@@ -117,7 +131,11 @@ function Board() {
           key={player.id}
           player={player.id}
           initialHand={player.hand}
-          style={playerPositions[player.id - 1]}
+          style={
+            rotatedPlayers.length === 2
+              ? playerPositionsFor2[index]
+              : playerPositions[index]
+          }
         />
       ))}
     </div>
