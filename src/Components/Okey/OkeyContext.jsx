@@ -10,12 +10,10 @@ import { createTile, maxHandSize } from "./utils";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
 // TODO:
-// reset game sadece oyun bitince gözükçek (sonra fixlenir)
 // tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
 // 2 tane aynı taş varsa yan yana oynatırken satıyor
 // oyun bitince herkesin elini göster
 // okey taşına bakarken +1 mod 13 yapmak lazım ortada 13 varsa okeyin 1 olması için
-// el biterken komşulara bakan kodun 13 ve 1 içinde çalışması lazım örnek resim var photosda
 // gizlenen taşı oynatınca geri açılıyor
 // taş çekerken başka taşın üstüne çekince öncekinin üzerine yazıyor ya izin vermemesi lazım çekiyorsada yanına koyması lazım
 // player 1 wins yerine adamın adını yaz
