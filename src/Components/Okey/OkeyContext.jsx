@@ -1,17 +1,17 @@
-import { createContext } from "react";
-import _, { cloneDeep } from "lodash";
+import React, { createContext } from "react";
+import _, { clone, cloneDeep, indexOf } from "lodash";
 import { useMap } from "@joebobmiles/y-react";
 import { toast } from "react-hot-toast";
+import useSound from "use-sound";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 import { useAuthStore } from "../../hooks/useStore";
 import { createTile, maxHandSize } from "./utils";
+import bell from "./assets/bell.mp3";
+import tile1 from "./assets/tile-1.mp3";
 // TODO:
-// reset game sadece oyun bitince gözükçek
+// reset game sadece oyun bitince gözükçek (sonra fixlenir)
 // tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
-// başkasının taşları hiç gözükmesin tahta boş görünsün
-// kendi taşımı başka oyuncunun tahtasına koyabiliyorum olmaması lazım (üstteki bunu düzeltir)
-// taş atma sesi ekleyek
 // 2 tane aynı taş varsa yan yana oynatırken satıyor
 // oyun bitince herkesin elini göster
 // okey taşına bakarken +1 mod 13 yapmak lazım ortada 13 varsa okeyin 1 olması için
@@ -48,34 +48,95 @@ function swapItems(array, fromIndex, toIndex) {
 
   return newArray;
 }
-
 function insertItem(array, toIndex, item) {
-  const newArray = [...array]; // Create a new array using the spread operator
+  const newArray = [...array];
+  if (newArray[toIndex] === null) {
+    // if the target is null just insert
+    newArray[toIndex] = item;
+    return newArray;
+  }
 
-  // Swap the items in the new array
-  newArray[toIndex] = item;
+  // Find the first null index after target
+  const rightNull = newArray.indexOf(null, toIndex);
+  const leftNull = newArray.lastIndexOf(null, toIndex);
+  const firstNull = newArray.indexOf(null);
+
+  // If no null is found on the right or left insert at the first available place
+  if (rightNull === -1 && leftNull === -1) {
+    newArray[firstNull] = item;
+    return newArray;
+  }
+
+  if (rightNull !== -1) {
+    // Shift the objects to the right
+    for (let i = rightNull; i > toIndex; i--) {
+      newArray[i] = newArray[i - 1];
+    }
+
+    // Insert the new object
+    newArray[toIndex] = item;
+
+    return newArray;
+  }
+
+  if (leftNull !== -1) {
+    // Shift the objects to the left
+    for (let i = leftNull; i < toIndex; i++) {
+      newArray[i] = newArray[i + 1];
+    }
+
+    // Insert the new object
+    newArray[toIndex] = item;
+
+    return newArray;
+  }
 
   return newArray;
 }
 
 const DEBUG = false;
+const debugHand = [
+  "black2",
+  "black3",
+  "black4",
+  "black5",
+  "black6",
+  "black7",
+  "black10",
+  "black11",
+  "black12",
+  "black13",
+  "black1",
+  "red1",
+  "red2",
+  "red3",
+  "red4",
+];
 
 function dealHand(drawPile, player, index) {
-  // Create a new array with 3 randomly selected elements
-  const sampledArray = (DEBUG ? _.take : _.sampleSize)(
-    drawPile,
-    index === 0 ? 15 : 14
-  ).map((tile) => ({ ...tile, hidden: false, source: `hand-${player}` }));
+  if (DEBUG && index === 0) {
+    const debugArray = drawPile.reduce((acc, curr) => {
+      if (
+        acc.length < 15 &&
+        !acc.some((a) => a.name === curr.name) &&
+        debugHand.includes(curr.name)
+      ) {
+        acc.push({ ...curr, hidden: false, source: `hand-${player}` });
+      }
+      return acc;
+    }, []);
+    return debugArray.concat(Array(maxHandSize - debugArray.length).fill(null));
+  }
+  const sampledArray = _.sampleSize(drawPile, index === 0 ? 15 : 14).map(
+    (tile) => ({ ...tile, hidden: false, source: `hand-${player}` })
+  );
 
-  // Remove the selected elements from the original array
-  _.pullAll(drawPile, sampledArray);
   return sampledArray.concat(
     Array(maxHandSize - sampledArray.length).fill(null)
   );
 }
 function pickOkeyTile(drawPile) {
   const okeyTile = _.sample(drawPile);
-  _.pull(drawPile, okeyTile);
   return { ...okeyTile, hidden: false };
 }
 const tiles = [];
@@ -129,6 +190,9 @@ function getNextPlayer(players, currentPlayer) {
 
 export function OkeyProvider({ children }) {
   const [currentUser] = useAuthStore((state) => [state.currentUser]);
+  const [playBellSound] = useSound(bell, { volume: 0.2 });
+  const [playTile1Sound] = useSound(tile1, { volume: 0.5 });
+
   const ymap = useMap("okey-state");
   let okeyState = ymap.get("game-state");
   const setOkeyState = (value) =>
@@ -140,15 +204,31 @@ export function OkeyProvider({ children }) {
   const nextDrawTile = okeyState.drawPile[okeyState.drawPile.length - 1];
 
   const me = okeyState.players.find((p) => p.user?.id === currentUser.id)?.id;
+
+  React.useEffect(() => {
+    if (okeyState.gameState === "play") {
+      if (okeyState.currentPlayer === me) {
+        playBellSound();
+      } else {
+        playTile1Sound();
+      }
+    }
+  }, [okeyState.currentPlayer]);
+
   const isMyTurn = () => okeyState.currentPlayer === me;
+
   const myHand = (player) =>
     okeyState.players.find((p) => p.id === player).hand;
+
   const canDrawTile = (player) =>
     myHand(player).filter((t) => t !== null).length < 15;
+
   const canDiscardTile = (player) =>
     myHand(player).filter((t) => t !== null).length === 15;
+
   const myDiscardPile = (player) =>
     okeyState.players.find((p) => p.id === player).discardPile;
+
   const drawTile = (player, tile, toIndex) => {
     if (!isMyTurn()) {
       toast("Not your turn");
@@ -228,14 +308,18 @@ export function OkeyProvider({ children }) {
       return;
     }
     const discardIndex = myHand(me).findIndex((h) => h?.id === tile.id);
-    const hand = [...myHand(me)];
+    const hand = cloneDeep(myHand(me));
     hand[discardIndex] = null;
 
     const finished = checkFinished(hand, okeyState.okeyTile);
     if (finished) {
       setOkeyState({
         ...okeyState,
-        message: `player ${me} wins!`,
+        message: `${
+          okeyState.players.find((p) => p.id === okeyState.currentPlayer).user
+            .name
+        } wins!`,
+        gameState: "finish",
       });
     }
   };
@@ -251,18 +335,24 @@ export function OkeyProvider({ children }) {
       });
       return;
     }
-    const newPlayers = filteredPlayers.map((p, index) => ({
-      ...p,
-      hand: dealHand(drawPile, p.id, index),
-    }));
+    const okeyTile = pickOkeyTile(drawPile);
+    const toBeRemoved = [okeyTile];
+    for (let i = 0; i < filteredPlayers.length; i++) {
+      filteredPlayers[i].hand = dealHand(drawPile, filteredPlayers[i].id, i);
+      toBeRemoved.push(...filteredPlayers[i].hand.filter((h) => h !== null));
+    }
+    const startingDrawPile = drawPile.filter(
+      (t) => !toBeRemoved.some((r) => t.id === r.id)
+    );
 
     setOkeyState({
       ...newState,
       gameState: "play",
-      players: newPlayers,
-      okeyTile: pickOkeyTile(drawPile),
-      currentPlayer: newPlayers[0].id,
+      players: filteredPlayers,
+      okeyTile,
+      currentPlayer: filteredPlayers[0].id,
       message: "",
+      drawPile: startingDrawPile,
     });
   };
 

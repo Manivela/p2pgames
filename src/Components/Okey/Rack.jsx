@@ -16,6 +16,7 @@ function Rack({ initialHand, ...props }) {
     isAlreadySitting,
     stand,
     currentUser,
+    me,
   } = useContext(OkeyContext);
   function onDrop(tile, toIndex) {
     if (tile.source.includes("hand")) {
@@ -31,30 +32,34 @@ function Rack({ initialHand, ...props }) {
 
   return (
     <div className="rack" {...props}>
-      <div className="top">
-        {myHand(props.player)
-          .slice(0, 13)
-          .map((tile, index) => (
-            <Slot
-              key={props.player + index}
-              index={index}
-              onDrop={(a, b) => onDrop(a, b)}
-              tile={tile}
-            />
-          ))}
-      </div>
-      <div className="bottom">
-        {myHand(props.player)
-          .slice(13, 26)
-          .map((tile, index) => (
-            <Slot
-              key={props.player + index + 13}
-              index={index + 13}
-              onDrop={onDrop}
-              tile={tile}
-            />
-          ))}
-      </div>
+      {me === props.player && (
+        <>
+          <div className="top">
+            {myHand(props.player)
+              .slice(0, 13)
+              .map((tile, index) => (
+                <Slot
+                  key={props.player + index}
+                  index={index}
+                  onDrop={(a, b) => onDrop(a, b)}
+                  tile={tile}
+                />
+              ))}
+          </div>
+          <div className="bottom">
+            {myHand(props.player)
+              .slice(13, 26)
+              .map((tile, index) => (
+                <Slot
+                  key={props.player + index + 13}
+                  index={index + 13}
+                  onDrop={onDrop}
+                  tile={tile}
+                />
+              ))}
+          </div>
+        </>
+      )}
       <Slot
         type="DISCARD"
         showBorder
@@ -64,12 +69,28 @@ function Rack({ initialHand, ...props }) {
           myDiscardPile(props.player)[myDiscardPile(props.player).length - 1]
         }
         canDiscard={() => isMyTurn(props.player)}
+        style={{
+          transform: props.player !== me ? props.style.transform : undefined,
+        }}
       />
+      <h4
+        className="discardPile"
+        style={{
+          transform: `translate(-200%,-150%) ${
+            props.player !== me ? props.style.transform : ""
+          }`,
+        }}
+      >
+        {myDiscardPile(props.player).length}
+      </h4>
       {sittingPlayer.user ? (
         <h1
           className={`playerName ${
             okeyState.currentPlayer === props.player ? "active" : ""
           }`}
+          style={{
+            transform: props.player !== me ? props.style.transform : undefined,
+          }}
         >
           {sittingPlayer.user.name}{" "}
           {okeyState.gameState !== "play" &&

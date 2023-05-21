@@ -2,8 +2,13 @@ import _ from "lodash";
 import { toast } from "react-hot-toast";
 
 function areNeighbors(a, b) {
+  if ((a.rank === 13 && b.rank === 1) || (a.rank === 1 && b.rank === 13)) {
+    return true;
+  }
+
   return Math.abs(a.rank - b.rank) === 1;
 }
+
 export const checkFinished = (hand, okey) => {
   let finished = true;
   let prevTile = null;

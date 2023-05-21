@@ -92,6 +92,9 @@ function Board() {
         type="DRAW"
         onDrop={finishGame}
       />
+      <h4 className="drawPile" style={{ marginTop: -60, marginLeft: -10 }}>
+        {okeyState.drawPile.length}
+      </h4>
       {okeyState.message && (
         <h1
           className="drawPile"
@@ -117,10 +120,10 @@ function Board() {
           Start Game
         </button>
       )}
-      {okeyState.gameState === "play" && (
+      {okeyState.gameState !== "start" && (
         <button
           className="drawPile"
-          style={{ marginLeft: 150 }}
+          style={{ marginLeft: 150, marginTop: 50 }}
           onClick={resetGame}
         >
           Reset Game
