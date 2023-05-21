@@ -232,25 +232,28 @@ export function OkeyProvider({ children }) {
   };
 
   const startGame = () => {
-    const drawPile = okeyState.drawPile;
-    const filteredPlayers = okeyState.players.filter((p) => p.user !== null);
+    const newState = cloneDeep(okeyState);
+    const drawPile = newState.drawPile;
+    const filteredPlayers = newState.players.filter((p) => p.user !== null);
     if (filteredPlayers.length < 2) {
       setOkeyState({
-        ...okeyState,
+        ...newState,
         message: "not enough players to start the game",
       });
+      return;
     }
-    const newPlayers = [...filteredPlayers].map((p, index) => ({
+    const newPlayers = filteredPlayers.map((p, index) => ({
       ...p,
       hand: dealHand(drawPile, p.id, index),
     }));
 
     setOkeyState({
-      ...okeyState,
+      ...newState,
       gameState: "play",
       players: newPlayers,
       okeyTile: pickOkeyTile(drawPile),
       currentPlayer: newPlayers[0].id,
+      message: "",
     });
   };
 
@@ -259,11 +262,12 @@ export function OkeyProvider({ children }) {
   };
 
   const sit = (player) => {
-    const newPlayers = [...okeyState.players];
+    const newState = cloneDeep(okeyState);
+    const newPlayers = newState.players;
     const seat = newPlayers.find((p) => p.id === player);
     seat.user = currentUser;
     setOkeyState({
-      ...okeyState,
+      ...newState,
       players: newPlayers,
     });
   };
@@ -273,11 +277,12 @@ export function OkeyProvider({ children }) {
   );
 
   const stand = (player) => {
-    const newPlayers = [...okeyState.players];
+    const newState = cloneDeep(okeyState);
+    const newPlayers = newState.players;
     const seat = newPlayers.find((p) => p.id === player);
     seat.user = null;
     setOkeyState({
-      ...okeyState,
+      ...newState,
       players: newPlayers,
       message: `${currentUser.name} left`,
     });
