@@ -5,6 +5,23 @@ import { toast } from "react-hot-toast";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 import { useAuthStore } from "../../hooks/useStore";
+// TODO:
+// reset game sadece oyun bitince gözükçek
+// tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
+// başkasının taşları hiç gözükmesin tahta boş görünsün
+// kendi taşımı başka oyuncunun tahtasına koyabiliyorum olmaması lazım (üstteki bunu düzeltir)
+// taş atma sesi ekleyek
+// 2 tane aynı taş varsa yan yana oynatırken satıyor
+// oyun bitince herkesin elini göster
+// okey taşına bakarken +1 mod 13 yapmak lazım ortada 13 varsa okeyin 1 olması için
+// el biterken komşulara bakan kodun 13 ve 1 içinde çalışması lazım örnek resim var photosda
+// gizlenen taşı oynatınca geri açılıyor
+// taş çekerken başka taşın üstüne çekince öncekinin üzerine yazıyor ya izin vermemesi lazım çekiyorsada yanına koyması lazım
+// player 1 wins yerine adamın adını yaz
+// oyun bitince taşları oynatmaya izin verme
+// milletin isimleri ve attıkları taşlar oyuncuya düzgün görünsün tepetakla gözükmesin
+// aynı taştan 4 tane oldu birşekilde
+// okey ekranında mouse takibi kapat
 
 export const maxHandSize = 26;
 
