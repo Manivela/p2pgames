@@ -1,11 +1,16 @@
 import { useDrag } from "react-dnd";
 import "./tile.css";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { OkeyContext } from "./OkeyContext";
 
 function Tile({ tile, disabled, className, style }) {
+  const { me } = useContext(OkeyContext);
   const [hidden, setHidden] = useState(tile.hidden);
+  const myTile = me && tile.source === `hand-${me}`;
+  const canSee = tile.source.includes("hand-") ? myTile : true;
   function handleClick(e) {
     e.preventDefault();
+    if (!myTile) return;
     setHidden(!hidden);
   }
   const [{ opacity }, dragRef] = useDrag(
@@ -26,7 +31,7 @@ function Tile({ tile, disabled, className, style }) {
       style={{ ...style, color: tile.color, opacity }}
       onContextMenu={handleClick}
     >
-      {!hidden && (
+      {canSee && !hidden && (
         <>
           <div className="rank">{tile.rank}</div>
           <div className="heart">♥</div>

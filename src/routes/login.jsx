@@ -36,7 +36,7 @@ export default function Login() {
           navigate(from || `/${newUser.id}/`, { replace: true });
         }}
       >
-        <input name="username" />
+        <input name="username" defaultValue="yunus" />
         <button type="submit">Go</button>
       </form>
     </div>

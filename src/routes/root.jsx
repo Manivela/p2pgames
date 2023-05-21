@@ -48,6 +48,16 @@ export default function Root() {
                 Minecraft
               </NavLink>
             </li>
+            <li>
+              <NavLink
+                to="okey"
+                className={({ isActive, isPending }) =>
+                  isActive ? "active" : isPending ? "pending" : ""
+                }
+              >
+                Okey
+              </NavLink>
+            </li>
           </ul>
         </nav>
         <div style={{ flexGrow: 1 }} />

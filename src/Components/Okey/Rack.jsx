@@ -4,8 +4,19 @@ import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 
 function Rack({ initialHand, ...props }) {
-  const { isMyTurn, myHand, myDiscardPile, discardTile, swapTile, drawTile } =
-    useContext(OkeyContext);
+  const {
+    isMyTurn,
+    myHand,
+    myDiscardPile,
+    discardTile,
+    swapTile,
+    drawTile,
+    sit,
+    okeyState,
+    isAlreadySitting,
+    stand,
+    currentUser,
+  } = useContext(OkeyContext);
   function onDrop(tile, toIndex) {
     if (tile.source.includes("hand")) {
       swapTile(props.player, tile, toIndex);
@@ -16,6 +27,8 @@ function Rack({ initialHand, ...props }) {
   function onDiscard(tile, index) {
     discardTile(props.player, tile, index);
   }
+  const sittingPlayer = okeyState.players.find((p) => p.id === props.player);
+
   return (
     <div className="rack" {...props}>
       <div className="top">
@@ -52,7 +65,26 @@ function Rack({ initialHand, ...props }) {
         }
         canDiscard={() => isMyTurn(props.player)}
       />
-      <h1>Player {props.player}</h1>
+      {sittingPlayer.user ? (
+        <h1
+          className={`playerName ${
+            okeyState.currentPlayer === props.player ? "active" : ""
+          }`}
+        >
+          {sittingPlayer.user.name}{" "}
+          {okeyState.gameState !== "play" &&
+            sittingPlayer.user.id === currentUser.id && (
+              <button onClick={() => stand(props.player)}>Stand</button>
+            )}
+        </h1>
+      ) : (
+        <h1 className="playerName">
+          Player {props.player}{" "}
+          {!isAlreadySitting && (
+            <button onClick={() => sit(props.player)}>Sit</button>
+          )}
+        </h1>
+      )}
     </div>
   );
 }
