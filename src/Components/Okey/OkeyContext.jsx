@@ -13,14 +13,7 @@ import tile1 from "./assets/tile-1.mp3";
 // tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
 // 2 tane aynı taş varsa yan yana oynatırken satıyor
 // oyun bitince herkesin elini göster
-// okey taşına bakarken +1 mod 13 yapmak lazım ortada 13 varsa okeyin 1 olması için
-// gizlenen taşı oynatınca geri açılıyor
-// taş çekerken başka taşın üstüne çekince öncekinin üzerine yazıyor ya izin vermemesi lazım çekiyorsada yanına koyması lazım
-// player 1 wins yerine adamın adını yaz
 // oyun bitince taşları oynatmaya izin verme
-// milletin isimleri ve attıkları taşlar oyuncuya düzgün görünsün tepetakla gözükmesin
-// aynı taştan 4 tane oldu birşekilde
-// okey ekranında mouse takibi kapat
 // oyunculardan biri çıkınca oyun pause state ine geçip çıkan kişinin koltuktan kalkması lazım yeni birinin oturmasını beklemesi lazım.
 
 export const OkeyContext = createContext({});
@@ -92,7 +85,7 @@ function insertItem(array, toIndex, item) {
   return newArray;
 }
 
-const DEBUG = false;
+const DEBUG = true;
 const debugHand = [
   "black2",
   "black3",
@@ -284,7 +277,7 @@ export function OkeyProvider({ children }) {
     myPlayer.hand = removeItem(myPlayer.hand, tile);
     myPlayer.discardPile = [
       ...myPlayer.discardPile,
-      { ...tile, source: `discard-${player}` },
+      { ...tile, source: `discard-${player}`, hidden: false },
     ];
     newState.currentPlayer = getNextPlayer(
       newState.players,
@@ -311,10 +304,14 @@ export function OkeyProvider({ children }) {
 
     const finished = checkFinished(hand, okeyState.okeyTile);
     if (finished) {
+      const newState = cloneDeep(okeyState);
+      for (const player of newState.players) {
+        player.hand.map((h) => ({ ...h, hidden: false }));
+      }
       setOkeyState({
-        ...okeyState,
+        ...newState,
         message: `${
-          okeyState.players.find((p) => p.id === okeyState.currentPlayer).user
+          newState.players.find((p) => p.id === newState.currentPlayer).user
             .name
         } wins!`,
         gameState: "finish",
@@ -389,6 +386,17 @@ export function OkeyProvider({ children }) {
     (p) => p.user?.id === currentUser.id
   );
 
+  const toggleHidden = (tile) => {
+    const newState = cloneDeep(okeyState);
+    for (const player of newState.players) {
+      const foundTile = player.hand.find((h) => h?.id === tile.id);
+      if (foundTile) foundTile.hidden = !foundTile.hidden;
+    }
+    setOkeyState({
+      ...newState,
+    });
+  };
+
   return (
     <OkeyContext.Provider
       value={{
@@ -409,6 +417,7 @@ export function OkeyProvider({ children }) {
         resetGame,
         me,
         currentUser,
+        toggleHidden,
       }}
     >
       {children}
