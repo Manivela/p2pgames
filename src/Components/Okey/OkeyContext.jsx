@@ -12,9 +12,9 @@ import tile1 from "./assets/tile-1.mp3";
 // TODO:
 // tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
 // 2 tane aynı taş varsa yan yana oynatırken satıyor
-// oyun bitince herkesin elini göster
 // oyun bitince taşları oynatmaya izin verme
 // oyunculardan biri çıkınca oyun pause state ine geçip çıkan kişinin koltuktan kalkması lazım yeni birinin oturmasını beklemesi lazım.
+// bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez
 
 export const OkeyContext = createContext({});
 
@@ -85,7 +85,7 @@ function insertItem(array, toIndex, item) {
   return newArray;
 }
 
-const DEBUG = true;
+const DEBUG = false;
 const debugHand = [
   "black2",
   "black3",
@@ -181,7 +181,7 @@ function getNextPlayer(players, currentPlayer) {
 
 export function OkeyProvider({ children }) {
   const [currentUser] = useAuthStore((state) => [state.currentUser]);
-  const [playBellSound] = useSound(bell, { volume: 0.2 });
+  const [playBellSound] = useSound(bell, { volume: 0.1 });
   const [playTile1Sound] = useSound(tile1, { volume: 0.5 });
 
   const ymap = useMap("okey-state");
