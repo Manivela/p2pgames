@@ -27,12 +27,12 @@ export default function Awareness() {
     }));
   }
   React.useEffect(() => {
+    setLocalState((prevState) => ({
+      color: colors[states.length],
+      ...prevState,
+      user: currentUser,
+    }));
     if (!disabled) {
-      setLocalState((prevState) => ({
-        color: colors[states.length],
-        ...prevState,
-        user: currentUser,
-      }));
       window.addEventListener("pointermove", handlePointerMove);
     }
     return () => window.removeEventListener("pointermove", handlePointerMove);
