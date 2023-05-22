@@ -30,11 +30,11 @@ export const checkFinished = (hand, indicator) => {
       if (
         !(
           currentTile?.color === indicator.color &&
-          currentTile?.rank === (indicator.rank + 1) % 13
+          currentTile?.rank === Math.max((indicator.rank + 1) % 14, 1)
         ) &&
         !(
           prevTile?.color === indicator.color &&
-          prevTile?.rank === (indicator.rank + 1) % 13
+          prevTile?.rank === Math.max((indicator.rank + 1) % 14, 1)
         )
       ) {
         if (

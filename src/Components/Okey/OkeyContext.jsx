@@ -14,7 +14,8 @@ import tile1 from "./assets/tile-1.mp3";
 // 2 tane aynı taş varsa yan yana oynatırken satıyor
 // oyun bitince taşları oynatmaya izin verme
 // oyunculardan biri çıkınca oyun pause state ine geçip çıkan kişinin koltuktan kalkması lazım yeni birinin oturmasını beklemesi lazım.
-// bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez
+// bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez (resim var)
+// biterken attığı taş ortada kalsın gerçekten bittiyse
 
 export const OkeyContext = createContext({});
 
