@@ -16,7 +16,7 @@ export function Player(props) {
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
   });
-  const { setLocalState } = useAwareness(provider.awareness);
+  const { setLocalState, localState } = useAwareness(provider.awareness);
   const { camera } = useThree();
   const { moveForward, moveBackward, moveLeft, moveRight, jump } =
     useKeyboardControls();
@@ -65,12 +65,10 @@ export function Player(props) {
     if (jump && Math.abs(velocity.current[1].toFixed(2)) < 0.05) {
       api.velocity.set(velocity.current[0], 8, velocity.current[2]);
     }
-    if (moveForward || moveBackward || moveLeft || moveRight || jump) {
-      setLocalState((prevState) => ({
-        ...prevState,
-        pos: pos.current,
-      }));
-    }
+    setLocalState((prevState) => ({
+      ...prevState,
+      pos: pos.current,
+    }));
   });
   return (
     <>
