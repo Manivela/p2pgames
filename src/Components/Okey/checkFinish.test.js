@@ -12,6 +12,33 @@ function makeHand(hand) {
 const indicator = createTile("black", 13, 1);
 const okey = createTile("black", 1, 1);
 
+test("black-8 black-9 red-9 can't finish", () => {
+  assert.isFalse(
+    checkFinished(
+      makeHand([
+        createTile("yellow", 6),
+        createTile("blue", 6),
+        createTile("red", 6),
+        null,
+        createTile("black", 8),
+        createTile("black", 9),
+        createTile("red", 9),
+        null,
+        createTile("blue", 13),
+        createTile("blue", 1),
+        createTile("blue", 2),
+        createTile("blue", 3),
+        createTile("blue", 4),
+        null,
+        createTile("red", 12),
+        createTile("yellow", 12),
+        createTile("black", 12),
+      ]),
+      indicator
+    )
+  );
+});
+
 test("1 and 13 counts for series", () => {
   assert.isTrue(
     checkFinished(
