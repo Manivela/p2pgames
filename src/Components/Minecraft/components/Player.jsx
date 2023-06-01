@@ -16,7 +16,7 @@ export function Player(props) {
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
   });
-  const { setLocalState, localState } = useAwareness(provider.awareness);
+  const { setLocalState } = useAwareness(provider.awareness);
   const { camera } = useThree();
   const { moveForward, moveBackward, moveLeft, moveRight, jump } =
     useKeyboardControls();

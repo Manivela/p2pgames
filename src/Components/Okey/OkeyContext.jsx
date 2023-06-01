@@ -1,14 +1,16 @@
 import React, { createContext } from "react";
 import _, { clone, cloneDeep, indexOf } from "lodash";
-import { useMap } from "@joebobmiles/y-react";
+import { useAwareness, useMap, useWebRtc } from "@joebobmiles/y-react";
 import { toast } from "react-hot-toast";
 import useSound from "use-sound";
+import { useParams } from "react-router-dom";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 import { useAuthStore } from "../../hooks/useStore";
 import { createTile, maxHandSize } from "./utils";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
+import { signalingServers } from "../../constants";
 // TODO:
 // tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
 // 2 tane aynı taş varsa yan yana oynatırken satıyor
@@ -16,6 +18,12 @@ import tile1 from "./assets/tile-1.mp3";
 // oyunculardan biri çıkınca oyun pause state ine geçip çıkan kişinin koltuktan kalkması lazım yeni birinin oturmasını beklemesi lazım.
 // bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez (resim var)
 // biterken attığı taş ortada kalsın gerçekten bittiyse
+// 3 kişi olunca yazılar yamuk kalıyor
+// ortadaki göstergeyi havuzdan çıkarmayı unutmuşuz
+// diğer milletin attığı taşı alabilioz
+// süre koyunca çektiyse çektiğini çekmediysede çekip atsın
+// sahte okey eklencek 2 tane
+// oyuncu dc olunca ayağa kaldır
 
 export const OkeyContext = createContext({});
 
@@ -181,14 +189,20 @@ function getNextPlayer(players, currentPlayer) {
 }
 
 export function OkeyProvider({ children }) {
+  const { roomId } = useParams();
+  const provider = useWebRtc(roomId, {
+    signaling: signalingServers,
+  });
+  const { localID } = useAwareness(provider.awareness);
   const [currentUser] = useAuthStore((state) => [state.currentUser]);
   const [playBellSound] = useSound(bell, { volume: 0.1 });
   const [playTile1Sound] = useSound(tile1, { volume: 0.5 });
 
   const ymap = useMap("okey-state");
   let okeyState = ymap.get("game-state");
-  const setOkeyState = (value) =>
-    ymap.set("game-state", { message: "", ...value });
+  const setOkeyState = (value) => {
+    ymap.set("game-state", value);
+  };
   if (okeyState === undefined) {
     setOkeyState(initialState);
     okeyState = initialState;

@@ -24,6 +24,7 @@ export const checkFinished = (hand, indicator) => {
   }
 
   let streak = 0;
+  let sequenceType = null;
   for (const currentTile of hand) {
     if (prevTile && currentTile) {
       streak++;
@@ -35,12 +36,14 @@ export const checkFinished = (hand, indicator) => {
         !(
           prevTile?.color === indicator.color &&
           prevTile?.rank === Math.max((indicator.rank + 1) % 14, 1)
-        )
+        ) &&
+        (sequenceType === "color" || sequenceType === null)
       ) {
         if (
           prevTile.color !== currentTile.color &&
           prevTile.rank !== currentTile.rank
         ) {
+          sequenceType = "color";
           if (streak < 3) {
             finished = false;
             toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
@@ -49,8 +52,10 @@ export const checkFinished = (hand, indicator) => {
           streak = 0;
         } else if (
           !areNeighbors(prevTile, currentTile) &&
-          prevTile.rank !== currentTile.rank
+          prevTile.rank !== currentTile.rank &&
+          (sequenceType === "rank" || sequenceType === null)
         ) {
+          sequenceType = "rank";
           if (streak < 3) {
             finished = false;
             toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
