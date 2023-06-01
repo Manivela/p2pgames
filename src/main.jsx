@@ -53,14 +53,14 @@ const router = createBrowserRouter(
               </React.Suspense>
             }
           />
-          <Route
+          {/* <Route
             path="chat"
             element={
               <React.Suspense fallback={<>...</>}>
                 <Chat />
               </React.Suspense>
             }
-          />
+          /> */}
           <Route
             path="backgammon"
             element={

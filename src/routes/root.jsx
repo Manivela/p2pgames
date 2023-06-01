@@ -19,7 +19,7 @@ export default function Root() {
                 TicTacToe
               </NavLink>
             </li>
-            <li>
+            {/* <li>
               <NavLink
                 to="chat"
                 className={({ isActive, isPending }) =>
@@ -28,7 +28,7 @@ export default function Root() {
               >
                 Chat
               </NavLink>
-            </li>
+            </li> */}
             <li>
               <NavLink
                 to="backgammon"
