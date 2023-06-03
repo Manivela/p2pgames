@@ -77,8 +77,15 @@ function rotateArray(array, x) {
 }
 
 function Board() {
-  const { okeyState, nextDrawTile, finishGame, startGame, myIndex, resetGame } =
-    useContext(OkeyContext);
+  const {
+    okeyState,
+    nextDrawTile,
+    finishGame,
+    startGame,
+    myIndex,
+    resetGame,
+    newGame,
+  } = useContext(OkeyContext);
   const rotatedPlayers =
     myIndex !== -1
       ? rotateArray(okeyState.players, myIndex)
@@ -127,6 +134,15 @@ function Board() {
           onClick={resetGame}
         >
           Reset Game
+        </button>
+      )}
+      {okeyState.gameState !== "start" && (
+        <button
+          className="drawPile"
+          style={{ marginLeft: 150, marginTop: 0 }}
+          onClick={newGame}
+        >
+          New Game
         </button>
       )}
       {rotatedPlayers.map((player, index) => (

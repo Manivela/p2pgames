@@ -15,7 +15,7 @@ demo: https://p2p.yunusgulcu.com/
   - players can't play each others moves.
   - players can use the history feature from the example to continue playing from a move in the past.
   - game is reset if both players leave.
-- message each other using the very basic messaging UI
+- message each other using the very basic messaging UI (disabled for liability concerns)
   - the order of messages should be the same for everyone thanks to the YArray data structure.
   - automatically scrolls when messages start overflowing the container.
 - play the backgammon game made by [Bruno Nunes](https://github.com/bnunesc/react-backgammon) with another person in your room
@@ -30,6 +30,9 @@ demo: https://p2p.yunusgulcu.com/
   - blocks placed by one player will be placed for all players
   - players can remove blocks using the <kbd>Alt</kbd>+<kbd>Click</kbd>
   - you can place other block types by changing the active block type using <kbd>1</kbd>,<kbd>2</kbd>,<kbd>3</kbd>,<kbd>4</kbd>,<kbd>5</kbd> keys
+- play Okey made by me
+  - 2 to 4 players
+  - check wikipedia for the rules
 
 ## FAQ
 
@@ -56,6 +59,12 @@ demo: https://p2p.yunusgulcu.com/
 - we should change the player model from a sphere to a rectangle similar to how minecraft has it to get more accurate movement.
 - ground should be made out of cubes instead of being a special plane to allow players to dig and get the preview when placing a cube.
 - change cube breaking to holding LMB on a cube instead of using the <kbd>alt</kbd> modifier key
+
+### Okey:
+
+- Ask to redistribute the tiles or end the games when no tiles are left
+- Fix css for player names and tiles
+- Add timers and scoring
 
 ## Running locally
 
