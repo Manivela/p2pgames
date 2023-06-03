@@ -186,6 +186,20 @@ function getNextPlayer(players, currentPlayer) {
   return players[nextIndex];
 }
 
+function getPreviousPlayer(players, currentPlayer) {
+  const previousIndex = players.findIndex((p) => p.id === currentPlayer);
+  const numPlayers = players.length;
+  let previousPlayerIndex;
+
+  if (previousIndex === 0) {
+    previousPlayerIndex = numPlayers - 1; // Wrap around to the last player
+  } else {
+    previousPlayerIndex = (previousIndex - 1) % numPlayers;
+  }
+
+  return players[previousPlayerIndex];
+}
+
 export function OkeyProvider({ children }) {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, {
@@ -261,6 +275,14 @@ export function OkeyProvider({ children }) {
     }
     if (!canDrawTile(player)) {
       toast("Can't draw more tiles");
+      return;
+    }
+    if (
+      tile.source.includes("discard") &&
+      tile.source !==
+        `discard-${getPreviousPlayer(okeyState.players, player).id}`
+    ) {
+      toast("Can't draw this tile");
       return;
     }
     const newState = cloneDeep(okeyState);
