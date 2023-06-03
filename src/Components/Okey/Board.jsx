@@ -12,6 +12,8 @@ const playerPositions = [
     bottom: "0px",
     marginLeft: "-358px",
     position: "absolute",
+    discardTransform: "translateY(-30px)",
+    discardCountTransform: "translate(-300%, -150%)",
   },
   {
     top: "50%",
@@ -20,12 +22,17 @@ const playerPositions = [
     marginRight: "-258px",
     marginTop: "-100px",
     transform: "rotate(-90deg)",
+    discardTransform: "translateY(-30px) rotate(90deg)",
+    discardCountTransform: "translate(200%,-150%)",
   },
   {
     left: "50%",
     marginLeft: "-358px",
     position: "absolute",
     transform: "rotate(180deg)",
+    nameTransform: "rotate(180deg)",
+    discardTransform: "translateY(-15px) rotate(180deg)",
+    discardCountTransform: "translate(300%,-330%)",
   },
   {
     top: "50%",
@@ -33,6 +40,8 @@ const playerPositions = [
     marginTop: "-100px",
     position: "absolute",
     transform: "rotate(90deg)",
+    discardTransform: "translate(-30px, -30px) rotate(-90deg)",
+    discardCountTransform: "translate(-200%,-400%)",
   },
 ];
 

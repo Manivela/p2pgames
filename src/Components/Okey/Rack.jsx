@@ -60,36 +60,30 @@ function Rack({ initialHand, ...props }) {
           </div>
         </>
       )}
-      <Slot
-        type="DISCARD"
-        showBorder
-        className="discardPile"
-        onDrop={onDiscard}
-        tile={
-          myDiscardPile(props.player)[myDiscardPile(props.player).length - 1]
-        }
-        canDiscard={() => isMyTurn(props.player)}
-        style={{
-          transform: props.player !== me ? props.style.transform : undefined,
-        }}
-      />
-      <h4
+      <div
         className="discardPile"
         style={{
-          transform: `translate(-200%,-150%) ${
-            props.player !== me ? props.style.transform : ""
-          }`,
+          transform: props.style.discardTransform,
         }}
       >
-        {myDiscardPile(props.player).length}
-      </h4>
+        <h4>{myDiscardPile(props.player).length}</h4>
+        <Slot
+          type="DISCARD"
+          showBorder
+          onDrop={onDiscard}
+          tile={
+            myDiscardPile(props.player)[myDiscardPile(props.player).length - 1]
+          }
+          canDiscard={() => isMyTurn(props.player)}
+        />
+      </div>
       {sittingPlayer.user ? (
         <h1
           className={`playerName ${
             okeyState.currentPlayer === props.player ? "active" : ""
           }`}
           style={{
-            transform: props.player !== me ? props.style.transform : undefined,
+            transform: props.player !== me ? props.style.nameTransform : "",
           }}
         >
           {sittingPlayer.user.name}{" "}
@@ -98,7 +92,13 @@ function Rack({ initialHand, ...props }) {
           )}
         </h1>
       ) : (
-        <h1 className="playerName">
+        <h1
+          className="playerName"
+          style={{
+            transform:
+              props.player !== me ? props.style.nameTransform : undefined,
+          }}
+        >
           Player {props.player}{" "}
           {!isAlreadySitting && (
             <button onClick={() => sit(props.player)}>Sit</button>

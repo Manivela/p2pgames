@@ -48,6 +48,9 @@
   position: absolute;
   top: -100px;
   right: 0px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .playerName {
