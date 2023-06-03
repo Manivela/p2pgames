@@ -12,35 +12,26 @@ import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
 import { signalingServers } from "../../constants";
 // TODO:
-// tuttuğun taşı atsın ilk bulduğunu değil (removeitem yanlış taşı bulup siliyor)
-// 2 tane aynı taş varsa yan yana oynatırken satıyor
 // oyun bitince taşları oynatmaya izin verme
-// oyunculardan biri çıkınca oyun pause state ine geçip çıkan kişinin koltuktan kalkması lazım yeni birinin oturmasını beklemesi lazım.
 // bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez (resim var)
 // biterken attığı taş ortada kalsın gerçekten bittiyse
 // 3 kişi olunca yazılar yamuk kalıyor
-// ortadaki göstergeyi havuzdan çıkarmayı unutmuşuz
 // diğer milletin attığı taşı alabilioz
 // süre koyunca çektiyse çektiğini çekmediysede çekip atsın
-// sahte okey eklencek 2 tane
-// oyuncu dc olunca ayağa kaldır
+// taşlar bitince seçenek sun oyunu bitir yada karıştır devam et diye
 
 export const OkeyContext = createContext({});
 
 function removeItem(array, tile) {
-  const fromIndex = array.findIndex((h) => h?.id === tile.id);
-  const newArray = [...array]; // Create a new array using the spread operator
-
-  // Swap the items in the new array
+  const newArray = [...array];
+  const fromIndex = newArray.findIndex((h) => h?.id === tile.id);
   newArray[fromIndex] = null;
 
   return newArray;
 }
 
 function swapItems(array, fromIndex, toIndex) {
-  const newArray = [...array]; // Create a new array using the spread operator
-
-  // Swap the items in the new array
+  const newArray = [...array];
   [newArray[fromIndex], newArray[toIndex]] = [
     newArray[toIndex],
     newArray[fromIndex],
@@ -48,6 +39,7 @@ function swapItems(array, fromIndex, toIndex) {
 
   return newArray;
 }
+
 function insertItem(array, toIndex, item) {
   const newArray = [...array];
   if (newArray[toIndex] === null) {
@@ -145,7 +137,9 @@ for (let i = 0; i < 2; i++) {
   colors.forEach((color) =>
     ranks.forEach((rank) => tiles.push(createTile(color, rank, i)))
   );
+  tiles.push(createTile("yellow", "👌", i));
 }
+
 const initialState = {
   gameState: "start",
   drawPile: _.shuffle(tiles).map((t) => ({ ...t, hidden: true })),
@@ -155,24 +149,28 @@ const initialState = {
     {
       id: 1,
       user: null,
+      userKey: null,
       hand: [],
       discardPile: [],
     },
     {
       id: 2,
       user: null,
+      userKey: null,
       hand: [],
       discardPile: [],
     },
     {
       id: 3,
       user: null,
+      userKey: null,
       hand: [],
       discardPile: [],
     },
     {
       id: 4,
       user: null,
+      userKey: null,
       hand: [],
       discardPile: [],
     },
@@ -193,13 +191,13 @@ export function OkeyProvider({ children }) {
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
   });
-  const { localID } = useAwareness(provider.awareness);
+  const { states, localID } = useAwareness(provider.awareness);
   const [currentUser] = useAuthStore((state) => [state.currentUser]);
   const [playBellSound] = useSound(bell, { volume: 0.1 });
   const [playTile1Sound] = useSound(tile1, { volume: 0.5 });
-
   const ymap = useMap("okey-state");
   let okeyState = ymap.get("game-state");
+
   const setOkeyState = (value) => {
     ymap.set("game-state", value);
   };
@@ -207,6 +205,27 @@ export function OkeyProvider({ children }) {
     setOkeyState(initialState);
     okeyState = initialState;
   }
+
+  const allTiles = [
+    ...okeyState.drawPile.filter((tile) => tile !== null),
+    ...(okeyState.okeyTile ? [okeyState.okeyTile] : []),
+    ...okeyState.players.flatMap((player) =>
+      player.hand.filter((tile) => tile !== null)
+    ),
+    ...okeyState.players.flatMap((player) =>
+      player.discardPile.filter((tile) => tile !== null)
+    ),
+  ];
+
+  const duplicates = _(allTiles)
+    .groupBy("name")
+    .filter((group) => group.length > 2)
+    .value();
+  if (duplicates.length > 0) {
+    toast.error("Duplicate tile detected");
+    console.warn("duplicates:", duplicates);
+  }
+
   const nextDrawTile = okeyState.drawPile[okeyState.drawPile.length - 1];
 
   const me = okeyState.players.find((p) => p.user?.id === currentUser.id)?.id;
@@ -347,13 +366,16 @@ export function OkeyProvider({ children }) {
     }
     const okeyTile = pickOkeyTile(drawPile);
     const toBeRemoved = [okeyTile];
+    const iteratee = (t) => !toBeRemoved.some((r) => t.id === r.id);
     for (let i = 0; i < filteredPlayers.length; i++) {
-      filteredPlayers[i].hand = dealHand(drawPile, filteredPlayers[i].id, i);
+      filteredPlayers[i].hand = dealHand(
+        drawPile.filter(iteratee),
+        filteredPlayers[i].id,
+        i
+      );
       toBeRemoved.push(...filteredPlayers[i].hand.filter((h) => h !== null));
     }
-    const startingDrawPile = drawPile.filter(
-      (t) => !toBeRemoved.some((r) => t.id === r.id)
-    );
+    const startingDrawPile = drawPile.filter(iteratee);
 
     setOkeyState({
       ...newState,
@@ -370,14 +392,27 @@ export function OkeyProvider({ children }) {
     setOkeyState(initialState);
   };
 
+  const newGame = () => {
+    setOkeyState({
+      ...initialState,
+      players: okeyState.players.map((p) => ({
+        ...p,
+        discardPile: [],
+        hand: [],
+      })),
+    });
+  };
+
   const sit = (player) => {
     const newState = cloneDeep(okeyState);
     const newPlayers = newState.players;
     const seat = newPlayers.find((p) => p.id === player);
     seat.user = currentUser;
+    seat.userKey = localID;
     setOkeyState({
       ...newState,
       players: newPlayers,
+      message: "",
     });
   };
 
@@ -389,13 +424,23 @@ export function OkeyProvider({ children }) {
     const newState = cloneDeep(okeyState);
     const newPlayers = newState.players;
     const seat = newPlayers.find((p) => p.id === player);
+    const userName = seat.user.name;
     seat.user = null;
+    seat.userKey = null;
     setOkeyState({
       ...newState,
       players: newPlayers,
-      message: `${currentUser.name} left`,
+      message: `${userName} left`,
     });
   };
+
+  React.useEffect(() => {
+    okeyState.players.forEach((p) => {
+      if (p.userKey && !states.has(p.userKey)) {
+        stand(p.id);
+      }
+    });
+  }, [states.size]);
 
   const myIndex = okeyState.players.findIndex(
     (p) => p.user?.id === currentUser.id
@@ -430,6 +475,7 @@ export function OkeyProvider({ children }) {
         isAlreadySitting,
         myIndex,
         resetGame,
+        newGame,
         me,
         currentUser,
         toggleHidden,

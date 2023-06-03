@@ -12,6 +12,33 @@ function makeHand(hand) {
 const indicator = createTile("black", 13, 1);
 const okey = createTile("black", 1, 1);
 
+test("can finish with fake okey", () => {
+  assert.isTrue(
+    checkFinished(
+      makeHand([
+        createTile("yellow", 6),
+        createTile("blue", 6),
+        createTile("red", 6),
+        null,
+        createTile("black", 11),
+        createTile("black", 12),
+        createTile("yellow", "👌"),
+        null,
+        createTile("blue", 1),
+        createTile("blue", 2),
+        createTile("blue", 3),
+        createTile("blue", 4),
+        createTile("blue", 5),
+        null,
+        createTile("red", 12),
+        createTile("yellow", 12),
+        createTile("black", 12),
+      ]),
+      indicator
+    )
+  );
+});
+
 test("black-8 black-9 red-9 can't finish", () => {
   assert.isFalse(
     checkFinished(
@@ -21,6 +48,33 @@ test("black-8 black-9 red-9 can't finish", () => {
         createTile("red", 6),
         null,
         createTile("black", 8),
+        createTile("black", 9),
+        createTile("red", 9),
+        null,
+        createTile("blue", 1),
+        createTile("blue", 2),
+        createTile("blue", 3),
+        createTile("blue", 4),
+        createTile("blue", 5),
+        null,
+        createTile("red", 12),
+        createTile("yellow", 12),
+        createTile("black", 12),
+      ]),
+      indicator
+    )
+  );
+});
+
+test("13 1 2 can't finish", () => {
+  assert.isFalse(
+    checkFinished(
+      makeHand([
+        createTile("yellow", 6),
+        createTile("blue", 6),
+        createTile("red", 6),
+        null,
+        createTile("yellow", 9),
         createTile("black", 9),
         createTile("red", 9),
         null,

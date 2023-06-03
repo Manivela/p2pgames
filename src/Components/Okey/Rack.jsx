@@ -93,10 +93,9 @@ function Rack({ initialHand, ...props }) {
           }}
         >
           {sittingPlayer.user.name}{" "}
-          {okeyState.gameState !== "play" &&
-            sittingPlayer.user.id === currentUser.id && (
-              <button onClick={() => stand(props.player)}>Stand</button>
-            )}
+          {sittingPlayer.user.id === currentUser.id && (
+            <button onClick={() => stand(props.player)}>Stand</button>
+          )}
         </h1>
       ) : (
         <h1 className="playerName">

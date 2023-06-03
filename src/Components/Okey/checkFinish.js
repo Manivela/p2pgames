@@ -10,10 +10,14 @@ function areNeighbors(a, b) {
 }
 
 export const checkFinished = (hand, indicator) => {
+  // replace fake okey's with indicator
+  const replacedHand = hand.map((item) =>
+    item?.rank === "👌" ? indicator : item
+  );
   let finished = true;
   let prevTile = null;
   // check doubles
-  const filteredHand = hand.filter((h) => h !== null);
+  const filteredHand = replacedHand.filter((h) => h !== null);
   const groupedByProperties = _.groupBy(
     filteredHand,
     (item) => `${item.color}-${item.rank}`
@@ -25,9 +29,11 @@ export const checkFinished = (hand, indicator) => {
 
   let streak = 0;
   let sequenceType = null;
-  for (const currentTile of hand) {
+  let thirteen = false;
+  for (const currentTile of replacedHand) {
     if (prevTile && currentTile) {
       streak++;
+      // okey is good anywhere so continue
       if (
         !(
           currentTile?.color === indicator.color &&
@@ -36,32 +42,46 @@ export const checkFinished = (hand, indicator) => {
         !(
           prevTile?.color === indicator.color &&
           prevTile?.rank === Math.max((indicator.rank + 1) % 14, 1)
-        ) &&
-        (sequenceType === "color" || sequenceType === null)
+        )
       ) {
         if (
           prevTile.color !== currentTile.color &&
-          prevTile.rank !== currentTile.rank
+          prevTile.rank === currentTile.rank
         ) {
+          if (sequenceType === "rank" && streak < 3) {
+            finished = false;
+            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
+            break;
+          }
+          // going for colors
           sequenceType = "color";
-          if (streak < 3) {
-            finished = false;
-            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
-            break;
-          }
-          streak = 0;
+          thirteen = false;
         } else if (
-          !areNeighbors(prevTile, currentTile) &&
-          prevTile.rank !== currentTile.rank &&
-          (sequenceType === "rank" || sequenceType === null)
+          prevTile.color === currentTile.color &&
+          areNeighbors(prevTile, currentTile)
         ) {
+          if (
+            (sequenceType === "color" && streak < 3) ||
+            (thirteen && currentTile.rank === 2)
+          ) {
+            finished = false;
+            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
+            break;
+          }
+          // going for sequence
           sequenceType = "rank";
+          if (prevTile.rank === 13) {
+            thirteen = true;
+          }
+        } else {
           if (streak < 3) {
             finished = false;
             toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
             break;
           }
           streak = 0;
+          sequenceType = null;
+          thirteen = false;
         }
       }
     } else {
@@ -71,6 +91,8 @@ export const checkFinished = (hand, indicator) => {
         break;
       }
       streak = 0;
+      sequenceType = null;
+      thirteen = false;
     }
     prevTile = currentTile;
   }
