@@ -216,7 +216,6 @@ export function OkeyProvider({ children }) {
     ymap.set("game-state", value);
   };
   if (okeyState === undefined) {
-    setOkeyState(initialState);
     okeyState = initialState;
   }
 
