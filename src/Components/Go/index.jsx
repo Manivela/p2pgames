@@ -1,4 +1,3 @@
-import { useState } from "react";
 import toast from "react-hot-toast";
 import { useMap } from "@joebobmiles/y-react";
 import Board from "./Board";
@@ -32,13 +31,33 @@ export default function Go() {
     setBoardState(boardState);
   }
 
-  const [previousBoardState, setPreviousBoardState] = useState(boardState);
+  let previousBoardState = ymap.get("previousBoardState");
+  const setPreviousBoardState = (value) =>
+    ymap.set("previousBoardState", value);
+  if (previousBoardState === undefined) {
+    previousBoardState = boardState;
+    setPreviousBoardState(previousBoardState);
+  }
 
   let player = ymap.get("player");
   const setPlayer = (value) => ymap.set("player", value);
   if (player === undefined) {
     player = 1;
     setPlayer(player);
+  }
+
+  let blackCaptured = ymap.get("blackCaptured");
+  const setBlackCaptured = (value) => ymap.set("blackCaptured", value);
+  if (blackCaptured === undefined) {
+    blackCaptured = 0;
+    setBlackCaptured(blackCaptured);
+  }
+
+  let whiteCaptured = ymap.get("whiteCaptured");
+  const setWhiteCaptured = (value) => ymap.set("whiteCaptured", value);
+  if (whiteCaptured === undefined) {
+    whiteCaptured = 0;
+    setWhiteCaptured(whiteCaptured);
   }
 
   let passed = ymap.get("passed");
@@ -66,6 +85,8 @@ export default function Go() {
     setPlayer(1);
     setPassed(0);
     setGameState(0);
+    setBlackCaptured(0);
+    setWhiteCaptured(0);
   }
   let users = ymap.get("users");
   const setUsers = (value) => {
@@ -131,6 +152,8 @@ export default function Go() {
           setBoardState(tempBoardState);
           setPlayer(otherPlayer);
           setPassed(0);
+          setBlackCaptured(blackCaptured + captures.blackCaptured);
+          setWhiteCaptured(whiteCaptured + captures.whiteCaptured);
         } else {
           toast(
             "Invalid move. No stone may be played so as to recreate a former board position."
@@ -197,7 +220,7 @@ export default function Go() {
       >
         <button onClick={resetGame}>Reset Game</button>
         <div>
-          black: {users.black?.name || "-"}
+          black: {users.black?.name || "-"} ({blackCaptured})
           {users.black && users.black.id === currentUser.id && (
             <button
               style={{ marginLeft: 8 }}
@@ -208,7 +231,7 @@ export default function Go() {
               leave
             </button>
           )}{" "}
-          / white: {users.white?.name || "-"}
+          / white: {users.white?.name || "-"} ({whiteCaptured})
           {users.white && users.white.id === currentUser.id && (
             <button
               style={{ marginLeft: 8 }}
