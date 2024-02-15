@@ -196,6 +196,30 @@ export default function Go() {
         }}
       >
         <button onClick={resetGame}>Reset Game</button>
+        <div>
+          black: {users.black?.name || "-"}
+          {users.black && users.black.id === currentUser.id && (
+            <button
+              style={{ marginLeft: 8 }}
+              onClick={() => {
+                setUsers({ ...users, black: null });
+              }}
+            >
+              leave
+            </button>
+          )}{" "}
+          / white: {users.white?.name || "-"}
+          {users.white && users.white.id === currentUser.id && (
+            <button
+              style={{ marginLeft: 8 }}
+              onClick={() => {
+                setUsers({ ...users, white: null });
+              }}
+            >
+              leave
+            </button>
+          )}
+        </div>
       </div>
       {gameState !== 0 && (
         <div
