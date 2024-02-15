@@ -4,6 +4,17 @@ function Credits() {
   const isTicTacToe = useMatch("/:roomId/tictactoe");
   const isMinecraft = useMatch("/:roomId/minecraft");
   const isBackgammon = useMatch("/:roomId/backgammon");
+  const isOkey = useMatch("/:roomId/okey");
+  if (isOkey) {
+    return (
+      <div style={{ flexDirection: "column" }}>
+        Sound Effects from{" "}
+        <a href="https://pixabay.com/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=102855">
+          Pixabay
+        </a>
+      </div>
+    );
+  }
   if (isBackgammon) {
     return (
       <div style={{ flexDirection: "column" }}>

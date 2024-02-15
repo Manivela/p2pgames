@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import Awareness from "../Components/Awareness";
 import Credits from "../Components/Credits";
 
@@ -18,7 +19,7 @@ export default function Root() {
                 TicTacToe
               </NavLink>
             </li>
-            <li>
+            {/* <li>
               <NavLink
                 to="chat"
                 className={({ isActive, isPending }) =>
@@ -27,7 +28,7 @@ export default function Root() {
               >
                 Chat
               </NavLink>
-            </li>
+            </li> */}
             <li>
               <NavLink
                 to="backgammon"
@@ -48,9 +49,27 @@ export default function Root() {
                 Minecraft
               </NavLink>
             </li>
+            <li>
+              <NavLink
+                to="okey"
+                className={({ isActive, isPending }) =>
+                  isActive ? "active" : isPending ? "pending" : ""
+                }
+              >
+                Okey
+              </NavLink>
+            </li>
           </ul>
         </nav>
         <div style={{ flexGrow: 1 }} />
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success("Copied!");
+          }}
+        >
+          Share Link
+        </button>
         <Credits />
         <Awareness />
       </div>

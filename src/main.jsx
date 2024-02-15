@@ -13,6 +13,7 @@ import ErrorPage from "./error-page";
 import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
+import Okey from "./Components/Okey";
 
 const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
 const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
@@ -61,19 +62,27 @@ const router = createBrowserRouter(
               </React.Suspense>
             }
           />
-          <Route
+          {/* <Route
             path="chat"
             element={
               <React.Suspense fallback={<>...</>}>
                 <Chat />
               </React.Suspense>
             }
-          />
+          /> */}
           <Route
             path="backgammon"
             element={
               <React.Suspense fallback={<>...</>}>
                 <Backgammon />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="okey"
+            element={
+              <React.Suspense fallback={<>...</>}>
+                <Okey />
               </React.Suspense>
             }
           />
