@@ -30,9 +30,12 @@ demo: https://p2p.yunusgulcu.com/
   - blocks placed by one player will be placed for all players
   - players can remove blocks using the <kbd>Alt</kbd>+<kbd>Click</kbd>
   - you can place other block types by changing the active block type using <kbd>1</kbd>,<kbd>2</kbd>,<kbd>3</kbd>,<kbd>4</kbd>,<kbd>5</kbd> keys
-- play Okey made by me
+- play Okey made by [me](https://github.com/Manivela)
   - 2 to 4 players
-  - check wikipedia for the rules
+  - check [wikipedia](https://en.wikipedia.org/wiki/Okey) for the rules
+- play Go made by [me](https://github.com/Manivela)
+  - 2 players
+  - check [wikipedia](https://en.wikipedia.org/wiki/Rules_of_Go) for the rules
 
 ## FAQ
 
