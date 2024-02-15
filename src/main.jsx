@@ -17,15 +17,17 @@ import Okey from "./Components/Okey";
 
 const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
 const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
-const Chat = React.lazy(() => import("./Components/Chat"));
+// const Chat = React.lazy(() => import("./Components/Chat"));
 const Backgammon = React.lazy(() =>
   import("./Components/Backgammon/containers/App")
 );
+const Go = React.lazy(() => import("./Components/Go"));
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route errorElement={<ErrorPage />}>
       <Route path="/" element={<Login />} />
+      {/* <Route path="/" element={<Login />} /> */}
       <Route path="/login" element={<Login />} />
       <Route
         path="/:roomId/"
@@ -74,6 +76,14 @@ const router = createBrowserRouter(
             element={
               <React.Suspense fallback={<>...</>}>
                 <Okey />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="go"
+            element={
+              <React.Suspense fallback={<>...</>}>
+                <Go />
               </React.Suspense>
             }
           />

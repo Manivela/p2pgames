@@ -59,6 +59,16 @@ export default function Root() {
                 Okey
               </NavLink>
             </li>
+            <li>
+              <NavLink
+                to="go"
+                className={({ isActive, isPending }) =>
+                  isActive ? "active" : isPending ? "pending" : ""
+                }
+              >
+                Go
+              </NavLink>
+            </li>
           </ul>
         </nav>
         <div style={{ flexGrow: 1 }} />
