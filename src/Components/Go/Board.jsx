@@ -1,24 +1,25 @@
 import React from "react";
-import { BOARD_SIZE, getNextPlayer } from ".";
+import { BOARD_SIZE } from ".";
 
-const bigPoints = [
-  [3, 3],
-  [3, 9],
-  [3, 15],
-  [9, 3],
-  [9, 9],
-  [9, 15],
-  [15, 3],
-  [15, 9],
-  [15, 15],
-];
-
-function Board({ boardState, handleIntersectionClick }) {
-  const baseBoardWidth = 1080; // Change this value to adjust the board width
+function Board({ player, boardState, handleIntersectionClick }) {
+  const bigPoints =
+    BOARD_SIZE === 19
+      ? [
+          [3, 3],
+          [3, 9],
+          [3, 15],
+          [9, 3],
+          [9, 9],
+          [9, 15],
+          [15, 3],
+          [15, 9],
+          [15, 15],
+        ]
+      : [];
+  const baseBoardWidth = BOARD_SIZE === 19 ? 1000 : 500; // Change this value to adjust the board width
   const cellSize = baseBoardWidth / (BOARD_SIZE - 1);
   const padding = cellSize * 1.5;
   const boardWidth = baseBoardWidth + 2 * padding; // Change this value to adjust the board width
-  const nextPlayer = getNextPlayer(boardState);
 
   const renderVerticalLines = () => {
     const lines = [];
@@ -88,11 +89,11 @@ function Board({ boardState, handleIntersectionClick }) {
               key={`dot-empty-handle-${i}-${j}`}
               cx={padding + cellSize * j}
               cy={padding + cellSize * i}
-              fill={nextPlayer === 1 ? "black" : "white"}
+              fill={player === 1 ? "black" : "white"}
               r={25}
               opacity={0}
               onClick={() => {
-                handleIntersectionClick(i, j, nextPlayer);
+                handleIntersectionClick(i, j);
               }}
               onMouseMove={(event) => {
                 // Set the radius to 10 when the mouse is over the circle
