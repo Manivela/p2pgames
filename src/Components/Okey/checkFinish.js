@@ -12,7 +12,9 @@ function areNeighbors(a, b) {
 export const checkFinished = (hand, indicator) => {
   // replace fake okey's with indicator
   const replacedHand = hand.map((item) =>
-    item?.rank === "👌" ? indicator : item
+    item?.rank === "👌"
+      ? { ...indicator, rank: Math.max((indicator.rank + 1) % 14, 1) }
+      : item,
   );
   let finished = true;
   let prevTile = null;
@@ -20,7 +22,7 @@ export const checkFinished = (hand, indicator) => {
   const filteredHand = replacedHand.filter((h) => h !== null);
   const groupedByProperties = _.groupBy(
     filteredHand,
-    (item) => `${item.color}-${item.rank}`
+    (item) => `${item.color}-${item.rank}`,
   );
   if (_.every(groupedByProperties, (g) => g.length === 2)) {
     // valid doubles hand
