@@ -20,9 +20,9 @@ test("can finish with fake okey", () => {
         createTile("blue", 6),
         createTile("red", 6),
         null,
-        createTile("black", 11),
-        createTile("black", 12),
         createTile("yellow", "👌"),
+        createTile("black", 2),
+        createTile("black", 3),
         null,
         createTile("blue", 1),
         createTile("blue", 2),
@@ -34,8 +34,8 @@ test("can finish with fake okey", () => {
         createTile("yellow", 12),
         createTile("black", 12),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -61,8 +61,8 @@ test("black-8 black-9 red-9 can't finish", () => {
         createTile("yellow", 12),
         createTile("black", 12),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -88,8 +88,8 @@ test("13 1 2 can't finish", () => {
         createTile("yellow", 12),
         createTile("black", 12),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -115,8 +115,8 @@ test("1 and 13 counts for series", () => {
         createTile("black", 13),
         createTile("yellow", 13),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -139,8 +139,8 @@ test("pairs and unfinished series combined can't win", () => {
         createTile("red", 5),
         createTile("red", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -163,8 +163,8 @@ test("pairs and unfinished series combined can't win with okey", () => {
         createTile("red", 5),
         okey,
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -187,8 +187,8 @@ test("pairs and series combined can't win", () => {
         createTile("red", 5),
         createTile("red", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -211,8 +211,8 @@ test("pairs and series combined can't win with okey", () => {
         createTile("red", 5),
         createTile("red", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -235,8 +235,8 @@ test("pairs can win", () => {
         createTile("blue", 11, 1),
         createTile("blue", 11, 2),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -259,8 +259,8 @@ test("same color sequences and multiple colors can win with okey", () => {
         createTile("yellow", 3),
         createTile("blue", 3),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -283,8 +283,8 @@ test("same color sequences and multiple colors can win", () => {
         createTile("yellow", 3),
         createTile("blue", 3),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -307,8 +307,8 @@ test("same color sequences can win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -331,8 +331,8 @@ test("same color sequences can win with okey", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -355,8 +355,8 @@ test("same color sequences can win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -381,8 +381,8 @@ test("sequence of 2 can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -405,8 +405,8 @@ test("sequence of 2 without spaces can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -429,8 +429,8 @@ test("alternating colors can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -453,8 +453,8 @@ test("different color sequences can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
 
@@ -477,7 +477,7 @@ test("different color sequences can't win", () => {
         createTile("yellow", 5),
         createTile("yellow", 6),
       ]),
-      indicator
-    )
+      indicator,
+    ),
   );
 });
