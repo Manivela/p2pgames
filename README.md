@@ -69,6 +69,10 @@ demo: https://p2p.yunusgulcu.com/
 - Fix css for player names and tiles
 - Add timers and scoring
 
+### GO:
+
+- One side puts down a stone that would take their own group of stones, but it doesn't update until the other side plays.
+
 ## Running locally
 
 - `npm install`
