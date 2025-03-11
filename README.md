@@ -2,14 +2,14 @@
 
 Collection of games modified to work over webRTC using [YJS](https://github.com/yjs/yjs) (and peerJS on the [peerjs](https://github.com/Manivela/p2pgames/tree/peerjs) branch)
 
-demo: https://p2p.yunusgulcu.com/
+demo: <https://p2p.yunusgulcu.com/>
 
-### Features:
+### Features
 
 - You are given a room if you just visit the demo page. you can share this room link with your friends to let them join the same room.
 - See each others cursors using the YJS awareness api
 - See a list of all users in the current room
-- play TicTacToe using the example project from the react team https://reactjs.org/tutorial/tutorial.html
+- play TicTacToe using the example project from the react team <https://reactjs.org/tutorial/tutorial.html>
   - players are assigned when they play a move.
   - players can leave and let another player continue.
   - players can't play each others moves.
@@ -49,27 +49,30 @@ demo: https://p2p.yunusgulcu.com/
 
 ## Known bugs and improvements
 
-### Backgammon:
+### Backgammon
 
 - p2 can roll the dice for p1 on "No moves available" state
 - p2 can undo for p1
 - p2 sees the board from the same perspective as p1 which could be confusing, it should probably be flipped for p2 so both players try to go to the bottom right (similar to how you would see if you were sitting across each other on a real board)
 - Sound effects can be added for when it's a players turn or when someone rolls the dice
 
-### Minecraft:
+### Minecraft
 
 - other players movement isn't very natural we should use physics to move players instead of setting their positions this would also enable doing player collisions.
 - we should change the player model from a sphere to a rectangle similar to how minecraft has it to get more accurate movement.
 - ground should be made out of cubes instead of being a special plane to allow players to dig and get the preview when placing a cube.
 - change cube breaking to holding LMB on a cube instead of using the <kbd>alt</kbd> modifier key
 
-### Okey:
+### Okey
 
 - Ask to redistribute the tiles or end the games when no tiles are left
 - Fix css for player names and tiles
 - Add timers and scoring
+- if there is a connection issue tile from the middle can be seen before it goes back
+- Add a way to move whole groups of tiles at once
+- Possible memory leak, animations stopped working after a while and Chrome crashed
 
-### GO:
+### GO
 
 - One side puts down a stone that would take their own group of stones, but it doesn't update until the other side plays.
 
