@@ -1,12 +1,17 @@
 {
-  "extends": ["airbnb", "prettier"],
-  "plugins": ["prettier"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "prettier",
+  ],
+  "plugins": ["prettier", "react", "react-hooks"],
   "rules": {
     "prettier/prettier": [
       "error",
       {
-        "endOfLine": "auto"
-      }
+        "endOfLine": "auto",
+      },
     ],
     "react/react-in-jsx-scope": "off",
     "no-console": "off",
@@ -15,7 +20,7 @@
     "import/prefer-default-export": "off",
     "react/button-has-type": "off",
     "react/prop-types": "off",
-    "no-unused-vars": "off",
+    "no-unused-vars": "warn",
     "react/jsx-no-constructed-context-values": "off",
     "import/no-cycle": "off",
     "no-plusplus": "off",
@@ -40,17 +45,16 @@
     "no-continue": "off",
     "no-param-reassign": "off",
     "no-loop-func": "off",
-    "no-constant-condition": "off"
+    "no-constant-condition": "off",
+    "comma-dangle": "off",
   },
   "env": {
-    "browser": true
+    "browser": true,
+    "es2021": true,
   },
-  "parser": "@babel/eslint-parser",
-  "parserOptions": {
-    "ecmaVersion": 8,
-    "requireConfigFile": false,
-    "babelOptions": {
-      "presets": ["@babel/preset-react"]
-    }
-  }
+  "settings": {
+    "react": {
+      "version": "detect",
+    },
+  },
 }

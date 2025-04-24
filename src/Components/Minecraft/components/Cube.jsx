@@ -5,7 +5,7 @@ import * as textures from "../textures";
 import { useStore } from "../hooks/useStore";
 
 function Cube({ position, texture, addCube: addCubeProp, removeCube }) {
-  const [activeTexture] = useStore((state) => [state.texture]);
+  const activeTexture = useStore((state) => state.texture);
   const [hover, setHover] = useState(null);
   const addCube = (x, y, z) => addCubeProp(x, y, z, activeTexture);
   const [ref] = useBox(() => ({
@@ -17,6 +17,7 @@ function Cube({ position, texture, addCube: addCubeProp, removeCube }) {
   return (
     <mesh
       castShadow
+      receiveShadow
       ref={ref}
       onPointerMove={(e) => {
         e.stopPropagation();

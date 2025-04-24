@@ -1,3 +1,4 @@
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
 import { useMap } from "@joebobmiles/y-react";
 import Board from "./Board";
@@ -23,62 +24,158 @@ function initializeBoard() {
 
 export default function Go() {
   const ymap = useMap("go-state");
+  const currentUser = useAuthStore((state) => state.currentUser);
 
-  let boardState = ymap.get("boardState");
-  const setBoardState = (value) => ymap.set("boardState", value);
-  if (boardState === undefined) {
-    boardState = initializeBoard();
-    setBoardState(boardState);
-  }
+  // Get values from ymap directly in the component render
+  const boardStateFromMap = ymap.get("boardState");
+  const previousBoardStateFromMap = ymap.get("previousBoardState");
+  const playerFromMap = ymap.get("player");
+  const blackCapturedFromMap = ymap.get("blackCaptured");
+  const whiteCapturedFromMap = ymap.get("whiteCaptured");
+  const passedFromMap = ymap.get("passed");
+  const gameStateFromMap = ymap.get("gameState");
+  const usersFromMap = ymap.get("users");
 
-  let previousBoardState = ymap.get("previousBoardState");
-  const setPreviousBoardState = (value) =>
-    ymap.set("previousBoardState", value);
-  if (previousBoardState === undefined) {
-    previousBoardState = boardState;
-    setPreviousBoardState(previousBoardState);
-  }
+  // Local state as fallback when ymap values aren't available
+  const [boardState, setBoardStateLocal] = useState(
+    boardStateFromMap || initializeBoard(),
+  );
+  const [previousBoardState, setPreviousBoardStateLocal] = useState(
+    previousBoardStateFromMap || boardState,
+  );
+  const [player, setPlayerLocal] = useState(playerFromMap || 1);
+  const [blackCaptured, setBlackCapturedLocal] = useState(
+    blackCapturedFromMap || 0,
+  );
+  const [whiteCaptured, setWhiteCapturedLocal] = useState(
+    whiteCapturedFromMap || 0,
+  );
+  const [passed, setPassedLocal] = useState(passedFromMap || 0);
+  const [gameState, setGameStateLocal] = useState(gameStateFromMap || 0);
+  const [users, setUsersLocal] = useState(
+    usersFromMap || { black: null, white: null },
+  );
 
-  let player = ymap.get("player");
-  const setPlayer = (value) => ymap.set("player", value);
-  if (player === undefined) {
-    player = 1;
-    setPlayer(player);
-  }
+  // Update local state when ymap values change
+  useEffect(() => {
+    if (boardStateFromMap) setBoardStateLocal(boardStateFromMap);
+  }, [boardStateFromMap]);
 
-  let blackCaptured = ymap.get("blackCaptured");
-  const setBlackCaptured = (value) => ymap.set("blackCaptured", value);
-  if (blackCaptured === undefined) {
-    blackCaptured = 0;
-    setBlackCaptured(blackCaptured);
-  }
+  useEffect(() => {
+    if (previousBoardStateFromMap)
+      setPreviousBoardStateLocal(previousBoardStateFromMap);
+  }, [previousBoardStateFromMap]);
 
-  let whiteCaptured = ymap.get("whiteCaptured");
-  const setWhiteCaptured = (value) => ymap.set("whiteCaptured", value);
-  if (whiteCaptured === undefined) {
-    whiteCaptured = 0;
-    setWhiteCaptured(whiteCaptured);
-  }
+  useEffect(() => {
+    if (playerFromMap !== undefined) setPlayerLocal(playerFromMap);
+  }, [playerFromMap]);
 
-  let passed = ymap.get("passed");
-  const setPassed = (value) => ymap.set("passed", value);
-  if (passed === undefined) {
-    passed = 1;
-    setPassed(passed);
-  }
+  useEffect(() => {
+    if (blackCapturedFromMap !== undefined)
+      setBlackCapturedLocal(blackCapturedFromMap);
+  }, [blackCapturedFromMap]);
 
-  // 0 = playing, 1 == player 1 win, 2 == player 2 win, 3 == draw
-  let gameState = ymap.get("gameState");
-  const setGameState = (value) => ymap.set("gameState", value);
-  if (gameState === undefined) {
-    gameState = 1;
-    setGameState(gameState);
-  }
+  useEffect(() => {
+    if (whiteCapturedFromMap !== undefined)
+      setWhiteCapturedLocal(whiteCapturedFromMap);
+  }, [whiteCapturedFromMap]);
 
-  const [currentUser] = useAuthStore((state) => [state.currentUser]);
+  useEffect(() => {
+    if (passedFromMap !== undefined) setPassedLocal(passedFromMap);
+  }, [passedFromMap]);
 
-  const otherPlayer = player === 1 ? 2 : 1;
-  function resetGame() {
+  useEffect(() => {
+    if (gameStateFromMap !== undefined) setGameStateLocal(gameStateFromMap);
+  }, [gameStateFromMap]);
+
+  useEffect(() => {
+    if (usersFromMap) setUsersLocal(usersFromMap);
+  }, [usersFromMap]);
+
+  const setBoardState = useCallback(
+    (value) => {
+      setBoardStateLocal(value);
+      ymap.set("boardState", value);
+    },
+    [ymap],
+  );
+
+  const setPreviousBoardState = useCallback(
+    (value) => {
+      setPreviousBoardStateLocal(value);
+      ymap.set("previousBoardState", value);
+    },
+    [ymap],
+  );
+
+  const setPlayer = useCallback(
+    (value) => {
+      setPlayerLocal(value);
+      ymap.set("player", value);
+    },
+    [ymap],
+  );
+
+  const setBlackCaptured = useCallback(
+    (value) => {
+      setBlackCapturedLocal(value);
+      ymap.set("blackCaptured", value);
+    },
+    [ymap],
+  );
+
+  const setWhiteCaptured = useCallback(
+    (value) => {
+      setWhiteCapturedLocal(value);
+      ymap.set("whiteCaptured", value);
+    },
+    [ymap],
+  );
+
+  const setPassed = useCallback(
+    (value) => {
+      setPassedLocal(value);
+      ymap.set("passed", value);
+    },
+    [ymap],
+  );
+
+  const setGameState = useCallback(
+    (value) => {
+      setGameStateLocal(value);
+      ymap.set("gameState", value);
+    },
+    [ymap],
+  );
+
+  const setUsers = useCallback(
+    (value) => {
+      if (!value.black && !value.white) {
+        resetGame();
+      }
+      setUsersLocal(value);
+      ymap.set("users", value);
+    },
+    [ymap],
+  );
+
+  useEffect(() => {
+    if (ymap.get("boardState") === undefined) {
+      const initialBoard = initializeBoard();
+      ymap.set("boardState", initialBoard);
+      ymap.set("previousBoardState", initialBoard);
+      ymap.set("player", 1);
+      ymap.set("blackCaptured", 0);
+      ymap.set("whiteCaptured", 0);
+      ymap.set("passed", 0);
+      ymap.set("gameState", 0);
+      ymap.set("users", { black: null, white: null });
+    }
+  }, [ymap]);
+
+  const otherPlayer = useMemo(() => (player === 1 ? 2 : 1), [player]);
+
+  const resetGame = useCallback(() => {
     const newBoard = initializeBoard();
     setBoardState(newBoard);
     setPreviousBoardState(newBoard);
@@ -87,87 +184,109 @@ export default function Go() {
     setGameState(0);
     setBlackCaptured(0);
     setWhiteCaptured(0);
-  }
-  let users = ymap.get("users");
-  const setUsers = (value) => {
-    if (!value.black && !value.white) {
-      // no users left reset game
-      resetGame();
-    }
-    ymap.set("users", value);
-  };
-  if (users === undefined) {
-    users = { black: null, white: null };
-    setUsers(users);
-  }
+  }, [
+    setBoardState,
+    setPreviousBoardState,
+    setPlayer,
+    setPassed,
+    setGameState,
+    setBlackCaptured,
+    setWhiteCaptured,
+  ]);
 
-  function handleIntersectionClick(row, col) {
-    // First, check if the position is within the board bounds and the intersection is empty
-    if (
-      row >= 0 &&
-      row < boardState.length &&
-      col >= 0 &&
-      col < boardState[row].length &&
-      boardState[row][col] === 0
-    ) {
-      // Create a temporary board state to check the validity of the move
-      const tempBoardState = boardState.map((r) => [...r]);
-      tempBoardState[row][col] = player;
-
-      // Check if the move results in capturing any enemy stones
-      const captures = calculateAndRemoveCapturedPieces(tempBoardState, {
-        row,
-        col,
-      }); // Assuming this function returns the number of captures
-      const isValidMove =
-        checkDirectLiberties(row, col, tempBoardState, player) ||
-        (player === 2 && captures.blackCaptured > 0) ||
-        (player === 1 && captures.whiteCaptured > 0);
-      // assign players
-      if (player === 1 && !users.black && users.white?.id !== currentUser.id) {
-        setUsers({ ...users, black: currentUser });
-      } else if (
-        player === 2 &&
-        !users.white &&
-        users.black?.id !== currentUser.id
+  const handleIntersectionClick = useCallback(
+    (row, col) => {
+      if (
+        row >= 0 &&
+        row < boardState.length &&
+        col >= 0 &&
+        col < boardState[row].length &&
+        boardState[row][col] === 0
       ) {
-        setUsers({ ...users, white: currentUser });
-      } else {
-        // players assigned > check turn
-        if (player === 1 && users.black?.id !== currentUser.id) {
-          toast("Not your turn");
-          return;
-        }
-        if (player === 2 && users.white?.id !== currentUser.id) {
-          toast("Not your turn");
-          return;
-        }
-      }
-      if (isValidMove) {
-        if (!areBoardStatesEqual(tempBoardState, previousBoardState)) {
-          console.log(
-            `${player === 1 ? "black" : "white"} played ${row}, ${col}`
-          );
-          setPreviousBoardState(boardState);
-          setBoardState(tempBoardState);
-          setPlayer(otherPlayer);
-          setPassed(0);
-          setBlackCaptured(blackCaptured + captures.blackCaptured);
-          setWhiteCaptured(whiteCaptured + captures.whiteCaptured);
+        const tempBoardState = boardState.map((r) => [...r]);
+        tempBoardState[row][col] = player;
+
+        const captures = calculateAndRemoveCapturedPieces(tempBoardState, {
+          row,
+          col,
+        });
+        const isSelfCapture =
+          !checkDirectLiberties(row, col, tempBoardState, player) &&
+          (player !== 2 || captures.blackCaptured === 0) &&
+          (player !== 1 || captures.whiteCaptured === 0);
+
+        const isDuplicateBoardState = areBoardStatesEqual(
+          tempBoardState,
+          previousBoardState,
+        );
+
+        if (
+          player === 1 &&
+          !users.black &&
+          users.white?.id !== currentUser.id
+        ) {
+          setUsers({ ...users, black: currentUser });
+        } else if (
+          player === 2 &&
+          !users.white &&
+          users.black?.id !== currentUser.id
+        ) {
+          setUsers({ ...users, white: currentUser });
         } else {
-          toast(
-            "Invalid move. No stone may be played so as to recreate a former board position."
-          );
+          if (player === 1 && users.black?.id !== currentUser.id) {
+            toast("Not your turn");
+            return;
+          }
+          if (player === 2 && users.white?.id !== currentUser.id) {
+            toast("Not your turn");
+            return;
+          }
         }
+
+        if (isSelfCapture) {
+          toast(
+            "Invalid move. This move results in self-capture without capturing any enemy stones.",
+          );
+          return;
+        }
+
+        if (isDuplicateBoardState) {
+          toast(
+            "Invalid move. No stone may be played so as to recreate a former board position.",
+          );
+          return;
+        }
+
+        setPreviousBoardState(boardState);
+        setBoardState(tempBoardState);
+        setPlayer(otherPlayer);
+        setPassed(0);
+        setBlackCaptured(blackCaptured + captures.blackCaptured);
+        setWhiteCaptured(whiteCaptured + captures.whiteCaptured);
       } else {
         toast(
-          "Invalid move. This move results in self-capture without capturing any enemy stones."
+          "Invalid move. Please choose an empty position within the board.",
         );
       }
-    } else {
-      toast("Invalid move. Please choose an empty position within the board.");
-    }
-  }
+    },
+    [
+      boardState,
+      player,
+      users,
+      currentUser,
+      previousBoardState,
+      otherPlayer,
+      setPreviousBoardState,
+      setBoardState,
+      setPlayer,
+      setPassed,
+      setBlackCaptured,
+      setWhiteCaptured,
+      blackCaptured,
+      whiteCaptured,
+      setUsers,
+    ],
+  );
 
   return (
     <div
