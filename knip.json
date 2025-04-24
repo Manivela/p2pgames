@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@3/schema.json",
+  "entry": ["src/main.jsx", "vite.config.js"],
+  "project": ["src/**/*.{js,jsx}"],
+  "ignoreDependencies": [],
+  "ignoreExportsUsedInFile": true,
+  "paths": {
+    "src": ["src/**"]
+  },
+  "rules": {
+    "binaries": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "exports": "error",
+    "files": "error",
+    "nsExports": "error",
+    "nsTypes": "error",
+    "types": "error",
+    "unresolved": "error"
+  },
+  "workspaces": {
+    ".": {
+      "entry": "src/main.jsx"
+    }
+  }
+}
