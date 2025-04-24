@@ -34,7 +34,7 @@ function Board({ player, boardState, handleIntersectionClick }) {
           stroke="black"
           strokeWidth="1"
           index={i}
-        />
+        />,
       );
     }
     return lines;
@@ -53,7 +53,7 @@ function Board({ player, boardState, handleIntersectionClick }) {
           stroke="black"
           strokeWidth="1"
           index={i}
-        />
+        />,
       );
     }
     return lines;
@@ -68,8 +68,8 @@ function Board({ player, boardState, handleIntersectionClick }) {
           intersectionState === 1
             ? "black"
             : intersectionState === 2
-            ? "white"
-            : "empty";
+              ? "white"
+              : "empty";
         // empty space
         if (intersectionState === 0) {
           if (bigPoints.some(([a, b]) => a === i && b === j)) {
@@ -80,7 +80,7 @@ function Board({ player, boardState, handleIntersectionClick }) {
                 cy={padding + cellSize * i}
                 fill={intersectionColor}
                 r={5}
-              />
+              />,
             );
           }
           // interactive circle
@@ -95,15 +95,15 @@ function Board({ player, boardState, handleIntersectionClick }) {
               onClick={() => {
                 handleIntersectionClick(i, j);
               }}
-              onMouseMove={(event) => {
+              onPointerMove={(event) => {
                 // Set the radius to 10 when the mouse is over the circle
                 event.target.setAttribute("opacity", 0.5);
               }}
-              onMouseLeave={(event) => {
+              onPointerLeave={(event) => {
                 // Set the radius back to 1 when the mouse leaves the circle
                 event.target.setAttribute("opacity", 0);
               }}
-            />
+            />,
           );
         } else {
           // filled space
@@ -114,7 +114,7 @@ function Board({ player, boardState, handleIntersectionClick }) {
               cy={padding + cellSize * i}
               fill={intersectionColor}
               r={25}
-            />
+            />,
           );
         }
       }

@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback } from "react";
 import { useMap } from "@joebobmiles/y-react";
 import { toast } from "react-hot-toast";
 import { useAuthStore } from "../../hooks/useStore";
@@ -77,62 +78,111 @@ function Board({ xIsNext, squares, onPlay }) {
 
 export default function Game() {
   const ymap = useMap("tictactoe-state");
-  let currentMove = ymap.get("currentMove");
-  const setCurrentMove = (value) => ymap.set("currentMove", value);
-  let history = ymap.get("history");
-  const setHistory = (value) => ymap.set("history", value);
-  let users = ymap.get("users");
-  const setUsers = (value) => {
-    if (!value.x && !value.o) {
-      // no users left reset game
-      setCurrentMove(0);
-      setHistory([Array(9).fill(null)]);
+  const currentUser = useAuthStore((state) => state.currentUser);
+
+  // Get values from ymap directly in the component render
+  const currentMoveFromMap = ymap.get("currentMove");
+  const historyFromMap = ymap.get("history");
+  const usersFromMap = ymap.get("users");
+
+  // Local state with fallbacks when ymap values aren't available
+  const [currentMove, setCurrentMoveLocal] = useState(currentMoveFromMap || 0);
+  const [history, setHistoryLocal] = useState(
+    historyFromMap || [Array(9).fill(null)],
+  );
+  const [users, setUsersLocal] = useState(usersFromMap || { x: null, o: null });
+
+  // Update local state when ymap values change
+  useEffect(() => {
+    if (currentMoveFromMap !== undefined)
+      setCurrentMoveLocal(currentMoveFromMap);
+  }, [currentMoveFromMap]);
+
+  useEffect(() => {
+    if (historyFromMap) setHistoryLocal(historyFromMap);
+  }, [historyFromMap]);
+
+  useEffect(() => {
+    if (usersFromMap) setUsersLocal(usersFromMap);
+  }, [usersFromMap]);
+
+  const setCurrentMove = useCallback(
+    (value) => {
+      setCurrentMoveLocal(value);
+      ymap.set("currentMove", value);
+    },
+    [ymap],
+  );
+
+  const setHistory = useCallback(
+    (value) => {
+      setHistoryLocal(value);
+      ymap.set("history", value);
+    },
+    [ymap],
+  );
+
+  const setUsers = useCallback(
+    (value) => {
+      if (!value.x && !value.o) {
+        setCurrentMove(0);
+        setHistory([Array(9).fill(null)]);
+      }
+      setUsersLocal(value);
+      ymap.set("users", value);
+    },
+    [ymap, setCurrentMove, setHistory],
+  );
+
+  useEffect(() => {
+    if (ymap.get("currentMove") === undefined) {
+      ymap.set("currentMove", 0);
+      ymap.set("history", [Array(9).fill(null)]);
+      ymap.set("users", { x: null, o: null });
     }
-    ymap.set("users", value);
-  };
-  const [currentUser] = useAuthStore((state) => [state.currentUser]);
+  }, [ymap]);
 
-  if (users === undefined) {
-    users = { x: null, o: null };
-    setUsers(users);
-  }
-
-  if (history === undefined) {
-    history = [Array(9).fill(null)];
-    setHistory(history);
-  }
-  if (currentMove === undefined) {
-    currentMove = 0;
-    setCurrentMove(currentMove);
-  }
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
 
-  function handlePlay(nextSquares) {
-    // assign players
-    if (xIsNext && !users.x && users.o?.id !== currentUser.id) {
-      setUsers({ ...users, x: currentUser });
-    } else if (!xIsNext && !users.o && users.x?.id !== currentUser.id) {
-      setUsers({ ...users, o: currentUser });
-    } else {
-      // players assigned > check turn
-      if (xIsNext && users.x?.id !== currentUser.id) {
-        toast("Not your turn");
-        return;
+  const handlePlay = useCallback(
+    (nextSquares) => {
+      if (xIsNext && !users.x && users.o?.id !== currentUser.id) {
+        setUsers({ ...users, x: currentUser });
+      } else if (!xIsNext && !users.o && users.x?.id !== currentUser.id) {
+        setUsers({ ...users, o: currentUser });
+      } else {
+        if (xIsNext && users.x?.id !== currentUser.id) {
+          toast("Not your turn");
+          return;
+        }
+        if (!xIsNext && users.o?.id !== currentUser.id) {
+          toast("Not your turn");
+          return;
+        }
       }
-      if (!xIsNext && users.o?.id !== currentUser.id) {
-        toast("Not your turn");
-        return;
-      }
-    }
-    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
-    setHistory(nextHistory);
-    setCurrentMove(nextHistory.length - 1);
-  }
+      const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+      setHistory(nextHistory);
+      setCurrentMove(nextHistory.length - 1);
+    },
+    [
+      xIsNext,
+      users,
+      currentUser,
+      history,
+      currentMove,
+      setUsers,
+      setHistory,
+      setCurrentMove,
+    ],
+  );
 
-  function jumpTo(nextMove) {
-    setCurrentMove(nextMove);
-  }
+  const jumpTo = useCallback(
+    (nextMove) => {
+      setCurrentMove(nextMove);
+    },
+    [setCurrentMove],
+  );
 
   const moves = history.map((squares, move) => {
     let description;

@@ -1,4 +1,4 @@
-import { useLocation, useMatch } from "react-router-dom";
+import { useMatch } from "react-router-dom";
 
 function Credits() {
   const isTicTacToe = useMatch("/:roomId/tictactoe");

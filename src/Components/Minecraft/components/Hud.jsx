@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useStore } from "../hooks/useStore";
 import * as textures from "../textures";
@@ -42,44 +42,45 @@ function MaterialContainer({ args, color, activeTexture, ...props }) {
 
 export function Hud({ position }) {
   const { camera } = useThree();
-  const [hudState, setHudState] = useState(() => ({
-    position: camera.position,
-    rotation: [0, 0, 0],
-    opacity: 0,
-  }));
+  const posRef = useRef(camera.position.clone());
+  const rotRef = useRef([0, 0, 0]);
   const [hudVisible, setHudVisible] = useState(false);
-  const [activeTexture] = useStore((state) => [state.texture]);
+
+  const activeTexture = useStore((state) => state.texture);
+  const prevTextureRef = useRef(activeTexture);
+
   useFrame(() => {
-    const { x, y, z } = camera.position;
-    const { x: rotX, y: rotY, z: rotZ } = camera.rotation;
-    setHudState({
-      position: [x, y, z],
-      rotation: [rotX, rotY, rotZ],
-      opacity: hudVisible ? 1 : 0,
-    });
+    posRef.current.copy(camera.position);
+    rotRef.current = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
   });
 
   useEffect(() => {
-    setHudVisible(true);
-    const hudVisibilityTimeout = setTimeout(() => {
-      setHudVisible(false);
-    }, 2000);
-    return () => {
-      clearTimeout(hudVisibilityTimeout);
-    };
-  }, [setHudVisible, activeTexture]);
+    if (prevTextureRef.current !== activeTexture) {
+      prevTextureRef.current = activeTexture;
+      setHudVisible(true);
+
+      const hudVisibilityTimeout = setTimeout(() => {
+        setHudVisible(false);
+      }, 2000);
+
+      return () => clearTimeout(hudVisibilityTimeout);
+    }
+  }, [activeTexture]);
+
+  if (!hudVisible) return null;
+
   return (
-    hudVisible && (
-      <group position={hudState.position} rotation={hudState.rotation}>
-        <group position={position}>
-          <MaterialContainer
-            args={[1.3, 0.3, 0.01]}
-            color="#222"
-            activeTexture={activeTexture}
-            hudVisible={hudVisible}
-          />
-        </group>
+    <group
+      position={[posRef.current.x, posRef.current.y, posRef.current.z]}
+      rotation={rotRef.current}
+    >
+      <group position={position}>
+        <MaterialContainer
+          args={[1.3, 0.3, 0.01]}
+          color="#222"
+          activeTexture={activeTexture}
+        />
       </group>
-    )
+    </group>
   );
 }

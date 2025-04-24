@@ -1,5 +1,5 @@
-import React, { createContext } from "react";
-import _, { clone, cloneDeep, indexOf } from "lodash";
+import React, { createContext, useMemo, useCallback } from "react";
+import _, { cloneDeep } from "lodash";
 import { useAwareness, useMap, useWebRtc } from "@joebobmiles/y-react";
 import { toast } from "react-hot-toast";
 import useSound from "use-sound";
@@ -120,11 +120,11 @@ function dealHand(drawPile, player, index) {
     return debugArray.concat(Array(maxHandSize - debugArray.length).fill(null));
   }
   const sampledArray = _.sampleSize(drawPile, index === 0 ? 15 : 14).map(
-    (tile) => ({ ...tile, hidden: false, source: `hand-${player}` })
+    (tile) => ({ ...tile, hidden: false, source: `hand-${player}` }),
   );
 
   return sampledArray.concat(
-    Array(maxHandSize - sampledArray.length).fill(null)
+    Array(maxHandSize - sampledArray.length).fill(null),
   );
 }
 function pickOkeyTile(drawPile) {
@@ -135,7 +135,7 @@ const tiles = [];
 // create the tiles
 for (let i = 0; i < 2; i++) {
   colors.forEach((color) =>
-    ranks.forEach((rank) => tiles.push(createTile(color, rank, i)))
+    ranks.forEach((rank) => tiles.push(createTile(color, rank, i))),
   );
   tiles.push(createTile("yellow", "👌", i));
 }
@@ -206,34 +206,46 @@ export function OkeyProvider({ children }) {
     signaling: signalingServers,
   });
   const { states, localID } = useAwareness(provider.awareness);
-  const [currentUser] = useAuthStore((state) => [state.currentUser]);
+  const currentUser = useAuthStore((state) => state.currentUser);
   const [playBellSound] = useSound(bell, { volume: 0.1 });
   const [playTile1Sound] = useSound(tile1, { volume: 0.5 });
   const ymap = useMap("okey-state");
   let okeyState = ymap.get("game-state");
 
-  const setOkeyState = (value) => {
-    ymap.set("game-state", value);
-  };
+  const setOkeyState = useCallback(
+    (value) => {
+      ymap.set("game-state", value);
+    },
+    [ymap],
+  );
+
   if (okeyState === undefined) {
     okeyState = initialState;
   }
 
-  const allTiles = [
-    ...okeyState.drawPile.filter((tile) => tile !== null),
-    ...(okeyState.okeyTile ? [okeyState.okeyTile] : []),
-    ...okeyState.players.flatMap((player) =>
-      player.hand.filter((tile) => tile !== null)
-    ),
-    ...okeyState.players.flatMap((player) =>
-      player.discardPile.filter((tile) => tile !== null)
-    ),
-  ];
+  const allTiles = useMemo(
+    () => [
+      ...okeyState.drawPile.filter((tile) => tile !== null),
+      ...(okeyState.okeyTile ? [okeyState.okeyTile] : []),
+      ...okeyState.players.flatMap((player) =>
+        player.hand.filter((tile) => tile !== null),
+      ),
+      ...okeyState.players.flatMap((player) =>
+        player.discardPile.filter((tile) => tile !== null),
+      ),
+    ],
+    [okeyState.drawPile, okeyState.okeyTile, okeyState.players],
+  );
 
-  const duplicates = _(allTiles)
-    .groupBy("name")
-    .filter((group) => group.length > 2)
-    .value();
+  const duplicates = useMemo(
+    () =>
+      _(allTiles)
+        .groupBy("name")
+        .filter((group) => group.length > 2)
+        .value(),
+    [allTiles],
+  );
+
   if (duplicates.length > 0) {
     toast.error("Duplicate tile detected");
     console.warn("duplicates:", duplicates);
@@ -241,7 +253,10 @@ export function OkeyProvider({ children }) {
 
   const nextDrawTile = okeyState.drawPile[okeyState.drawPile.length - 1];
 
-  const me = okeyState.players.find((p) => p.user?.id === currentUser.id)?.id;
+  const me = useMemo(
+    () => okeyState.players.find((p) => p?.user?.id === currentUser?.id)?.id,
+    [okeyState.players, currentUser?.id],
+  );
 
   React.useEffect(() => {
     if (okeyState.gameState === "play") {
@@ -251,130 +266,181 @@ export function OkeyProvider({ children }) {
         playTile1Sound();
       }
     }
-  }, [okeyState.currentPlayer]);
+  }, [
+    okeyState.gameState,
+    okeyState.currentPlayer,
+    me,
+    playBellSound,
+    playTile1Sound,
+  ]);
 
-  const isMyTurn = () => okeyState.currentPlayer === me;
+  const isMyTurn = useCallback(
+    () => okeyState.currentPlayer === me,
+    [okeyState.currentPlayer, me],
+  );
 
-  const myHand = (player) =>
-    okeyState.players.find((p) => p.id === player).hand;
+  const myHand = useCallback(
+    (player) => okeyState.players.find((p) => p.id === player)?.hand || [],
+    [okeyState.players],
+  );
 
-  const canDrawTile = (player) =>
-    myHand(player).filter((t) => t !== null).length < 15;
+  const canDrawTile = useCallback(
+    (player) => myHand(player).filter((t) => t !== null).length < 15,
+    [myHand],
+  );
 
-  const canDiscardTile = (player) =>
-    myHand(player).filter((t) => t !== null).length === 15;
+  const canDiscardTile = useCallback(
+    (player) => myHand(player).filter((t) => t !== null).length === 15,
+    [myHand],
+  );
 
-  const myDiscardPile = (player) =>
-    okeyState.players.find((p) => p.id === player).discardPile;
+  const myDiscardPile = useCallback(
+    (player) =>
+      okeyState.players.find((p) => p.id === player)?.discardPile || [],
+    [okeyState.players],
+  );
 
-  const drawTile = (player, tile, toIndex) => {
-    if (!isMyTurn()) {
-      toast("Not your turn");
-      return;
-    }
-    if (!canDrawTile(player)) {
-      toast("Can't draw more tiles");
-      return;
-    }
-    if (
-      tile.source.includes("discard") &&
-      tile.source !==
-        `discard-${getPreviousPlayer(okeyState.players, player).id}`
-    ) {
-      toast("Can't draw this tile");
-      return;
-    }
-    const newState = cloneDeep(okeyState);
-    const myPlayer = newState.players.find((p) => p.id === player);
-    myPlayer.hand = insertItem(myPlayer.hand, toIndex, {
-      ...tile,
-      source: `hand-${player}`,
-      hidden: false,
-    });
-    if (tile.source === "draw-pile") {
-      newState.drawPile = newState.drawPile.filter((t) => t.id !== tile.id);
-    } else {
-      const sourcePlayer = newState.players.find(
-        (p) => p.id === Number(tile.source.split("-")[1])
-      );
-      sourcePlayer.discardPile = sourcePlayer.discardPile.filter(
-        (t) => t.id !== tile.id
-      );
-    }
-    setOkeyState(newState);
-  };
-  const swapTile = (player, tile, toIndex) => {
-    if (tile.source !== `hand-${me}`) {
-      toast("Can't move other players tiles");
-      return;
-    }
-    const newState = cloneDeep(okeyState);
-    const myPlayer = newState.players.find((p) => p.id === player);
-    const oldIndex = myPlayer.hand.findIndex((t) => t?.id === tile.id);
-    myPlayer.hand = swapItems(myPlayer.hand, oldIndex, toIndex);
-    setOkeyState(newState);
-  };
-  const discardTile = (player, tile) => {
-    if (!isMyTurn()) {
-      toast("Not your turn");
-      return;
-    }
-    if (!canDiscardTile(player)) {
-      toast("Can't discard before drawing");
-      return;
-    }
-    if (!tile.source.includes("hand")) {
-      toast("Invalid discard source");
-      return;
-    }
-    const newState = cloneDeep(okeyState);
-    const myPlayer = newState.players.find((p) => p.id === player);
-    myPlayer.hand = removeItem(myPlayer.hand, tile);
-    myPlayer.discardPile = [
-      ...myPlayer.discardPile,
-      { ...tile, source: `discard-${player}`, hidden: false },
-    ];
-    newState.currentPlayer = getNextPlayer(
-      newState.players,
-      newState.currentPlayer
-    ).id;
-    setOkeyState(newState);
-  };
-  const finishGame = (tile) => {
-    if (!isMyTurn()) {
-      toast("Not your turn");
-      return;
-    }
-    if (!canDiscardTile(me)) {
-      toast("Can't discard before drawing");
-      return;
-    }
-    if (tile.source !== `hand-${me}`) {
-      toast("Can't move other players tiles");
-      return;
-    }
-    const discardIndex = myHand(me).findIndex((h) => h?.id === tile.id);
-    const hand = cloneDeep(myHand(me));
-    hand[discardIndex] = null;
-
-    const finished = checkFinished(hand, okeyState.okeyTile);
-    if (finished) {
-      const newState = cloneDeep(okeyState);
-      for (const player of newState.players) {
-        player.hand.map((h) => ({ ...h, hidden: false }));
+  const drawTile = useCallback(
+    (player, tile, toIndex) => {
+      if (!isMyTurn()) {
+        toast("Not your turn");
+        return;
       }
-      setOkeyState({
-        ...newState,
-        message: `${
-          newState.players.find((p) => p.id === newState.currentPlayer).user
-            .name
-        } wins!`,
-        gameState: "finish",
-      });
-    }
-  };
+      if (!canDrawTile(player)) {
+        toast("Can't draw more tiles");
+        return;
+      }
+      if (
+        tile.source.includes("discard") &&
+        tile.source !==
+          `discard-${getPreviousPlayer(okeyState.players, player).id}`
+      ) {
+        toast("Can't draw this tile");
+        return;
+      }
+      const newState = cloneDeep(okeyState);
+      const myPlayer = newState.players.find((p) => p.id === player);
+      if (!myPlayer) return;
 
-  const startGame = () => {
+      myPlayer.hand = insertItem(myPlayer.hand, toIndex, {
+        ...tile,
+        source: `hand-${player}`,
+        hidden: false,
+      });
+
+      if (tile.source === "draw-pile") {
+        newState.drawPile = newState.drawPile.filter((t) => t.id !== tile.id);
+      } else {
+        const sourcePlayer = newState.players.find(
+          (p) => p.id === Number(tile.source.split("-")[1]),
+        );
+        if (sourcePlayer) {
+          sourcePlayer.discardPile = sourcePlayer.discardPile.filter(
+            (t) => t.id !== tile.id,
+          );
+        }
+      }
+      setOkeyState(newState);
+    },
+    [okeyState, isMyTurn, canDrawTile, setOkeyState],
+  );
+
+  const swapTile = useCallback(
+    (player, tile, toIndex) => {
+      if (!me || tile.source !== `hand-${me}`) {
+        toast("Can't move other players tiles");
+        return;
+      }
+      const newState = cloneDeep(okeyState);
+      const myPlayer = newState.players.find((p) => p.id === player);
+      if (!myPlayer) return;
+
+      const oldIndex = myPlayer.hand.findIndex((t) => t?.id === tile.id);
+      myPlayer.hand = swapItems(myPlayer.hand, oldIndex, toIndex);
+      setOkeyState(newState);
+    },
+    [okeyState, me, setOkeyState],
+  );
+
+  const discardTile = useCallback(
+    (player, tile) => {
+      if (!isMyTurn()) {
+        toast("Not your turn");
+        return;
+      }
+      if (!canDiscardTile(player)) {
+        toast("Can't discard before drawing");
+        return;
+      }
+      if (!tile.source.includes("hand")) {
+        toast("Invalid discard source");
+        return;
+      }
+      const newState = cloneDeep(okeyState);
+      const myPlayer = newState.players.find((p) => p.id === player);
+      if (!myPlayer) return;
+
+      myPlayer.hand = removeItem(myPlayer.hand, tile);
+      myPlayer.discardPile = [
+        ...myPlayer.discardPile,
+        { ...tile, source: `discard-${player}`, hidden: false },
+      ];
+      newState.currentPlayer = getNextPlayer(
+        newState.players,
+        newState.currentPlayer,
+      ).id;
+      setOkeyState(newState);
+    },
+    [okeyState, isMyTurn, canDiscardTile, setOkeyState],
+  );
+
+  const finishGame = useCallback(
+    (tile) => {
+      if (!me || !isMyTurn()) {
+        toast("Not your turn");
+        return;
+      }
+      if (!canDiscardTile(me)) {
+        toast("Can't discard before drawing");
+        return;
+      }
+      if (tile.source !== `hand-${me}`) {
+        toast("Can't move other players tiles");
+        return;
+      }
+      const discardIndex = myHand(me).findIndex((h) => h?.id === tile.id);
+      const hand = cloneDeep(myHand(me));
+      if (discardIndex === -1) return;
+
+      hand[discardIndex] = null;
+
+      const finished = checkFinished(hand, okeyState.okeyTile);
+      if (finished) {
+        const newState = cloneDeep(okeyState);
+        for (const player of newState.players) {
+          if (player.hand) {
+            player.hand = player.hand.map((h) =>
+              h ? { ...h, hidden: false } : null,
+            );
+          }
+        }
+
+        const winner = newState.players.find(
+          (p) => p.id === newState.currentPlayer,
+        );
+        const winnerName = winner?.user?.name || "Player";
+
+        setOkeyState({
+          ...newState,
+          message: `${winnerName} wins!`,
+          gameState: "finish",
+        });
+      }
+    },
+    [okeyState, me, isMyTurn, canDiscardTile, myHand, setOkeyState],
+  );
+
+  const startGame = useCallback(() => {
     const newState = cloneDeep(okeyState);
     const drawPile = newState.drawPile;
     const filteredPlayers = newState.players.filter((p) => p.user !== null);
@@ -385,17 +451,20 @@ export function OkeyProvider({ children }) {
       });
       return;
     }
+
     const okeyTile = pickOkeyTile(drawPile);
     const toBeRemoved = [okeyTile];
     const iteratee = (t) => !toBeRemoved.some((r) => t.id === r.id);
+
     for (let i = 0; i < filteredPlayers.length; i++) {
       filteredPlayers[i].hand = dealHand(
         drawPile.filter(iteratee),
         filteredPlayers[i].id,
-        i
+        i,
       );
       toBeRemoved.push(...filteredPlayers[i].hand.filter((h) => h !== null));
     }
+
     const startingDrawPile = drawPile.filter(iteratee);
 
     setOkeyState({
@@ -407,13 +476,13 @@ export function OkeyProvider({ children }) {
       message: "",
       drawPile: startingDrawPile,
     });
-  };
+  }, [okeyState, setOkeyState]);
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setOkeyState(initialState);
-  };
+  }, [setOkeyState]);
 
-  const newGame = () => {
+  const newGame = useCallback(() => {
     setOkeyState({
       ...initialState,
       players: okeyState.players.map((p) => ({
@@ -422,87 +491,151 @@ export function OkeyProvider({ children }) {
         hand: [],
       })),
     });
-  };
+  }, [okeyState.players, setOkeyState]);
 
-  const sit = (player) => {
-    const newState = cloneDeep(okeyState);
-    const newPlayers = newState.players;
-    const seat = newPlayers.find((p) => p.id === player);
-    seat.user = currentUser;
-    seat.userKey = localID;
-    setOkeyState({
-      ...newState,
-      players: newPlayers,
-      message: "",
-    });
-  };
+  const sit = useCallback(
+    (player) => {
+      if (!currentUser) return;
 
-  const isAlreadySitting = okeyState.players.find(
-    (p) => p.user?.id === currentUser.id
+      const newState = cloneDeep(okeyState);
+      const seat = newState.players.find((p) => p.id === player);
+      if (!seat) return;
+
+      seat.user = currentUser;
+      seat.userKey = localID;
+
+      setOkeyState({
+        ...newState,
+        players: newState.players,
+        message: "",
+      });
+    },
+    [okeyState, currentUser, localID, setOkeyState],
   );
 
-  const stand = (player) => {
-    const newState = cloneDeep(okeyState);
-    const newPlayers = newState.players;
-    const seat = newPlayers.find((p) => p.id === player);
-    const userName = seat.user.name;
-    seat.user = null;
-    seat.userKey = null;
-    setOkeyState({
-      ...newState,
-      players: newPlayers,
-      message: `${userName} left`,
-    });
-  };
+  const isAlreadySitting = useMemo(
+    () => okeyState.players.find((p) => p?.user?.id === currentUser?.id),
+    [okeyState.players, currentUser?.id],
+  );
+
+  const stand = useCallback(
+    (player) => {
+      const newState = cloneDeep(okeyState);
+      const seat = newState.players.find((p) => p.id === player);
+      if (!seat) return;
+
+      const userName = seat.user?.name || "Someone";
+      seat.user = null;
+      seat.userKey = null;
+
+      setOkeyState({
+        ...newState,
+        players: newState.players,
+        message: `${userName} left`,
+      });
+    },
+    [okeyState, setOkeyState],
+  );
+
+  const playerKeys = useMemo(
+    () => okeyState.players.map((p) => p.userKey).filter(Boolean),
+    [okeyState.players],
+  );
 
   React.useEffect(() => {
-    okeyState.players.forEach((p) => {
-      if (p.userKey && !states.has(p.userKey)) {
-        stand(p.id);
+    const disconnectedPlayerKeys = playerKeys.filter((key) => !states.has(key));
+
+    if (disconnectedPlayerKeys.length === 0) return;
+
+    const newState = cloneDeep(okeyState);
+    let changed = false;
+    let lastLeaverName = "Someone";
+
+    disconnectedPlayerKeys.forEach((key) => {
+      const playerIndex = newState.players.findIndex((p) => p.userKey === key);
+      if (playerIndex >= 0) {
+        const player = newState.players[playerIndex];
+        lastLeaverName = player.user?.name || "Someone";
+        player.user = null;
+        player.userKey = null;
+        changed = true;
       }
     });
-  }, [states.size]);
 
-  const myIndex = okeyState.players.findIndex(
-    (p) => p.user?.id === currentUser.id
+    if (changed) {
+      setOkeyState({
+        ...newState,
+        message: `${lastLeaverName} left`,
+      });
+    }
+  }, [states, playerKeys, okeyState, setOkeyState]);
+
+  const myIndex = useMemo(
+    () => okeyState.players.findIndex((p) => p?.user?.id === currentUser?.id),
+    [okeyState.players, currentUser?.id],
   );
 
-  const toggleHidden = (tile) => {
-    const newState = cloneDeep(okeyState);
-    for (const player of newState.players) {
-      const foundTile = player.hand.find((h) => h?.id === tile.id);
-      if (foundTile) foundTile.hidden = !foundTile.hidden;
-    }
-    setOkeyState({
-      ...newState,
-    });
-  };
+  const toggleHidden = useCallback(
+    (tile) => {
+      const newState = cloneDeep(okeyState);
+      for (const player of newState.players) {
+        if (!player.hand) continue;
+        const foundTile = player.hand.find((h) => h?.id === tile.id);
+        if (foundTile) foundTile.hidden = !foundTile.hidden;
+      }
+      setOkeyState({
+        ...newState,
+      });
+    },
+    [okeyState, setOkeyState],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      okeyState,
+      nextDrawTile,
+      isMyTurn,
+      myHand,
+      myDiscardPile,
+      discardTile,
+      swapTile,
+      drawTile,
+      finishGame,
+      startGame,
+      sit,
+      stand,
+      isAlreadySitting,
+      myIndex,
+      resetGame,
+      newGame,
+      me,
+      currentUser,
+      toggleHidden,
+    }),
+    [
+      okeyState,
+      nextDrawTile,
+      isMyTurn,
+      myHand,
+      myDiscardPile,
+      discardTile,
+      swapTile,
+      drawTile,
+      finishGame,
+      startGame,
+      sit,
+      stand,
+      isAlreadySitting,
+      myIndex,
+      resetGame,
+      newGame,
+      me,
+      currentUser,
+      toggleHidden,
+    ],
+  );
 
   return (
-    <OkeyContext.Provider
-      value={{
-        okeyState,
-        nextDrawTile,
-        isMyTurn,
-        myHand,
-        myDiscardPile,
-        discardTile,
-        swapTile,
-        drawTile,
-        finishGame,
-        startGame,
-        sit,
-        stand,
-        isAlreadySitting,
-        myIndex,
-        resetGame,
-        newGame,
-        me,
-        currentUser,
-        toggleHidden,
-      }}
-    >
-      {children}
-    </OkeyContext.Provider>
+    <OkeyContext.Provider value={contextValue}>{children}</OkeyContext.Provider>
   );
 }

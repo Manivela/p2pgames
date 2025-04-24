@@ -12,20 +12,19 @@ import { useStore } from "../hooks/useStore";
 
 export function Ground({ addCube, ...props }) {
   const [ref] = usePlane(() => ({ rotation: [-Math.PI / 2, 0, 0], ...props }));
+
   const texture = useMemo(() => {
     const t = new TextureLoader().load(grass);
     t.wrapS = RepeatWrapping;
     t.wrapT = RepeatWrapping;
     t.repeat.set(100, 100);
+    t.magFilter = NearestFilter;
+    t.minFilter = LinearMipMapLinearFilter;
     return t;
   }, []);
 
-  const [activeTexture] = useStore((state) => [state.texture]);
-  texture.magFilter = NearestFilter;
-  texture.minFilter = LinearMipMapLinearFilter;
-  texture.wrapS = RepeatWrapping;
-  texture.wrapT = RepeatWrapping;
-  texture.repeat.set(100, 100);
+  const activeTexture = useStore((state) => state.texture);
+
   return (
     <mesh
       ref={ref}
@@ -33,13 +32,18 @@ export function Ground({ addCube, ...props }) {
       onClick={(e) => {
         e.stopPropagation();
         const [x, y, z] = Object.values(e.point).map((coord) =>
-          Math.ceil(coord)
+          Math.ceil(coord),
         );
         addCube(x, y, z, activeTexture);
       }}
     >
       <planeGeometry attach="geometry" args={[100, 100]} />
-      <meshStandardMaterial map={texture} attach="material" />
+      <meshStandardMaterial
+        map={texture}
+        attach="material"
+        metalness={0.1}
+        roughness={0.9}
+      />
     </mesh>
   );
 }

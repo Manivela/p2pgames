@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, useState, useEffect } from "react";
 import "./App.css";
 
 import Graybar from "../components/GrayBar/Graybar";
@@ -11,19 +11,39 @@ import { useMap } from "@joebobmiles/y-react";
 
 function withHooksAndPlayers(Component) {
   return function WrappedComponent(props) {
-    const [currentUser] = useAuthStore((state) => [state.currentUser]);
+    const currentUser = useAuthStore((state) => state.currentUser);
     const ymap = useMap("tictactoe-state");
-    const state = ymap.get("game-state");
-    const setState = (value) => ymap.set("game-state", value);
-    let users = ymap.get("users");
+    
+    const gameStateFromMap = ymap.get("game-state");
+    const usersFromMap = ymap.get("users");
+    
+    const [state, setStateLocal] = useState(gameStateFromMap);
+    const [users, setUsersLocal] = useState(usersFromMap || { p1: null, p2: null });
+    
+    useEffect(() => {
+      if (gameStateFromMap) setStateLocal(gameStateFromMap);
+    }, [gameStateFromMap]);
+    
+    useEffect(() => {
+      if (usersFromMap) setUsersLocal(usersFromMap);
+    }, [usersFromMap]);
+
+    const setState = (value) => {
+      setStateLocal(value);
+      ymap.set("game-state", value);
+    };
+    
     const setUsers = (value) => {
+      setUsersLocal(value);
       ymap.set("users", value);
     };
+    
+    useEffect(() => {
+      if (ymap.get("users") === undefined) {
+        ymap.set("users", { p1: null, p2: null });
+      }
+    }, [ymap]);
 
-    if (users === undefined) {
-      users = { p1: null, p2: null };
-      setUsers(users);
-    }
     if (!users.p1 || !users.p2) {
       return (
         <div>

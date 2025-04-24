@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useWebRtc, useAwareness } from "@joebobmiles/y-react";
 import { useAuthStore } from "../hooks/useStore";
@@ -12,31 +12,71 @@ export default function Awareness() {
   const { roomId } = useParams();
   const location = useLocation();
   const disabled = disabledPaths.some((d) => location.pathname.includes(d));
+  const [connectedUsers, setConnectedUsers] = useState([]);
 
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
   });
   const { states, localID, setLocalState } = useAwareness(provider.awareness);
-  const [currentUser] = useAuthStore((state) => [state.currentUser]);
-  function handlePointerMove(e) {
-    setLocalState((prevState) => ({
-      ...prevState,
-      x: e.clientX,
-      y: e.clientY,
-      user: currentUser,
-    }));
-  }
-  React.useEffect(() => {
-    setLocalState((prevState) => ({
-      color: colors[states.length],
-      ...prevState,
-      user: currentUser,
-    }));
+  const currentUser = useAuthStore((state) => state.currentUser);
+
+  const userData = useMemo(
+    () =>
+      currentUser
+        ? {
+            id: currentUser.id,
+            name: currentUser.name,
+            color: currentUser.color,
+          }
+        : null,
+    [currentUser?.id, currentUser?.name, currentUser?.color],
+  );
+
+  const handlePointerMove = useCallback(
+    (e) => {
+      setLocalState((prevState) => ({
+        ...prevState,
+        x: e.clientX,
+        y: e.clientY,
+        user: userData,
+      }));
+    },
+    [setLocalState, userData],
+  );
+
+  useEffect(() => {
+    if (!userData) return;
+
+    setLocalState((prevState) => {
+      if (prevState?.user?.id === userData.id) {
+        return prevState;
+      }
+      return {
+        color: colors[Math.floor(Math.random() * colors.length)],
+        ...prevState,
+        user: userData,
+      };
+    });
+
     if (!disabled) {
       window.addEventListener("pointermove", handlePointerMove);
     }
     return () => window.removeEventListener("pointermove", handlePointerMove);
-  }, [location]);
+  }, [disabled, handlePointerMove, userData, setLocalState]);
+
+  useEffect(() => {
+    const updateConnectedUsers = () => {
+      setConnectedUsers(Array.from(states.entries()));
+    };
+
+    updateConnectedUsers();
+
+    provider.awareness.on("change", updateConnectedUsers);
+
+    return () => {
+      provider.awareness.off("change", updateConnectedUsers);
+    };
+  }, [provider.awareness, states]);
 
   return (
     <main>
@@ -54,13 +94,13 @@ export default function Awareness() {
             pointerEvents: "none",
           }}
         >
-          {Array.from(states.entries())
+          {connectedUsers
             .filter(([id, state]) => id !== localID && state.x)
             .map(([id, state]) => (
               <g key={id}>
                 <circle cx={state.x} cy={state.y} r={5} />
                 <text x={state.x + 7} y={state.y - 7} style={{ fontSize: 10 }}>
-                  {state.user.name}
+                  {state.user?.name}
                 </text>
               </g>
             ))}
@@ -69,7 +109,7 @@ export default function Awareness() {
       <div>
         Connected:
         <ul>
-          {Array.from(states.entries()).map(([id, state]) => (
+          {connectedUsers.map(([id, state]) => (
             <li key={id}>{state?.user?.name}</li>
           ))}
         </ul>
