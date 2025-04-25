@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useWebRtc, useAwareness } from "@joebobmiles/y-react";
 import { useAuthStore } from "../hooks/useStore";
-import { signalingServers } from "../constants";
+import { signalingServers, iceServers } from "../constants";
 
 const colors = ["orange", "blue", "yellow", "green"];
 
@@ -16,6 +16,7 @@ export default function Awareness() {
 
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
+    webrtcOptions: { iceServers },
   });
   const { states, localID, setLocalState } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((state) => state.currentUser);
