@@ -10,7 +10,7 @@ import { useAuthStore } from "../../hooks/useStore";
 import { createTile, maxHandSize } from "./utils";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
-import { signalingServers } from "../../constants";
+import { signalingServers, iceServers } from "../../constants";
 // TODO:
 // oyun bitince taşları oynatmaya izin verme
 // bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez (resim var)
@@ -204,6 +204,7 @@ export function OkeyProvider({ children }) {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
+    webrtcOptions: { iceServers },
   });
   const { states, localID } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((state) => state.currentUser);
