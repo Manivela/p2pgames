@@ -1,7 +1,4 @@
-export const signalingServers = [
-  "wss://webrtc-signaling.fly.dev",
-  "wss://y-webrtc-eu.fly.dev",
-];
+export const signalingServers = ["wss://webrtc-signaling.fly.dev"];
 
 export const iceServers = [
   { urls: "stun:stun.l.google.com:19302" },
