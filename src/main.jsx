@@ -6,7 +6,7 @@ import {
   RouterProvider,
   Route,
 } from "react-router-dom";
-import { DocumentProvider } from "@joebobmiles/y-react";
+import { DocumentProvider } from "./vendor/y-react";
 import { Toaster } from "react-hot-toast";
 import Root from "./routes/root";
 import ErrorPage from "./error-page";

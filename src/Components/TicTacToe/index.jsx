@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useMap } from "@joebobmiles/y-react";
+import { useMap } from "../../vendor/y-react";
 import { toast } from "react-hot-toast";
 import { useAuthStore } from "../../hooks/useStore";
 import "./ttt.modules.css";

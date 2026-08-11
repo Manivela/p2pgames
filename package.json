@@ -16,7 +16,6 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@joebobmiles/y-react": "^1.2.0",
     "@react-three/cannon": "^6.6.0",
     "@react-three/drei": "^10.0.7",
     "@react-three/fiber": "^9.1.2",
@@ -30,7 +29,18 @@
     "react-router-dom": "^7.5.2",
     "three": "^0.176.0",
     "use-sound": "^5.0.0",
+    "y-indexeddb": "^9.0.12",
+    "y-protocols": "^1.0.6",
+    "y-webrtc": "^10.3.0",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.26",
     "zustand": "^5.0.3"
+  },
+  "overrides": {
+    "ws": "8.21.0",
+    "y-websocket": {
+      "ws": "6.2.4"
+    }
   },
   "devDependencies": {
     "@types/react-dom": "^19.1.2",

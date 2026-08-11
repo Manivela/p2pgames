@@ -4,7 +4,7 @@ import { useThree, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { PointerLockControls } from "@react-three/drei";
 import { useParams } from "react-router-dom";
-import { useWebRtc } from "@joebobmiles/y-react";
+import { useWebRtc } from "../../../vendor/y-react";
 import { useKeyboardControls } from "../hooks/useKeyboardControls";
 import { signalingServers, iceServers } from "../../../constants";
 import { useAuthStore } from "../../../hooks/useStore";

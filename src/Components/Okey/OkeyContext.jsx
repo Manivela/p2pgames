@@ -1,6 +1,6 @@
 import React, { createContext, useMemo, useCallback } from "react";
 import _, { cloneDeep } from "lodash";
-import { useAwareness, useMap, useWebRtc } from "@joebobmiles/y-react";
+import { useAwareness, useMap, useWebRtc } from "../../vendor/y-react";
 import { toast } from "react-hot-toast";
 import useSound from "use-sound";
 import { useParams } from "react-router-dom";

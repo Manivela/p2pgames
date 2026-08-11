@@ -7,7 +7,7 @@ import Board from "../components/Board/Board";
 import Status from "../components/Status/Status";
 import Menu from "../components/Menu/Menu";
 import { useAuthStore } from "../../../hooks/useStore";
-import { useMap } from "@joebobmiles/y-react";
+import { useMap } from "../../../vendor/y-react";
 
 function withHooksAndPlayers(Component) {
   return function WrappedComponent(props) {

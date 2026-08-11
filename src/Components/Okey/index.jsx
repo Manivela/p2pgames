@@ -1,4 +1,4 @@
-import { useMap } from "@joebobmiles/y-react";
+import { useMap } from "../../vendor/y-react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAuthStore } from "../../hooks/useStore";

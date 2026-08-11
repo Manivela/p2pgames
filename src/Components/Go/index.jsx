@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
-import { useMap } from "@joebobmiles/y-react";
+import { useMap } from "../../vendor/y-react";
 import Board from "./Board";
 import {
   areBoardStatesEqual,

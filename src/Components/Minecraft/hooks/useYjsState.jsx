@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useMap } from "@joebobmiles/y-react";
+import { useMap } from "../../../vendor/y-react";
 
 export function useYjsState(mapName, key, initialValue = null) {
   const ymap = useMap(mapName);

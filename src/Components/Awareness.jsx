@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { useWebRtc, useAwareness } from "@joebobmiles/y-react";
+import { useWebRtc, useAwareness } from "../vendor/y-react";
 import { useAuthStore } from "../hooks/useStore";
 import { signalingServers, iceServers } from "../constants";
 

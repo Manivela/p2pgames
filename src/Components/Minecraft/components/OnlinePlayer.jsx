@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { useAwareness, useWebRtc } from "@joebobmiles/y-react";
+import { useAwareness, useWebRtc } from "../../../vendor/y-react";
 import { extend, useThree, useFrame } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry";
 import { Text } from "@react-three/drei";
