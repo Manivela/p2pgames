@@ -1,13 +1,24 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Awareness from "../Components/Awareness";
 import Credits from "../Components/Credits";
 
 export default function Root() {
+  // small screens hide the sidebar; this button lays it over the game
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <>
-      <div id="sidebar">
-        <nav>
+      <button
+        className="menu-toggle"
+        aria-label="Menu"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(!menuOpen)}
+      >
+        ☰
+      </button>
+      <div id="sidebar" className={menuOpen ? "open" : ""}>
+        <nav onClick={() => setMenuOpen(false)}>
           <ul>
             <li>
               <NavLink

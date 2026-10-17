@@ -110,6 +110,44 @@ form[action$="destroy"] button {
   flex-direction: column;
 }
 
+/* small screens give the room to the game. Width 0 instead of display: none
+   keeps the other players' cursor overlay, which is positioned on the page */
+.menu-toggle {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  #sidebar {
+    width: 0;
+    overflow: hidden;
+    border: none;
+  }
+
+  /* visible overflow keeps the full-page cursor overlay unclipped */
+  #sidebar.open {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 200;
+    width: 22rem;
+    overflow: visible;
+    border-right: solid 1px #e3e3e3;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .menu-toggle {
+    display: block;
+    position: fixed;
+    top: 4px;
+    right: 4px;
+    z-index: 201;
+    padding: 0.8rem 1.2rem;
+    font-size: 2.4rem;
+    line-height: 1;
+  }
+}
+
 #sidebar > * {
   padding-left: 2rem;
   padding-right: 2rem;
