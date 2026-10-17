@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { DndProvider, useDragLayer } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
@@ -27,7 +28,28 @@ function TouchPreview() {
   );
 }
 
+// keep the screen on while at the table; browsers only allow it over HTTPS
+// and drop the lock whenever the page is hidden, so take it again on return
+function useWakeLock() {
+  useEffect(() => {
+    let lock;
+    const request = () =>
+      document.visibilityState === "visible" &&
+      navigator.wakeLock
+        ?.request("screen")
+        .then((l) => (lock = l))
+        .catch(() => {});
+    request();
+    document.addEventListener("visibilitychange", request);
+    return () => {
+      document.removeEventListener("visibilitychange", request);
+      lock?.release();
+    };
+  }, []);
+}
+
 function Okey(props) {
+  useWakeLock();
   return (
     <OkeyProvider {...props}>
       <DndProvider
