@@ -1,6 +1,6 @@
 import { cloneDeep, sum } from "lodash";
 import * as game from "./game";
-import { isOkey, meldOrder, rankOf } from "./melds";
+import { isOkey, meldOrder, rankOf, splitMelds } from "./melds";
 
 // Americano: 12 rounds, each with its own opening (el açma) requirement.
 // Same shape as game.js: (state, player, ...args) => new state | message.
@@ -13,6 +13,11 @@ export const OKEY_IN_HAND_SCORE = 25;
 export const MAX_TAKES = 3;
 // from this round on, a real tile can take an okey's place in a table meld
 export const OKEY_SWAP_FROM_ROUND = 6;
+// after drawing from the pile, the others get this long to take the discard
+export const CLAIM_WAIT_SECONDS = 8;
+// discarding a tile that fits a table meld (işler taş): whoever catches it
+// adds this to the discarder's round score, and nobody can take the tile
+export const CATCH_PENALTY = 20;
 
 // The opening must be exactly these melds, [type, size] each.
 // Elden has no opening: you finish with your whole hand in one go.
@@ -146,34 +151,27 @@ export function openHand(state, player, groups) {
   if (typeof taken === "string") return taken;
   const [s, tiles] = taken;
 
-  // groups match the required melds one to one, in either order
-  const orders =
-    required.length === 2
-      ? [
-          [0, 1],
-          [1, 0],
-        ]
-      : [[0]];
-  const melds =
-    tiles.length === required.length &&
-    orders
-      .map((order) =>
-        tiles.map((group, i) => {
-          const [type, size] = required[order[i]];
-          const ordered =
-            group.length === size && meldOrder(group, type, s.okeyTile);
-          return (
-            ordered && { type, owner: player, tiles: ordered.map(tableTile) }
-          );
-        }),
-      )
-      .find((m) => m.every(Boolean));
+  // the picked tiles, wherever they sit on the rack, make exactly the
+  // required melds
+  const melds = splitMelds(tiles.flat(), s.okeyTile, required);
   if (!melds) return `Open with exactly: ${rounds[state.round - 1].name}`;
-
-  s.melds = [...s.melds, ...melds];
+  lay(s, player, melds, groups.flat());
   s.opened = { ...s.opened, [player]: true };
   s.justOpened = player;
   return s;
+}
+
+// puts the new melds on the table, in the order their tiles were picked
+function lay(s, player, melds, ids) {
+  const first = (m) => Math.min(...m.tiles.map((t) => ids.indexOf(t.id)));
+  const table = [...melds]
+    .sort((a, b) => first(a) - first(b))
+    .map(({ type, tiles }) => ({
+      type,
+      owner: player,
+      tiles: tiles.map(tableTile),
+    }));
+  s.melds = [...s.melds, ...table];
 }
 
 export function layMelds(state, player, groups) {
@@ -183,16 +181,9 @@ export function layMelds(state, player, groups) {
   if (typeof taken === "string") return taken;
   const [s, tiles] = taken;
 
-  // ponytail: a group that is both (e.g. 5 + two okeys) is laid as a seri
-  const melds = tiles.map((group) => {
-    for (const type of ["seri", "kut"]) {
-      const ordered = meldOrder(group, type, s.okeyTile);
-      if (ordered)
-        return { type, owner: player, tiles: ordered.map(tableTile) };
-    }
-  });
-  if (!melds.every(Boolean)) return "That's not a küt or a seri";
-  s.melds = [...s.melds, ...melds];
+  const melds = splitMelds(tiles.flat(), s.okeyTile);
+  if (!melds) return "That's not a küt or a seri";
+  lay(s, player, melds, groups.flat());
   return s;
 }
 
@@ -213,10 +204,9 @@ export function addToMeld(state, player, tileId, meldIndex) {
 
 // Trades a real tile from the hand for an okey in a table meld that it can
 // stand in for; the okey goes to the hand (e.g. to open with, same turn).
+const NO_OKEY = "No okey there that tile can replace";
+
 export function swapOkey(state, player, tileId, meldIndex) {
-  if (state.round < OKEY_SWAP_FROM_ROUND) {
-    return `Okeys can be swapped from round ${OKEY_SWAP_FROM_ROUND}`;
-  }
   if (state.gameState !== "play") return "The round is over";
   if (state.currentPlayer !== player) return "Not your turn";
   if (!state.drawn) return "Draw a tile first";
@@ -230,7 +220,14 @@ export function swapOkey(state, player, tileId, meldIndex) {
     : meld.tiles.findIndex(
         (t, j) => isOkey(t, ind) && meldOrder(swapped(j), meld.type, ind),
       );
-  if (i === -1) return "No okey there that tile can replace";
+  if (i === -1) return NO_OKEY;
+  if (state.round < OKEY_SWAP_FROM_ROUND) {
+    return `Okeys can be swapped from round ${OKEY_SWAP_FROM_ROUND}`;
+  }
+  // a küt gives up its okey only once all four colours are there
+  if (meld.type === "kut" && meld.tiles.length < 4) {
+    return "Complete all four of the küt to take its okey";
+  }
 
   const s = cloneDeep(state);
   const okey = { ...meld.tiles[i], source: `hand-${player}`, hidden: false };
@@ -246,17 +243,21 @@ export function swapOkey(state, player, tileId, meldIndex) {
 // A tile dropped on a meld: swap out an okey if it can (that's why you'd
 // drop the exact tile an okey stands for), otherwise add it.
 export function playOnMeld(state, player, tileId, meldIndex) {
-  const s = swapOkey(state, player, tileId, meldIndex);
-  return s && typeof s !== "string"
-    ? s
-    : addToMeld(state, player, tileId, meldIndex);
+  const swap = swapOkey(state, player, tileId, meldIndex);
+  if (swap && typeof swap !== "string") return swap;
+  const add = addToMeld(state, player, tileId, meldIndex);
+  // the tile is the one an okey stands for: say why it can't swap
+  return typeof add === "string" && typeof swap === "string" && swap !== NO_OKEY
+    ? swap
+    : add;
 }
 
 // Taking a discard out of turn: the player whose turn it is may take the
 // previous discard as their draw. If they draw from the pile instead, the
 // discard is on offer to everyone else until they discard; the claimant
 // earliest in turn order after them gets it plus a penalty tile from the pile.
-export function drawTile(state, player, tile, toIndex) {
+export function drawTile(state, player, tile, toIndex, now = Date.now()) {
+  if (isCaught(state, tile.id)) return "That tile was caught";
   const s = game.drawTile(state, player, tile, toIndex);
   if (!s || typeof s === "string") return s;
   const i = s.players.findIndex((p) => p.id === player);
@@ -264,16 +265,24 @@ export function drawTile(state, player, tile, toIndex) {
   const top = from.discardPile.at(-1);
   s.offers = (s.offers ?? 0) + 1;
   s.offer =
-    tile.source === "draw-pile" && top
-      ? { id: `${s.round}.${s.offers}`, from: from.id, tileId: top.id }
+    tile.source === "draw-pile" && top && !isCaught(s, top.id)
+      ? { id: `${s.round}.${s.offers}`, from: from.id, tileId: top.id, at: now }
       : null;
   return s;
 }
 
-// Toggles the player's claim on the tile on offer. Claims are per player
-// (their own sync key), so claiming never collides with the current move.
-export function claimDiscard(state, player) {
+// Out-of-turn take: the player drags the tile on offer onto an empty slot of
+// their rack, where it waits as a ghost until the current player discards.
+// Claims are per player (their own sync key), so claiming never collides
+// with the current move. slot null takes the claim back.
+export function claimDiscard(state, player, slot = null) {
   const { offer } = state;
+  if (slot === null) {
+    if (!seat(state, player)?.claim) return;
+    const s = cloneDeep(state);
+    seat(s, player).claim = null;
+    return s;
+  }
   if (state.gameState !== "play" || !offer) return "Nothing to take right now";
   if (player === state.currentPlayer) return "You already drew this turn";
   if (player === offer.from) return "That's your own tile";
@@ -283,10 +292,14 @@ export function claimDiscard(state, player) {
   if (seat(state, offer.from).discardPile.at(-1)?.id !== offer.tileId) {
     return "Nothing to take right now";
   }
+  if (isCaught(state, offer.tileId)) return "That tile was caught";
   if (!state.drawPile.length) return "No tiles left for the extra draw";
+  const hand = seat(state, player).hand;
   const s = cloneDeep(state);
-  const me = seat(s, player);
-  me.claim = me.claim === offer.id ? null : offer.id;
+  seat(s, player).claim = {
+    id: offer.id,
+    slot: hand[slot] ? hand.indexOf(null) : slot,
+  };
   return s;
 }
 
@@ -301,10 +314,11 @@ export function collectInbox(state, player) {
   return s;
 }
 
+// a won discard goes to the slot its ghost was in, if that's still free
 function intoHand(hand, tiles) {
   const h = [...hand];
-  for (const t of tiles) {
-    const i = h.indexOf(null);
+  for (const { slot, ...t } of tiles) {
+    const i = slot !== undefined && h[slot] === null ? slot : h.indexOf(null);
     h[i === -1 ? h.length : i] = t;
   }
   return h;
@@ -314,23 +328,26 @@ function intoHand(hand, tiles) {
 // after the player whose turn it is.
 export function claimants(state, current = state.currentPlayer) {
   const { offer, players } = state;
-  if (!offer) return [];
+  if (!offer || isCaught(state, offer.tileId)) return [];
   const n = players.length;
   const start = players.findIndex((p) => p.id === current);
   return Array.from(
     { length: n - 1 },
     (_, k) => players[(start + 1 + k) % n],
-  ).filter((p) => p.user && p.id !== offer.from && p.claim === offer.id);
+  ).filter((p) => p.user && p.id !== offer.from && p.claim?.id === offer.id);
 }
 
 function resolveOffer(s, current) {
   const { offer } = s;
   const [winner] = claimants(s, current);
   s.offer = null;
-  if (!winner || !s.drawPile.length) return;
+  if (!winner || !s.drawPile.length || isCaught(s, offer.tileId)) return;
   const from = seat(s, offer.from);
   if (from.discardPile.at(-1)?.id !== offer.tileId) return;
-  const won = [from.discardPile.at(-1), s.drawPile.at(-1)];
+  const won = [
+    { ...from.discardPile.at(-1), slot: winner.claim.slot },
+    s.drawPile.at(-1),
+  ];
   from.discardPile = from.discardPile.slice(0, -1);
   s.drawPile = s.drawPile.slice(0, -1);
   s.takes = { ...s.takes, [winner.id]: (s.takes?.[winner.id] ?? 0) + 1 };
@@ -342,13 +359,61 @@ function resolveOffer(s, current) {
 
 // Rounds 1–11 end when someone discards their last tile, or the pile runs out
 // (then everyone, opened or not, scores what's left in their hand).
-export function discardTile(state, player, tile) {
+// someone besides the discarder could still take the tile on offer
+function claimable(state, player) {
+  const { offer } = state;
+  return (
+    offer &&
+    state.drawPile.length > 0 &&
+    !isCaught(state, offer.tileId) &&
+    state.players.some(
+      (p) =>
+        p.user &&
+        p.id !== player &&
+        p.id !== offer.from &&
+        (state.takes?.[p.id] ?? 0) < MAX_TAKES,
+    )
+  );
+}
+
+export function discardTile(state, player, tile, now = Date.now()) {
+  const last = seat(state, player)?.hand.filter(Boolean).length === 1;
+  const wait =
+    state.offer && CLAIM_WAIT_SECONDS - (now - state.offer.at) / 1000;
+  if (!last && wait > 0 && claimable(state, player)) {
+    return `Give the others ${Math.ceil(wait)}s to take the discard`;
+  }
   const s = game.discardTile(state, player, tile);
   if (!s || typeof s === "string") return s;
   s.justOpened = null;
   if (!seat(s, player).hand.some(Boolean)) return endRound(s, player);
   resolveOffer(s, player);
   if (!s.drawPile.length) return endRound(s, null);
+  return s;
+}
+
+const isCaught = (state, tileId) =>
+  state.players.some((p) => p.caught?.includes(tileId));
+
+// The latest discard, while it's still on top of its pile, can be caught by
+// anyone else if it fits a meld on the table.
+export function catchDiscard(state, player) {
+  if (state.gameState !== "play") return "The round is over";
+  const from = state.players.find((p) =>
+    p.discardPile.some((t) => t.id === state.lastDiscard),
+  );
+  const tile = from?.discardPile.at(-1);
+  if (!tile || tile.id !== state.lastDiscard) return "Nothing to catch";
+  if (from.id === player) return "That's your own tile";
+  if (isCaught(state, tile.id)) return "Already caught";
+  const fits = state.melds.some((m) =>
+    meldOrder([...m.tiles, tile], m.type, state.okeyTile),
+  );
+  if (!fits) return "That tile doesn't fit a meld on the table";
+  const s = cloneDeep(state);
+  const me = seat(s, player);
+  me.caught = [...(me.caught ?? []), tile.id];
+  s.message = `${me.user?.name} caught ${from.user?.name}'s tile: +${CATCH_PENALTY}`;
   return s;
 }
 
@@ -375,6 +440,7 @@ function handScore(hand, indicator) {
 function endRound(state, finisher) {
   const s = cloneDeep(state);
   const i = s.round - 1;
+  const caught = s.players.flatMap((p) => p.caught ?? []);
   for (const p of s.players) {
     p.hand = intoHand(p.hand, p.inbox ?? []);
     p.inbox = [];
@@ -385,6 +451,8 @@ function endRound(state, finisher) {
         : finisher && !isElden(s) && !s.opened[p.id]
           ? NOT_OPENED_SCORE
           : handScore(p.hand, s.okeyTile);
+    s.scores[p.id][i] +=
+      CATCH_PENALTY * p.discardPile.filter((t) => caught.includes(t.id)).length;
     p.hand = p.hand.map((t) => t && { ...t, hidden: false });
   }
   const name = (id) => seat(s, id)?.user?.name ?? "Player";

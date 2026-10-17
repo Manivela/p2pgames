@@ -30,3 +30,23 @@
   box-shadow: 0px 12px 12px 0 rgba(0, 0, 0, 0.1) inset,
     0px -8px 12px 0 rgba(255, 255, 255, 0.3) inset;
 }
+
+/* a finger on a tile drags it instead of scrolling or selecting text */
+.tile {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* table melds can't be dragged, so let them scroll */
+.meld .tile {
+  touch-action: auto;
+}
+
+.dragPreview {
+  position: fixed;
+  z-index: 300;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}

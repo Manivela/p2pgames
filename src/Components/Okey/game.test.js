@@ -84,6 +84,14 @@ test("scripted 2 player game: discard, take discard, draw, finish", () => {
   assert.equal(game.drawTile(s, 2, s.drawPile.at(-1), 20), "The round is over");
 });
 
+test("a fake okey is never the indicator", () => {
+  const fakes = game.tiles.filter((t) => t.rank === "👌");
+  const real = game.tiles.find((t) => t.rank === 7);
+  for (let i = 0; i < 20; i++) {
+    assert.equal(game.pickOkeyTile([...fakes, real]).id, real.id);
+  }
+});
+
 test("only the previous player's discard can be taken", () => {
   let s = game.startGame(seated(3));
   s = game.discardTile(s, 1, player(s, 1).hand.find(Boolean));
@@ -181,6 +189,32 @@ test("a reset racing a move replaces the game whole", () => {
   }
 });
 
+test("a rejoining player who sits before syncing can't reset the game", () => {
+  // which of two concurrent writes to a key wins depends on the clientIDs
+  for (const [tableId, phoneId] of [[1, 2], [2, 1]]) {
+    const [table, phone] = [new Y.Doc(), new Y.Doc()];
+    table.clientID = tableId;
+    phone.clientID = phoneId;
+    const [mapT, mapP] = [table.getMap("okey-state"), phone.getMap("okey-state")];
+    writeState(mapT, undefined, seated(2));
+    replaceState(mapT, game.startGame(readState(mapT)));
+
+    // the phone reloaded: its doc is empty, so it shows an empty table
+    const empty = readState(mapP);
+    writeState(mapP, empty, {
+      ...game.initialState,
+      players: seated(1).players,
+    });
+    Y.applyUpdate(phone, Y.encodeStateAsUpdate(table));
+    Y.applyUpdate(table, Y.encodeStateAsUpdate(phone));
+
+    for (const merged of [readState(mapT), readState(mapP)]) {
+      assert.equal(merged.gameState, "play");
+      assertAllTiles(merged);
+    }
+  }
+});
+
 test("a claim made while the current player moves survives sync", () => {
   let start = americano.startGame(seated(3));
   start = americano.discardTile(start, 1, player(start, 1).hand.find(Boolean));
@@ -190,15 +224,16 @@ test("a claim made while the current player moves survives sync", () => {
   // P2 tidies their rack on one peer while P3 claims on the other
   const s = readState(mapA);
   writeState(mapA, s, game.swapTile(s, 2, player(s, 2).hand.find(Boolean), 24));
-  writeState(mapB, s, americano.claimDiscard(s, 3));
+  writeState(mapB, s, americano.claimDiscard(s, 3, 25));
   sync();
 
   const merged = readState(mapA);
-  assert.equal(player(merged, 3).claim, merged.offer.id);
+  assert.equal(player(merged, 3).claim.id, merged.offer.id);
   const done = americano.discardTile(
     merged,
     2,
     player(merged, 2).hand.find(Boolean),
+    merged.offer.at + americano.CLAIM_WAIT_SECONDS * 1000,
   );
   assert.equal(player(done, 3).inbox.length, 2);
 });

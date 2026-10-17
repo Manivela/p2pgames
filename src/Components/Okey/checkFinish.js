@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { toast } from "react-hot-toast";
+import { t } from "../../i18n";
 
 function areNeighbors(a, b) {
   if ((a.rank === 13 && b.rank === 1) || (a.rank === 1 && b.rank === 13)) {
@@ -52,7 +53,7 @@ export const checkFinished = (hand, indicator) => {
         ) {
           if (sequenceType === "rank" && streak < 3) {
             finished = false;
-            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
+            toast(t(`Invalid sequence ${prevTile.name}>${currentTile.name}`));
             break;
           }
           // going for colors
@@ -67,7 +68,7 @@ export const checkFinished = (hand, indicator) => {
             (thirteen && currentTile.rank === 2)
           ) {
             finished = false;
-            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
+            toast(t(`Invalid sequence ${prevTile.name}>${currentTile.name}`));
             break;
           }
           // going for sequence
@@ -78,7 +79,7 @@ export const checkFinished = (hand, indicator) => {
         } else {
           if (streak < 3) {
             finished = false;
-            toast(`Invalid sequence ${prevTile.name}>${currentTile.name}`);
+            toast(t(`Invalid sequence ${prevTile.name}>${currentTile.name}`));
             break;
           }
           streak = 0;
@@ -90,7 +91,7 @@ export const checkFinished = (hand, indicator) => {
       // a group just ended: it needs 3+ tiles (streak counts the links)
       if (prevTile && streak < 2) {
         finished = false;
-        toast(`Unfinished sequence ${prevTile.name}>...`);
+        toast(t(`Unfinished sequence ${prevTile.name}>...`));
         break;
       }
       streak = 0;
@@ -101,7 +102,7 @@ export const checkFinished = (hand, indicator) => {
   }
   // the last slot of the rack closes a group too
   if (finished && prevTile && streak < 2) {
-    toast(`Unfinished sequence ${prevTile.name}>...`);
+    toast(t(`Unfinished sequence ${prevTile.name}>...`));
     finished = false;
   }
   return finished;

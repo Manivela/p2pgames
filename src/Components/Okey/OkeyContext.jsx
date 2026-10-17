@@ -8,6 +8,7 @@ import { useAuthStore } from "../../hooks/useStore";
 import * as game from "./game";
 import * as americano from "./americano";
 import { readState, replaceState, writeState } from "./sync";
+import { t } from "../../i18n";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
 import { signalingServers, iceServers } from "../../constants";
@@ -21,6 +22,9 @@ import { signalingServers, iceServers } from "../../constants";
 // taşlar bitince seçenek sun oyunu bitir yada karıştır devam et diye
 
 export const OkeyContext = createContext({});
+
+// a claim's ghost only goes back to the discard pile or around the rack
+const ghost = (tile) => tile.source.startsWith("claim-");
 
 export function OkeyProvider({ children }) {
   const { roomId } = useParams();
@@ -74,7 +78,7 @@ export function OkeyProvider({ children }) {
   );
 
   if (duplicates.length > 0) {
-    toast.error("Duplicate tile detected");
+    toast.error(t("Duplicate tile detected"));
     console.warn("duplicates:", duplicates);
   }
 
@@ -125,7 +129,7 @@ export function OkeyProvider({ children }) {
     (fn, player, ...args) => {
       const result =
         player === me ? fn(okeyState, player, ...args) : "Not your turn";
-      if (typeof result === "string") toast(result);
+      if (typeof result === "string") toast(t(result));
       else if (result) setOkeyState(result);
       return !!result && typeof result !== "string";
     },
@@ -148,21 +152,26 @@ export function OkeyProvider({ children }) {
   );
 
   const finishGame = useCallback(
-    (tile) => act(rules.finishGame, me, tile),
+    (tile) => !ghost(tile) && act(rules.finishGame, me, tile),
     [act, rules, me],
   );
 
   const startGame = useCallback(
     (mode) => {
       const start = mode === "americano" ? americano.startGame : game.startGame;
-      replaceState(map, start(okeyState));
+      const next = start(okeyState);
+      // a failed start would still replace the table, seats and all
+      if (next.gameState !== "play") toast(t(next.message));
+      else replaceState(map, next);
     },
     [map, okeyState],
   );
 
-  // Americano: tiles picked on your own rack (local only, not shared).
-  // Picked tiles in neighbouring slots form one group; the rows split groups.
+  // Americano: tiles picked on your own rack (local only, not shared). The
+  // rules split them into melds, wherever they sit on the rack.
   const [selected, setSelected] = React.useState([]);
+  // a new deal can hand out the same tile ids again
+  React.useEffect(() => setSelected([]), [okeyState.deal]);
 
   const toggleSelected = useCallback(
     (tile) => {
@@ -176,33 +185,37 @@ export function OkeyProvider({ children }) {
     [okeyState.mode],
   );
 
-  const selectedGroups = useCallback(() => {
-    const hand = myHand(me);
-    const picked = (t) => t && selected.includes(t.id);
-    const groups = [];
-    hand.forEach((t, i) => {
-      if (!picked(t)) return;
-      if (i % 13 && picked(hand[i - 1])) groups.at(-1).push(t.id);
-      else groups.push([t.id]);
-    });
-    return groups;
-  }, [myHand, me, selected]);
+  const picked = useCallback(
+    () => [
+      myHand(me)
+        .filter((t) => t && selected.includes(t.id))
+        .map((t) => t.id),
+    ],
+    [myHand, me, selected],
+  );
 
   const openHand = useCallback(() => {
-    if (act(americano.openHand, me, selectedGroups())) setSelected([]);
-  }, [act, me, selectedGroups]);
+    if (act(americano.openHand, me, picked())) setSelected([]);
+  }, [act, me, picked]);
 
   const layMelds = useCallback(() => {
-    if (act(americano.layMelds, me, selectedGroups())) setSelected([]);
-  }, [act, me, selectedGroups]);
+    if (act(americano.layMelds, me, picked())) setSelected([]);
+  }, [act, me, picked]);
 
   const playOnMeld = useCallback(
-    (tile, meldIndex) => act(americano.playOnMeld, me, tile.id, meldIndex),
+    (tile, meldIndex) =>
+      !ghost(tile) && act(americano.playOnMeld, me, tile.id, meldIndex),
     [act, me],
   );
 
+  // slot: where the ghost goes on my rack; null takes the claim back
   const claimDiscard = useCallback(
-    () => act(americano.claimDiscard, me),
+    (slot = null) => act(americano.claimDiscard, me, slot),
+    [act, me],
+  );
+
+  const catchDiscard = useCallback(
+    () => act(americano.catchDiscard, me),
     [act, me],
   );
 
@@ -282,6 +295,10 @@ export function OkeyProvider({ children }) {
   );
 
   React.useEffect(() => {
+    // Seeing no one else means we're the ones offline: a phone waking up
+    // drops everyone it hasn't heard from in 30s, and must not unseat them.
+    if (states.size <= 1) return;
+
     const disconnectedPlayerKeys = playerKeys.filter((key) => !states.has(key));
 
     if (disconnectedPlayerKeys.length === 0) return;
@@ -356,6 +373,7 @@ export function OkeyProvider({ children }) {
       layMelds,
       playOnMeld,
       claimDiscard,
+      catchDiscard,
       nextRound,
     }),
     [
@@ -384,6 +402,7 @@ export function OkeyProvider({ children }) {
       layMelds,
       playOnMeld,
       claimDiscard,
+      catchDiscard,
       nextRound,
     ],
   );

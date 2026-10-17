@@ -10,7 +10,7 @@ export const isOkey = (tile, indicator) =>
 const isFake = (tile) => tile.rank === "👌";
 export const rankOf = (tile, indicator) =>
   isFake(tile) ? okeyRank(indicator) : tile.rank;
-const colorOf = (tile, indicator) =>
+export const colorOf = (tile, indicator) =>
   isFake(tile) ? indicator.color : tile.color;
 
 // küt: 3–4 tiles, one rank, all different colours
@@ -55,3 +55,39 @@ function seriOrder(tiles, indicator) {
 // tiles arranged as a meld of `type` ("kut" | "seri"), or null if they aren't one
 export const meldOrder = (tiles, type, indicator) =>
   type === "kut" ? kutOrder(tiles, indicator) : seriOrder(tiles, indicator);
+
+const combos = (arr, k) =>
+  k === 0
+    ? [[]]
+    : arr.flatMap((t, i) =>
+        combos(arr.slice(i + 1), k - 1).map((c) => [t, ...c]),
+      );
+
+// Splits the picked tiles into melds, using every tile. `shapes` is a list of
+// [type, size] to make exactly (an opening); without it any küts and seris of
+// 3+ will do (laying down later). A group that could be both is a seri.
+// Returns [{ type, tiles }] with each meld's tiles in order, or null.
+export function splitMelds(tiles, indicator, shapes) {
+  if (!tiles.length) return shapes?.length ? null : [];
+  if (shapes && !shapes.length) return null;
+  const [first, ...rest] = tiles;
+  const options = shapes
+    ? shapes.map((shape, i) => [...shape, i])
+    : ["seri", "kut"].flatMap((type) =>
+        Array.from({ length: tiles.length - 2 }, (_, k) => [type, k + 3]),
+      );
+  for (const [type, size, i] of options) {
+    for (const others of combos(rest, size - 1)) {
+      const ordered = meldOrder([first, ...others], type, indicator);
+      if (!ordered) continue;
+      const left = rest.filter((t) => !others.includes(t));
+      const more = splitMelds(
+        left,
+        indicator,
+        shapes?.filter((_, j) => j !== i),
+      );
+      if (more) return [{ type, tiles: ordered }, ...more];
+    }
+  }
+  return null;
+}

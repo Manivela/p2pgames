@@ -83,6 +83,9 @@ function assertAllTiles(s) {
   assert.equal(new Set(all).size, 106);
 }
 
+// a discard time past the wait that lets the others take the discard
+const afterWait = (s) => s.offer.at + americano.CLAIM_WAIT_SECONDS * 1000;
+
 const kut5 = ["red5-0", "blue5-0", "black5-0"];
 const seri789 = ["red7-0", "red8-0", "red9-0"];
 const seri234 = ["black2-0", "black3-0", "black4-0"];
@@ -239,15 +242,20 @@ test("out of turn: earliest claimant after the current player gets the discard +
   let s = americano.startGame(seated(4));
   const thrown = player(s, 1).hand.find(Boolean);
   s = americano.discardTile(s, 1, thrown);
-  assert.equal(americano.claimDiscard(s, 3), "Nothing to take right now");
+  assert.equal(americano.claimDiscard(s, 3, 25), "Nothing to take right now");
 
   s = americano.drawTile(s, 2, s.drawPile.at(-1), 25); // P2 passes on it
-  assert.equal(americano.claimDiscard(s, 1), "That's your own tile");
-  assert.equal(americano.claimDiscard(s, 2), "You already drew this turn");
-  s = americano.claimDiscard(s, 4);
-  s = americano.claimDiscard(s, 3);
+  assert.equal(americano.claimDiscard(s, 1, 25), "That's your own tile");
+  assert.equal(americano.claimDiscard(s, 2, 25), "You already drew this turn");
+  s = americano.claimDiscard(s, 4, 25);
+  s = americano.claimDiscard(s, 3, 25);
   const pile = s.drawPile.length;
-  s = americano.discardTile(s, 2, player(s, 2).hand.find(Boolean));
+  const tile = player(s, 2).hand.find(Boolean);
+  assert.equal(
+    americano.discardTile(s, 2, tile, s.offer.at + 1000),
+    "Give the others 7s to take the discard",
+  );
+  s = americano.discardTile(s, 2, tile, afterWait(s));
 
   assert.equal(player(s, 3).inbox[0].id, thrown.id); // P3 comes before P4
   assert.equal(player(s, 3).inbox.length, 2);
@@ -268,8 +276,8 @@ test("a claimant who left the table before the discard doesn't get it", () => {
   let s = americano.startGame(seated(4));
   s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
   s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  s = americano.claimDiscard(s, 3);
-  s = americano.claimDiscard(s, 4);
+  s = americano.claimDiscard(s, 3, 25);
+  s = americano.claimDiscard(s, 4, 25);
   assert.deepEqual(
     americano.claimants(s).map((p) => p.id),
     [3, 4],
@@ -278,7 +286,12 @@ test("a claimant who left the table before the discard doesn't get it", () => {
     ...s,
     players: s.players.map((p) => (p.id === 3 ? { ...p, user: null } : p)),
   };
-  s = americano.discardTile(s, 2, player(s, 2).hand.find(Boolean));
+  s = americano.discardTile(
+    s,
+    2,
+    player(s, 2).hand.find(Boolean),
+    afterWait(s),
+  );
   assert.isEmpty(player(s, 3).inbox ?? []);
   assert.equal(player(s, 4).inbox.length, 2);
 });
@@ -288,19 +301,19 @@ test("at most 3 out-of-turn takes per player per round", () => {
   s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
   s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
   s = { ...s, takes: { 3: americano.MAX_TAKES } };
-  assert.equal(americano.claimDiscard(s, 3), "You can take 3 a round");
+  assert.equal(americano.claimDiscard(s, 3, 25), "You can take 3 a round");
 });
 
 test("the player whose turn it is takes the discard first, closing the offer", () => {
   let s = americano.startGame(seated(3));
   s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
   s = americano.drawTile(s, 2, player(s, 1).discardPile.at(-1), 25);
-  assert.equal(americano.claimDiscard(s, 3), "Nothing to take right now");
+  assert.equal(americano.claimDiscard(s, 3, 25), "Nothing to take right now");
 });
 
 test("from round 6, a real tile swaps out a table okey, which can open the same turn", () => {
   // okey is blue1 (both copies); P1 already has two melds with an okey each
-  const kutWithOkey = ["red5-1", "blue5-1", "blue1-0"];
+  const kutWithOkey = ["red5-1", "blue5-1", "yellow5-0", "blue1-0"];
   const seriWithOkey = ["red3-1", "blue1-1", "red5-0"];
   const filler = ["yellow2-0", "yellow4-0", "yellow6-0", "yellow8-0"];
   let s = americano.startGame(seated(2), {
@@ -349,11 +362,21 @@ test("from round 6, a real tile swaps out a table okey, which can open the same 
     /from round 6/,
   );
   s = { ...s, round: 6 }; // 4'lü küt
+  const threeKut = {
+    type: "kut",
+    owner: 1,
+    tiles: table(["red5-1", "blue5-1", "blue1-0"]),
+  };
+  assert.match(
+    americano.playOnMeld({ ...s, melds: [threeKut] }, 2, "black5-0", 0),
+    /all four/,
+  );
   s = americano.playOnMeld(s, 2, "black5-0", 0);
   assert.deepEqual(ids(s.melds[0].tiles).sort(), [
     "black5-0",
     "blue5-1",
     "red5-1",
+    "yellow5-0",
   ]);
   assert.isOk(tileIn(s, 2, "blue1-0"));
 
@@ -365,4 +388,113 @@ test("from round 6, a real tile swaps out a table okey, which can open the same 
   assert.deepEqual(ids(s.melds[1].tiles), ["red3-1", "red4-0", "red5-0"]);
   assert.isOk(tileIn(s, 2, "blue1-1"));
   assertAllTiles(s);
+});
+
+test("nobody waits when no one else could take the discard", () => {
+  let s = americano.startGame(seated(2));
+  s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25, 1000);
+  s = americano.discardTile(s, 2, player(s, 2).hand.find(Boolean), 1000);
+  assert.equal(s.currentPlayer, 1);
+});
+
+test("a discard that fits a table meld can be caught: +20, and nobody takes it", () => {
+  let s = americano.startGame(seated(3), deal);
+  s = americano.openHand(s, 1, [kut10]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "red10-0")); // fits küt 10
+  assert.equal(americano.catchDiscard(s, 1), "That's your own tile");
+
+  s = americano.catchDiscard(s, 3);
+  assert.deepEqual(player(s, 3).caught, ["red10-0"]);
+  assert.equal(americano.catchDiscard(s, 2), "Already caught");
+  const caughtTile = player(s, 1).discardPile.at(-1);
+  assert.equal(
+    americano.drawTile(s, 2, caughtTile, 25),
+    "That tile was caught",
+  );
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  assert.isNull(s.offer);
+
+  s = americano.discardTile(s, 2, tileIn(s, 2, "red11-0"));
+  assert.equal(
+    americano.catchDiscard(s, 3),
+    "That tile doesn't fit a meld on the table",
+  );
+
+  while (s.gameState === "play") {
+    const p = s.currentPlayer;
+    if (!s.drawn) s = americano.drawTile(s, p, s.drawPile.at(-1), 25);
+    s = americano.discardTile(s, p, player(s, p).hand.find(Boolean), Infinity);
+  }
+  const hand = player(s, 1).hand.filter(Boolean);
+  const inHand = sum(
+    hand.map((x) => (isOkey(x, s.okeyTile) ? 25 : rankOf(x, s.okeyTile))),
+  );
+  assert.equal(s.scores[1][0], inHand + americano.CATCH_PENALTY);
+});
+
+test("a claim waits in the slot it was dropped on, and can be taken back", () => {
+  let s = americano.startGame(seated(3));
+  s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  const offered = player(s, 1).discardPile.at(-1);
+  assert.equal(s.lastDiscard, offered.id);
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+
+  s = americano.claimDiscard(s, 3, 20);
+  assert.deepEqual(player(s, 3).claim, { id: s.offer.id, slot: 20 });
+  s = americano.claimDiscard(s, 3, null);
+  assert.isEmpty(americano.claimants(s));
+
+  s = americano.claimDiscard(s, 3, 22);
+  s = americano.discardTile(
+    s,
+    2,
+    player(s, 2).hand.find(Boolean),
+    afterWait(s),
+  );
+  s = americano.collectInbox(s, 3);
+  assert.equal(player(s, 3).hand[22].id, offered.id);
+  assertAllTiles(s);
+});
+
+test("picked tiles open and lay down wherever they sit on the rack", () => {
+  let s = americano.startGame(seated(2), deal);
+  s = { ...s, round: 3 }; // 3'lü küt + 3'lü seri, picked mixed together
+  const mixed = ["red7-0", "blue5-0", "red9-0", "red5-0", "red8-0", "black5-0"];
+  assert.match(
+    americano.openHand(s, 1, [[...mixed.slice(0, 5), "yellow13-0"]]),
+    /Open with exactly/,
+  );
+  s = americano.openHand(s, 1, [mixed]);
+  assert.deepEqual(
+    s.melds.map((m) => [m.type, ids(m.tiles)]),
+    [
+      ["seri", ["red7-0", "red8-0", "red9-0"]],
+      ["kut", ["blue5-0", "red5-0", "black5-0"]],
+    ],
+  );
+
+  // next turn: two melds picked in one go
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 20);
+  s = game.discardTile(s, 2, tileIn(s, 2, "red11-0"));
+  s = game.drawTile(s, 1, s.drawPile.at(-1), 20);
+  s = americano.layMelds(s, 1, [
+    ["black3-0", "blue10-0", "black2-0", "yellow10-0", "black4-0", "black10-0"],
+  ]);
+  assert.deepEqual(
+    s.melds.slice(2).map((m) => m.type),
+    ["seri", "kut"],
+  );
+});
+
+test("catching the tile on offer drops the claims on it", () => {
+  let s = americano.startGame(seated(3), deal);
+  s = americano.openHand(s, 1, [kut10]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "red10-0")); // fits küt 10
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = americano.claimDiscard(s, 3, 25);
+  assert.lengthOf(americano.claimants(s), 1);
+  s = americano.catchDiscard(s, 2);
+  assert.isEmpty(americano.claimants(s));
 });

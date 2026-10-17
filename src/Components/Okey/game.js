@@ -92,8 +92,11 @@ function dealHand(drawPile, player, count, ids) {
   return hand.concat(Array(maxHandSize - hand.length).fill(null));
 }
 
-function pickOkeyTile(drawPile, id) {
-  const okeyTile = id ? drawPile.find((t) => t.id === id) : _.sample(drawPile);
+// a fake okey can't be the indicator: there's no rank to count up from
+export function pickOkeyTile(drawPile, id) {
+  const okeyTile = id
+    ? drawPile.find((t) => t.id === id)
+    : _.sample(drawPile.filter((t) => t.rank !== "👌"));
   return { ...okeyTile, hidden: false };
 }
 
@@ -186,7 +189,7 @@ export function dealRound(state, drawPile, deal, starter = 0) {
       deal?.hands?.[i],
     );
     hand.forEach((t) => t && taken.add(t.id));
-    return { ...p, hand, discardPile: [], inbox: [] };
+    return { ...p, hand, discardPile: [], inbox: [], claim: null, caught: [] };
   });
 
   return {
@@ -196,6 +199,7 @@ export function dealRound(state, drawPile, deal, starter = 0) {
     okeyTile,
     currentPlayer: players[starter].id,
     drawn: true,
+    lastDiscard: null,
     message: "",
     drawPile: drawPile.filter((t) => !taken.has(t.id)),
   };
@@ -274,6 +278,7 @@ export function discardTile(state, player, tile) {
     newState.currentPlayer,
   ).id;
   newState.drawn = false;
+  newState.lastDiscard = tile.id; // shown apart from the rest of the pile
   return newState;
 }
 

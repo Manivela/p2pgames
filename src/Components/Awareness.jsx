@@ -3,6 +3,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { useWebRtc, useAwareness } from "../vendor/y-react";
 import { useAuthStore } from "../hooks/useStore";
 import { signalingServers, iceServers } from "../constants";
+import { t } from "../i18n";
 
 const colors = ["orange", "blue", "yellow", "green"];
 
@@ -108,7 +109,7 @@ export default function Awareness() {
         </svg>
       )}
       <div>
-        Connected:
+        {t("Connected:")}
         <ul>
           {connectedUsers.map(([id, state]) => (
             <li key={id}>{state?.user?.name}</li>

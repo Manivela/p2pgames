@@ -1,12 +1,14 @@
-import { useContext } from "react";
+import { useContext, useLayoutEffect, useRef } from "react";
 import { useDrop } from "react-dnd";
 import { sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
-import { FINISH_SCORE, MAX_TAKES, claimants, rounds } from "./americano";
+import { FINISH_SCORE, claimants, rounds } from "./americano";
+import { colorOf, isOkey, rankOf } from "./melds";
 import Tile from "./Tile";
+import { t } from "../../i18n";
 
 function Meld({ meld, index }) {
-  const { playOnMeld } = useContext(OkeyContext);
+  const { playOnMeld, okeyState } = useContext(OkeyContext);
   const [{ isOver }, drop] = useDrop(
     () => ({
       accept: "TILE",
@@ -17,125 +19,194 @@ function Meld({ meld, index }) {
     }),
     [playOnMeld, index],
   );
+  // a full küt (all four colours, no okey left to swap out) is one tile
+  const ind = okeyState.okeyTile;
+  const full =
+    meld.type === "kut" &&
+    meld.tiles.length === 4 &&
+    !meld.tiles.some((x) => isOkey(x, ind));
   return (
     <div ref={drop} className={`meld ${isOver ? "over" : ""}`}>
-      {meld.tiles.map((t) => (
-        <Tile key={t.id} tile={t} disabled />
-      ))}
+      {full ? (
+        <div className="tile full">
+          <div className="rank">{rankOf(meld.tiles[0], ind)}</div>
+          <div className="dots">
+            {meld.tiles.map((x) => (
+              <span key={x.id} style={{ backgroundColor: colorOf(x, ind) }} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        meld.tiles.map((x) => <Tile key={x.id} tile={x} disabled />)
+      )}
     </div>
   );
 }
 
-// Americano bits that sit on the table: round, melds, open / lay, next round
-export function AmericanoTable() {
-  const { okeyState, me, openHand, layMelds, claimDiscard, nextRound } =
-    useContext(OkeyContext);
-  const { round, melds, opened, gameState, message, players, offer } =
-    okeyState;
-  const myClaim = players.find((p) => p.id === me)?.claim;
-  const takesLeft = MAX_TAKES - (okeyState.takes?.[me] ?? 0);
-  const canClaim =
-    gameState === "play" &&
-    offer &&
-    me &&
-    takesLeft > 0 &&
-    me !== okeyState.currentPlayer &&
-    me !== offer.from;
+// Desktop pins table buttons around the draw pile; the phone layout stacks
+// them in its own column
+export const place = (phone, style) =>
+  phone ? {} : { className: "drawPile", style };
+
+// round, the claims on the last discard and the melds on the table
+export function AmericanoInfo({ phone }) {
+  const { okeyState } = useContext(OkeyContext);
+  const { round, melds, message, players, offer } = okeyState;
   // everyone sees who wants the discard, so others can claim it too
   const wanting = claimants(okeyState);
   const from = offer && players.find((p) => p.id === offer.from);
   const offered = from?.discardPile.at(-1);
-  const elden = !rounds[round - 1].melds;
   // clear of the top player's discard pile and the side racks
-  const inset = players.length === 2 ? 30 : 380;
+  const inset = players.length === 2 ? 100 : 380;
+
+  // every meld stays in view: they all shrink until they fit the band
+  const band = useRef(null);
+  const layout = melds.map((m) => m.tiles.length).join();
+  useLayoutEffect(() => {
+    const el = band.current;
+    const fit = () => {
+      let scale = 1;
+      el.style.setProperty("--fit", scale);
+      while (el.scrollHeight > el.clientHeight && scale > 0.3) {
+        scale -= 0.05;
+        el.style.setProperty("--fit", scale);
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [layout]);
 
   return (
     <>
       <h3 className="round">
-        Round {round}/{rounds.length} · {rounds[round - 1].name}
-        {message && ` — ${message}`}
+        {t(`Round ${round}/${rounds.length}`)} · {t(rounds[round - 1].name)}
+        {message && ` — ${t(message)}`}
         {wanting.length > 0 && offered && (
           <span className="claims">
-            {wanting.map((p) => p.user.name).join(", ")}{" "}
-            {wanting.length > 1 ? "want" : "wants"} {from.user?.name}&apos;s{" "}
-            {offered.rank === "👌"
-              ? "fake okey"
-              : offered.name.replace(/^([a-z]+)/, "$1 ")}
+            {t(
+              `${wanting.map((p) => p.user.name).join(", ")} ${
+                wanting.length > 1 ? "want" : "wants"
+              } ${from.user?.name}'s ${
+                offered.rank === "👌"
+                  ? "fake okey"
+                  : offered.name.replace(/^([a-z]+)/, "$1 ")
+              }`,
+            )}
           </span>
         )}
       </h3>
-      <div className="melds" style={{ left: inset, right: inset }}>
+      <div
+        ref={band}
+        className="melds"
+        style={phone ? undefined : { left: inset, right: inset }}
+      >
         {melds.map((meld, i) => (
           <Meld key={meld.tiles[0].id} meld={meld} index={i} />
         ))}
       </div>
+    </>
+  );
+}
+
+// open / lay down, catch the discard, next round
+export function AmericanoActions({ phone }) {
+  const { okeyState, me, openHand, layMelds, catchDiscard, nextRound } =
+    useContext(OkeyContext);
+  const { round, opened, gameState, players, melds, lastDiscard } = okeyState;
+  const elden = !rounds[round - 1].melds;
+  // the latest discard, while it's on top, can be caught if it fits a meld
+  const discarder = players.find(
+    (p) => lastDiscard && p.discardPile.at(-1)?.id === lastDiscard,
+  );
+  const canCatch =
+    gameState === "play" &&
+    me &&
+    melds.length > 0 &&
+    discarder &&
+    discarder.id !== me &&
+    !players.some((p) => p.caught?.includes(lastDiscard));
+
+  return (
+    <>
       {gameState === "play" && me && !elden && (
         <button
-          className="drawPile"
-          style={{ marginLeft: -220 }}
+          {...place(phone, { marginLeft: -220 })}
           onClick={opened[me] ? layMelds : openHand}
         >
-          {opened[me] ? "Lay down" : "Open"}
+          {t(opened[me] ? "Lay down" : "Open")}
         </button>
       )}
-      {canClaim && (
+      {canCatch && (
         <button
-          className="drawPile"
-          style={{ marginLeft: -220, marginTop: 20 }}
-          onClick={claimDiscard}
+          {...place(phone, { marginLeft: -220, marginTop: 20 })}
+          onClick={catchDiscard}
         >
-          {myClaim === offer.id
-            ? "Taking discard ✓"
-            : `Take discard (+1) · ${takesLeft} left`}
+          {t("Catch discard")}
         </button>
       )}
       {gameState === "roundEnd" && (
         <button
-          className="drawPile"
-          style={{ marginLeft: 150, marginTop: 100 }}
+          {...place(phone, { marginLeft: 150, marginTop: 100 })}
           onClick={nextRound}
         >
-          Next Round
+          {t("Next Round")}
         </button>
       )}
     </>
   );
 }
 
-export function Scores() {
+export function AmericanoTable() {
+  return (
+    <>
+      <AmericanoInfo />
+      <AmericanoActions />
+    </>
+  );
+}
+
+// children: extra controls under the sheet (the phone puts Reset / New Game here)
+export function Scores({ children }) {
   const { okeyState } = useContext(OkeyContext);
   const { players, scores, gameState } = okeyState;
   return (
     <details className="scores" open={gameState !== "play"}>
-      <summary>Scores</summary>
-      <table>
-        <thead>
-          <tr>
-            <th />
-            {players.map((p) => (
-              <th key={p.id}>{p.user?.name ?? `Player ${p.id}`}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rounds.map((r, i) => (
-            <tr key={r.name}>
-              <th>{r.name}</th>
+      <summary>{t("Scores")}</summary>
+      <div className="sheet">
+        <table>
+          <thead>
+            <tr>
+              <th />
               {players.map((p) => (
-                <td key={p.id}>
-                  {scores[p.id]?.[i] === FINISH_SCORE ? "—" : scores[p.id]?.[i]}
-                </td>
+                <th key={p.id}>{p.user?.name ?? t(`Player ${p.id}`)}</th>
               ))}
             </tr>
-          ))}
-          <tr>
-            <th>Total</th>
-            {players.map((p) => (
-              <td key={p.id}>{sum(scores[p.id] ?? [])}</td>
+          </thead>
+          <tbody>
+            {rounds.map((r, i) => (
+              <tr key={r.name}>
+                <th>{t(r.name)}</th>
+                {players.map((p) => (
+                  <td key={p.id}>
+                    {scores[p.id]?.[i] === FINISH_SCORE
+                      ? "—"
+                      : scores[p.id]?.[i]}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </tr>
-        </tbody>
-      </table>
+            <tr>
+              <th>{t("Total")}</th>
+              {players.map((p) => (
+                <td key={p.id}>{sum(scores[p.id] ?? [])}</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+        {children}
+      </div>
     </details>
   );
 }

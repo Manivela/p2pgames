@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../hooks/useStore";
 import { customNanoid } from "../utils/customNanoid";
+import { t } from "../i18n";
 
 const colors = ["red", "green", "blue", "orange", "yellow"];
 
@@ -37,10 +38,10 @@ export default function Login() {
 
   return (
     <div className="centered">
-      User:{" "}
+      {t("User:")}{" "}
       <form onSubmit={handleLogin}>
         <input name="username" required />
-        <button type="submit">Go</button>
+        <button type="submit">{t("Go")}</button>
       </form>
     </div>
   );

@@ -2,8 +2,9 @@ import { useContext } from "react";
 import Slot from "./Slot";
 import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
+import { t } from "../../i18n";
 
-function Rack({ initialHand, ...props }) {
+function Rack({ initialHand, className = "", ...props }) {
   const {
     isMyTurn,
     myHand,
@@ -17,21 +18,50 @@ function Rack({ initialHand, ...props }) {
     stand,
     currentUser,
     me,
+    claimDiscard,
   } = useContext(OkeyContext);
+  const { offer } = okeyState;
   function onDrop(tile, toIndex) {
-    if (tile.source.includes("hand")) {
+    if (tile.source.startsWith("claim-")) {
+      claimDiscard(toIndex); // move the ghost
+    } else if (tile.source.includes("hand")) {
       swapTile(props.player, tile, toIndex);
+    } else if (offer?.tileId === tile.id && me !== okeyState.currentPlayer) {
+      claimDiscard(toIndex); // out-of-turn take
     } else {
       drawTile(props.player, tile, toIndex);
     }
   }
   function onDiscard(tile, index) {
-    discardTile(props.player, tile, index);
+    if (tile.source.startsWith("claim-"))
+      claimDiscard(null); // put it back
+    else discardTile(props.player, tile, index);
   }
   const sittingPlayer = okeyState.players.find((p) => p.id === props.player);
+  const top = myDiscardPile(props.player).at(-1);
+  const caught = okeyState.players.some((p) => p.caught?.includes(top?.id));
+  // my claim on the discard waits as a ghost in the slot I dropped it on
+  const offered =
+    offer &&
+    !okeyState.players.some((p) => p.caught?.includes(offer.tileId)) &&
+    okeyState.players.find((p) => p.id === offer.from)?.discardPile.at(-1);
+  const ghost = me === props.player &&
+    offered &&
+    offered.id === offer.tileId &&
+    sittingPlayer.claim?.id === offer.id && {
+      slot: sittingPlayer.claim.slot,
+      tile: { ...offered, source: `claim-${me}` },
+    };
+  const slotProps = (tile, index) =>
+    !tile && ghost?.slot === index
+      ? { tile: ghost.tile, className: "ghost" }
+      : { tile };
+  const americano =
+    okeyState.mode === "americano" && okeyState.gameState === "play";
+  const tilesLeft = myHand(props.player).filter(Boolean).length;
 
   return (
-    <div className="rack" {...props}>
+    <div className={`rack ${className}`} {...props}>
       {(me === props.player ||
         ["finish", "roundEnd"].includes(okeyState.gameState)) && (
         <>
@@ -43,7 +73,7 @@ function Rack({ initialHand, ...props }) {
                   key={props.player + index}
                   index={index}
                   onDrop={(a, b) => onDrop(a, b)}
-                  tile={tile}
+                  {...slotProps(tile, index)}
                 />
               ))}
           </div>
@@ -55,7 +85,7 @@ function Rack({ initialHand, ...props }) {
                   key={props.player + index + 13}
                   index={index + 13}
                   onDrop={onDrop}
-                  tile={tile}
+                  {...slotProps(tile, index + 13)}
                 />
               ))}
           </div>
@@ -71,10 +101,15 @@ function Rack({ initialHand, ...props }) {
         <Slot
           type="DISCARD"
           showBorder
-          onDrop={onDiscard}
-          tile={
-            myDiscardPile(props.player)[myDiscardPile(props.player).length - 1]
+          className={
+            caught
+              ? "caught"
+              : top?.id === okeyState.lastDiscard
+                ? "latest"
+                : ""
           }
+          onDrop={onDiscard}
+          tile={top}
           canDiscard={() => isMyTurn(props.player)}
         />
       </div>
@@ -87,9 +122,15 @@ function Rack({ initialHand, ...props }) {
             transform: props.player !== me ? props.style.nameTransform : "",
           }}
         >
-          {sittingPlayer.user.name}{" "}
+          <span className="name">{sittingPlayer.user.name}</span>{" "}
+          {americano && okeyState.opened[props.player] && (
+            <span className="badge">{t("opened")}</span>
+          )}
+          {americano && tilesLeft === 1 && (
+            <span className="badge last">{t("1 tile")}</span>
+          )}
           {sittingPlayer.user.id === currentUser.id && (
-            <button onClick={() => stand(props.player)}>Stand</button>
+            <button onClick={() => stand(props.player)}>{t("Stand")}</button>
           )}
         </h1>
       ) : (
@@ -100,9 +141,9 @@ function Rack({ initialHand, ...props }) {
               props.player !== me ? props.style.nameTransform : undefined,
           }}
         >
-          Player {props.player}{" "}
+          {t(`Player ${props.player}`)}{" "}
           {!isAlreadySitting && (
-            <button onClick={() => sit(props.player)}>Sit</button>
+            <button onClick={() => sit(props.player)}>{t("Sit")}</button>
           )}
         </h1>
       )}

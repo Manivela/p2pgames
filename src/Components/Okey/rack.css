@@ -61,10 +61,14 @@
   align-items: center;
 }
 
+/* centred over the rack, clear of the discard pile at its end; translate
+   leaves transform free for the rotated seats */
 .playerName {
-  left: 40%;
+  left: 50%;
+  translate: -50% 0;
   position: absolute;
   top: -75px;
+  white-space: nowrap;
 }
 
 .active {
@@ -108,7 +112,7 @@
 
 .meld {
   display: flex;
-  zoom: 0.7;
+  zoom: calc(0.7 * var(--fit, 1));
   padding: 4px;
   border-radius: 4px;
   background-color: rgba(0, 0, 0, 0.2);
@@ -116,6 +120,23 @@
 
 .meld.over {
   outline: 3px dashed #fff;
+}
+
+/* a full küt: its number and the four colours */
+.tile.full .rank {
+  color: #333;
+}
+
+.tile.full .dots {
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.tile.full .dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
 }
 
 .scores {
@@ -129,8 +150,269 @@
   font-size: 12px;
 }
 
+/* small screens and fullscreen put the corner buttons top right */
+@media (max-width: 1024px) {
+  .scores {
+    right: auto;
+    left: 8px;
+  }
+}
+
+:fullscreen .scores {
+  right: auto;
+  left: 8px;
+}
+
 .scores th,
 .scores td {
   padding: 0 6px;
   text-align: right;
+}
+
+/* Phone layout (short landscape screens), see PhoneBoard */
+.board.phone {
+  display: grid;
+  grid-template-columns: 718px 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "opponents pile"
+    "table actions"
+    "rack discard";
+  gap: 6px 12px;
+  padding: 6px;
+}
+
+.phone .opponents {
+  grid-area: opponents;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.phone .pile {
+  grid-area: pile;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.phone .pile h4 {
+  margin: 0;
+  color: #fff;
+}
+
+.phone .table {
+  grid-area: table;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.phone .round {
+  position: static;
+  transform: none;
+  font-size: 16px;
+  white-space: normal;
+}
+
+.phone .round .claims {
+  font-size: 14px;
+}
+
+.phone .melds {
+  position: static;
+  flex: 1;
+  min-height: 0;
+}
+
+.phone .meld {
+  zoom: calc(0.55 * var(--fit, 1));
+}
+
+.phone .actions {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.phone .actions button {
+  font-size: 13px;
+  padding: 3px 8px;
+}
+
+.phone .rack {
+  grid-area: rack;
+  position: relative;
+  margin: 0;
+  height: auto;
+  min-height: 174px;
+}
+
+.phone .rack > .top,
+.phone .rack > .bottom {
+  height: auto;
+}
+
+.phone .playerName {
+  font-size: 16px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* long names get cut short so the Stand button stays on screen */
+.phone .playerName .name {
+  display: inline-block;
+  max-width: 7em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.phone .playerName button {
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+/* your discard pile and name sit right of your rack */
+.phone .rack .discardPile {
+  top: auto;
+  bottom: 0;
+  left: calc(100% + 12px);
+  right: auto;
+}
+
+.phone .rack .playerName {
+  top: 0;
+  left: calc(100% + 12px);
+  translate: none;
+  width: 150px;
+  white-space: normal;
+}
+
+.phone .discardPile h4 {
+  margin: 0;
+  color: #fff;
+}
+
+/* the others: just their discard pile and name; ponytail: their hands
+   aren't shown at round end on phones */
+.phone .rack.mini {
+  grid-area: auto;
+  width: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.phone .rack.mini > .top,
+.phone .rack.mini > .bottom {
+  display: none;
+}
+
+.phone .rack.mini .discardPile,
+.phone .rack.mini .playerName {
+  position: static;
+}
+
+.phone .rack.mini .playerName {
+  width: auto;
+  white-space: nowrap;
+}
+
+.phone .rack.mini {
+  min-height: 0;
+}
+
+.phone .rack.mini .discardPile {
+  flex-direction: row;
+  gap: 4px;
+}
+
+/* Scores sits with the buttons and opens over the table */
+.phone .scores {
+  position: static;
+  align-self: flex-start;
+  font-size: 14px;
+}
+
+.phone .scores .sheet {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.phone .scores .sheet button {
+  margin: 6px 6px 0 0;
+}
+
+/* there's no room for the table in portrait */
+@media (orientation: portrait) and (max-width: 600px) {
+  .fit::after {
+    content: attr(data-rotate);
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    font-size: 1.6rem;
+    color: #fff;
+    background-color: #28641c;
+  }
+}
+
+/* next to a name: has opened, and down to the last tile */
+.badge {
+  display: inline-block;
+  margin: 0 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  vertical-align: middle;
+  color: #fff;
+  background-color: #2e7d32;
+}
+
+.badge.last {
+  background-color: #e53935;
+}
+
+.phone .badge {
+  font-size: 11px;
+}
+
+/* a caught discard (işler taş) can't be taken */
+.caught .tile {
+  outline: 3px solid #e53935;
+}
+
+/* your out-of-turn take, until the current player discards */
+.ghost {
+  opacity: 0.5;
+}
+
+.ghost .tile {
+  outline: 2px dashed #1e90ff;
+}
+
+/* the latest discard */
+.latest .tile {
+  box-shadow:
+    0 0 0 3px #ffd54f,
+    0 0 14px 4px rgba(255, 213, 79, 0.9);
 }

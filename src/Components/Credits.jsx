@@ -1,4 +1,5 @@
 import { useMatch } from "react-router-dom";
+import { t } from "../i18n";
 
 function Credits() {
   const isTicTacToe = useMatch("/:roomId/tictactoe");
@@ -8,7 +9,7 @@ function Credits() {
   if (isOkey) {
     return (
       <div style={{ flexDirection: "column" }}>
-        Sound Effects from{" "}
+        {t("Sound Effects from")}{" "}
         <a href="https://pixabay.com/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=102855">
           Pixabay
         </a>
