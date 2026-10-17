@@ -16,7 +16,9 @@ function Slot({
   const [{ isOver, canDrop }, drop] = useDrop(
     () => ({
       accept: "TILE",
-      drop: (e) => onDrop(e.tile, index),
+      drop: (e) => {
+        onDrop(e.tile, index); // react-dnd only takes an object or nothing back
+      },
       // canDrop: (e) =>
       //   (type === "DRAW" ? e.tile.source.includes("hand") : false) &&
       //   (type === "DISCARD" ? canDiscard : true),
@@ -25,7 +27,7 @@ function Slot({
         canDrop: !!monitor.canDrop(),
       }),
     }),
-    [index, canDiscard, onDrop]
+    [index, canDiscard, onDrop],
   );
   return (
     <div

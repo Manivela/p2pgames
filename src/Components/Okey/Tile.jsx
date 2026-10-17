@@ -4,7 +4,8 @@ import { useContext } from "react";
 import { OkeyContext } from "./OkeyContext";
 
 function Tile({ tile, disabled, className, style }) {
-  const { me, toggleHidden, okeyState } = useContext(OkeyContext);
+  const { me, toggleHidden, okeyState, selected, toggleSelected } =
+    useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
   const canSee = tile.source.includes("hand-") ? myTile : true;
   function handleClick(e) {
@@ -21,21 +22,23 @@ function Tile({ tile, disabled, className, style }) {
         opacity: monitor.isDragging() ? 0.5 : 1,
       }),
     }),
-    [tile]
+    [tile],
   );
   return (
     <div
       ref={dragRef}
-      className={`${className} tile`}
+      className={`${className} tile ${selected.includes(tile.id) ? "selected" : ""}`}
       style={{ ...style, color: tile.color, opacity }}
+      onClick={() => myTile && toggleSelected(tile)}
       onContextMenu={handleClick}
     >
-      {(canSee || okeyState.gameState === "finish") && !tile.hidden && (
-        <>
-          <div className="rank">{tile.rank}</div>
-          <div className="heart">♥</div>
-        </>
-      )}
+      {(canSee || ["finish", "roundEnd"].includes(okeyState.gameState)) &&
+        !tile.hidden && (
+          <>
+            <div className="rank">{tile.rank}</div>
+            <div className="heart">♥</div>
+          </>
+        )}
     </div>
   );
 }

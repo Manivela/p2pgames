@@ -1,9 +1,10 @@
 import _ from "lodash";
-import { useContext } from "react";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
 import { OkeyContext } from "./OkeyContext";
 import Rack from "./Rack";
 import Slot from "./Slot";
 import Tile from "./Tile";
+import { AmericanoTable, Scores } from "./AmericanoTable";
 import "./rack.css";
 
 const playerPositions = [
@@ -85,6 +86,21 @@ function rotateArray(array, x) {
   return _.concat(tail, head);
 }
 
+// Shrinks the fixed-size table to fit its container, never grows it.
+function useFitZoom(width, height) {
+  const ref = useRef(null);
+  const [zoom, setZoom] = useState(1);
+  useLayoutEffect(() => {
+    const observer = new ResizeObserver(([entry]) => {
+      const { width: w, height: h } = entry.contentRect;
+      setZoom(Math.min(1, w / width, h / height));
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [width, height]);
+  return [ref, zoom];
+}
+
 function Board() {
   const {
     okeyState,
@@ -99,73 +115,96 @@ function Board() {
     myIndex !== -1
       ? rotateArray(okeyState.players, myIndex)
       : okeyState.players;
+  const americano = okeyState.mode === "americano";
+  const two = rotatedPlayers.length === 2;
+  // smallest sizes where no racks, names or discard piles overlap;
+  // Americano needs extra height for the melds above the draw pile
+  const width = two ? 760 : 1340;
+  const height = (two ? 700 : 820) + (americano ? (two ? 360 : 320) : 0);
+  const [fitRef, zoom] = useFitZoom(width, height);
   return (
-    <div className="board">
-      <Slot
-        className="drawPile"
-        showBorder
-        tile={nextDrawTile}
-        type="DRAW"
-        onDrop={finishGame}
-      />
-      <h4 className="drawPile" style={{ marginTop: -60, marginLeft: -10 }}>
-        {okeyState.drawPile.length}
-      </h4>
-      {okeyState.message && (
-        <h1
+    <div className="fit" ref={fitRef}>
+      {americano && <Scores />}
+      <div
+        className="board"
+        style={{ width, height, zoom }}
+      >
+        {americano && <AmericanoTable />}
+        <Slot
           className="drawPile"
-          style={{ marginTop: -100, transform: "translateX(-45%)" }}
-        >
-          {okeyState.message}
-        </h1>
-      )}
-      {okeyState.okeyTile && (
-        <Tile
-          className="drawPile"
-          style={{ marginLeft: 40 }}
-          tile={okeyState.okeyTile}
-          disabled
+          showBorder
+          tile={nextDrawTile}
+          type="DRAW"
+          onDrop={finishGame}
         />
-      )}
-      {okeyState.gameState === "start" && (
-        <button
-          className="drawPile"
-          style={{ marginLeft: 150 }}
-          onClick={startGame}
-        >
-          Start Game
-        </button>
-      )}
-      {okeyState.gameState !== "start" && (
-        <button
-          className="drawPile"
-          style={{ marginLeft: 150, marginTop: 50 }}
-          onClick={resetGame}
-        >
-          Reset Game
-        </button>
-      )}
-      {okeyState.gameState !== "start" && (
-        <button
-          className="drawPile"
-          style={{ marginLeft: 150, marginTop: 0 }}
-          onClick={newGame}
-        >
-          New Game
-        </button>
-      )}
-      {rotatedPlayers.map((player, index) => (
-        <Rack
-          key={player.id}
-          player={player.id}
-          initialHand={player.hand}
-          style={
-            rotatedPlayers.length === 2
-              ? playerPositionsFor2[index]
-              : playerPositions[index]
-          }
-        />
-      ))}
+        <h4 className="drawPile" style={{ marginTop: -60, marginLeft: -10 }}>
+          {okeyState.drawPile.length}
+        </h4>
+        {okeyState.message && !americano && (
+          <h1
+            className="drawPile"
+            style={{ marginTop: -100, transform: "translateX(-45%)" }}
+          >
+            {okeyState.message}
+          </h1>
+        )}
+        {okeyState.okeyTile && (
+          <Tile
+            className="drawPile"
+            style={{ marginLeft: 40 }}
+            tile={okeyState.okeyTile}
+            disabled
+          />
+        )}
+        {okeyState.gameState === "start" && (
+          <button
+            className="drawPile"
+            style={{ marginLeft: 150 }}
+            onClick={() => startGame()}
+          >
+            Start Okey
+          </button>
+        )}
+        {okeyState.gameState === "start" && (
+          <button
+            className="drawPile"
+            style={{ marginLeft: 150, marginTop: 50 }}
+            onClick={() => startGame("americano")}
+          >
+            Start Americano
+          </button>
+        )}
+        {okeyState.gameState !== "start" && (
+          <button
+            className="drawPile"
+            style={{ marginLeft: 150, marginTop: 50 }}
+            onClick={resetGame}
+          >
+            Reset Game
+          </button>
+        )}
+        {okeyState.gameState !== "start" && (
+          <button
+            className="drawPile"
+            style={{ marginLeft: 150, marginTop: 0 }}
+            onClick={newGame}
+          >
+            New Game
+          </button>
+        )}
+        {rotatedPlayers.map((player, index) => (
+          <Rack
+            key={player.id}
+            player={player.id}
+            initialHand={player.hand}
+            style={
+              rotatedPlayers.length === 2
+                ? playerPositionsFor2[index]
+                : playerPositions[index]
+            }
+          />
+        ))}
+      </div>
     </div>
   );
 }
