@@ -87,7 +87,8 @@ export const checkFinished = (hand, indicator) => {
         }
       }
     } else {
-      if (streak !== 0 && streak < 2) {
+      // a group just ended: it needs 3+ tiles (streak counts the links)
+      if (prevTile && streak < 2) {
         finished = false;
         toast(`Unfinished sequence ${prevTile.name}>...`);
         break;
@@ -98,9 +99,10 @@ export const checkFinished = (hand, indicator) => {
     }
     prevTile = currentTile;
   }
-  // if (streak !== 0 && streak < 2) {
-  //   toast(`Unfinished sequence ${prevTile.id}>...`);
-  //   finished = false;
-  // }
+  // the last slot of the rack closes a group too
+  if (finished && prevTile && streak < 2) {
+    toast(`Unfinished sequence ${prevTile.name}>...`);
+    finished = false;
+  }
   return finished;
 };

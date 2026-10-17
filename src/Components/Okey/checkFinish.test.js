@@ -481,3 +481,24 @@ test("different color sequences can't win", () => {
     ),
   );
 });
+
+test("a lone tile can't win", () => {
+  const groups = [
+    ...[createTile("red", 1), createTile("red", 2), createTile("red", 3)],
+    null,
+    ...[createTile("blue", 5), createTile("blue", 6), createTile("blue", 7)],
+    null,
+    ...[createTile("black", 9), createTile("black", 10)],
+    ...[createTile("black", 11), createTile("black", 12)],
+    null,
+    ...[createTile("red", 8), createTile("black", 8), createTile("blue", 8)],
+    null,
+  ];
+  const lone = createTile("yellow", 2);
+  const inMiddle = [...groups, lone, null];
+  const inLastSlot = [...groups];
+  inLastSlot[maxHandSize - 1] = lone;
+
+  assert.isFalse(checkFinished(makeHand(inMiddle), indicator));
+  assert.isFalse(checkFinished(inLastSlot, indicator));
+});
