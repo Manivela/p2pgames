@@ -15,6 +15,7 @@ import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { AMERICANO } from "./rulesets";
+import { useMoves } from "./moves";
 
 function rotateArray(array, x) {
   // Normalize the rotation count
@@ -159,6 +160,7 @@ function Board() {
   const americano = !!okeyState.rules;
   const two = rotatedPlayers.length === 2;
   const [fitRef, box] = useBoxSize();
+  useMoves();
   // same test as the CSS that moves the corner buttons (index.css)
   const phone = window.innerHeight <= 500;
   // smallest sizes where no seats, names or discard piles overlap;

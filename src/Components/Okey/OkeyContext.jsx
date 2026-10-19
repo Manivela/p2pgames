@@ -136,8 +136,13 @@ export function OkeyProvider({ children }) {
     [okeyState, me, setOkeyState],
   );
 
+  // the tile you last dragged has already landed: moves.js doesn't fly it
+  const dragged = React.useRef(null);
   const drawTile = useCallback(
-    (player, tile, toIndex) => act(moves.drawTile, player, tile, toIndex),
+    (player, tile, toIndex) => {
+      dragged.current = tile.id;
+      return act(moves.drawTile, player, tile, toIndex);
+    },
     [act, moves],
   );
 
@@ -162,20 +167,28 @@ export function OkeyProvider({ children }) {
   );
 
   const swapTile = useCallback(
-    (player, tile, toIndex) =>
-      selected.length > 1 && selected.includes(tile.id)
+    (player, tile, toIndex) => {
+      dragged.current = tile.id;
+      return selected.length > 1 && selected.includes(tile.id)
         ? act(game.moveTiles, player, selected, toIndex)
-        : act(game.swapTile, player, tile, toIndex),
+        : act(game.swapTile, player, tile, toIndex);
+    },
     [act, selected],
   );
 
   const discardTile = useCallback(
-    (player, tile) => act(moves.discardTile, player, tile),
+    (player, tile) => {
+      dragged.current = tile.id;
+      return act(moves.discardTile, player, tile);
+    },
     [act, moves],
   );
 
   const finishGame = useCallback(
-    (tile) => !ghost(tile) && act(moves.finishGame, me, tile),
+    (tile) => {
+      dragged.current = tile.id;
+      return !ghost(tile) && act(moves.finishGame, me, tile);
+    },
     [act, moves, me],
   );
 
@@ -398,6 +411,7 @@ export function OkeyProvider({ children }) {
       claimDiscard,
       catchDiscard,
       nextRound,
+      dragged,
     }),
     [
       okeyState,

@@ -130,7 +130,7 @@ function Rack({ player }) {
 
   const turn = turnOf(okeyState, player);
   return (
-    <div className={`rack ${turn ? "turn" : ""}`}>
+    <div className={`rack ${turn ? "turn" : ""}`} data-seat={player}>
       {turn && <Timer okeyState={okeyState} />}
       {(me === player || shownAtEnd(okeyState)) && (
         <>
@@ -152,7 +152,7 @@ export function Seat({ player, pos }) {
   const left = hand.filter(Boolean).length;
   const turn = turnOf(okeyState, player);
   return (
-    <div className={`seat pos-${pos} ${turn ? "turn" : ""}`}>
+    <div className={`seat pos-${pos} ${turn ? "turn" : ""}`} data-seat={player}>
       <div
         className={`avatar ${name ? "" : "empty"}`}
         style={{ "--c": seatColors[player] }}
@@ -221,7 +221,10 @@ export function DiscardPile({ player, pos }) {
     top?.id === okeyState.lastDiscard &&
     !caught;
   return (
-    <div className={`discardPile ${pos === undefined ? "" : `pos-${pos}`}`}>
+    <div
+      className={`discardPile ${pos === undefined ? "" : `pos-${pos}`}`}
+      data-pile={player}
+    >
       <h4>{pile.length}</h4>
       <Slot
         type="DISCARD"

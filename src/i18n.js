@@ -128,6 +128,7 @@ const TR = [
   [/^Drag here to open$/, "Açmak için buraya sürükle"],
   [/^Drag here to lay down$/, "İşlemek için buraya sürükle"],
   [/^Catch$/, "Yakala"],
+  [/^Catch!$/, "Yakala!"],
   [/^(.+)'s turn$/, "sıra: $1"],
   [/^Round (\d+)\/(\d+)$/, "El $1/$2"],
   [/^Turn your phone sideways to play$/, "Oynamak için telefonu yan çevir"],

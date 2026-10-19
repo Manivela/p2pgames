@@ -125,6 +125,16 @@ test("picked tiles move together", async ({ page }) => {
     .toEqual([before[3], before[6], before[9]]);
 });
 
+test("another player's move flies across the table", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 1); // my discard
+  const flights = () => page.evaluate(() => window.okeyFlights ?? 0);
+  const before = await flights();
+  await table(page, "play", 1); // Bora draws and discards
+  await expect.poll(flights).toBeGreaterThan(before);
+});
+
 test("between rounds a seat can be freed and taken", async ({
   page,
   context,

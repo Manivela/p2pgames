@@ -35,7 +35,11 @@ function Meld({ meld, index }) {
     meld.tiles.length === 4 &&
     !meld.tiles.some((x) => isOkey(x, ind));
   return (
-    <div ref={drop} className={`meld ${isOver ? "over" : ""}`}>
+    <div
+      ref={drop}
+      className={`meld ${isOver ? "over" : ""}`}
+      data-meld={index}
+    >
       {full ? (
         <div className="tile full">
           <div className="rank">{rankOf(meld.tiles[0], ind)}</div>

@@ -78,6 +78,7 @@ function Tile({ tile, disabled, className, style }) {
   return (
     <div
       ref={dragRef}
+      data-tile-id={tile.id}
       className={classes.filter(Boolean).join(" ")}
       style={{ ...style, opacity }}
       onClick={() => {

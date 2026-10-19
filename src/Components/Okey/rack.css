@@ -1009,3 +1009,41 @@
     animation: none;
   }
 }
+
+/* the copies that fly between places (moves.js), over the whole page */
+.flights {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  pointer-events: none;
+}
+
+div.flights > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  transform-origin: 0 0;
+}
+
+.flights .pop {
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #ffb300;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  color: #3a2600;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.flights .score {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.flights .score.fine {
+  color: #ff8a80;
+}
