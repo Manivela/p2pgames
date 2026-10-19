@@ -21,6 +21,10 @@ test("messages with names and numbers translate both ways", () => {
     "Ali istiyor: Ayşe · kırmızı 4",
   );
   assert.equal(
+    t("Open with 101+ or 5 pairs", true),
+    "101+ sayıyla ya da 5 çiftle aç",
+  );
+  assert.equal(
     t("Open with exactly: 3'lü küt + 3'lü seri", false),
     "Open with exactly: set of 3 + run of 3",
   );

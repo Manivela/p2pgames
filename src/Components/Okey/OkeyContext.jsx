@@ -249,6 +249,12 @@ export function OkeyProvider({ children }) {
     [act, me],
   );
 
+  // 101: the discard I took goes back on its pile
+  const returnDiscard = useCallback(
+    () => act(americano.returnDiscard, me),
+    [act, me],
+  );
+
   // tiles won out of turn wait in my inbox; move them onto my rack
   const inboxSize = okeyState.players.find((p) => p.id === me)?.inbox?.length;
   React.useEffect(() => {
@@ -410,6 +416,7 @@ export function OkeyProvider({ children }) {
       playOnMeld,
       claimDiscard,
       catchDiscard,
+      returnDiscard,
       nextRound,
       dragged,
     }),
@@ -441,6 +448,7 @@ export function OkeyProvider({ children }) {
       playOnMeld,
       claimDiscard,
       catchDiscard,
+      returnDiscard,
       nextRound,
     ],
   );

@@ -84,6 +84,10 @@ const stages = {
     await table(page, "start", 4, "classic");
     await table(page, "play", 5);
   },
+  101: async (page) => {
+    await table(page, "start", 4, "101");
+    await table(page, "toMyTurn");
+  },
 };
 
 for (const [stage, setUp] of Object.entries(stages)) {

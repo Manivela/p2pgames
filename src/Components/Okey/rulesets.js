@@ -71,4 +71,35 @@ export const AMERICANO = {
   // discarding a tile that fits a table meld (işler taş): whoever catches it
   // adds this to the discarder's round score, and nobody can take the tile
   catchPenalty: 20,
+  wrapRuns: true, // 12-13-1 is a run
+  outOfTurnTakes: true, // anyone may claim the discard (maxTakes a round)
+  swapOkeys: true, // a table okey can be traded for the tile it stands for
+  buildWhenOpening: false, // lay more and add to melds only from next turn
+};
+
+// 101 Okey, as pagat.com has it (pagat.com/rummy/okey101.html): open with
+// sets and runs worth 101 or more at face value, or with 5 pairs; the
+// lowest total after 11 hands wins.
+export const ONE_O_ONE = {
+  id: "101",
+  name: "101",
+  handSize: 21,
+  // the same opening every hand
+  rounds: Array.from({ length: 11 }, (_, i) => ({ name: `${i + 1}` })),
+  opening: { points: 101, pairs: 5 },
+  // a pairs opener scores double, and lays only pairs (or adds to the
+  // table's sets and runs); a win with pairs or by discarding the okey
+  // doubles every score, both together quadruple it (a player who didn't
+  // open pays at most twice notOpenedScore)
+  finishScore: -101,
+  notOpenedScore: 202,
+  okeyInHandScore: 101,
+  catchPenalty: 101, // işler taş, caught with the Catch button
+  okeyDiscardPenalty: 101, // discarding the okey, unless it's your last tile
+  wrapRuns: false, // 1-2-3 only, never 12-13-1
+  outOfTurnTakes: false,
+  // the previous discard can be taken only to use it in a meld that turn
+  takeMustBeUsed: true,
+  swapOkeys: false, // a table okey stays where it is
+  buildWhenOpening: true,
 };

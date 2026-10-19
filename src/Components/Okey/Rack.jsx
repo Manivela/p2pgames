@@ -202,10 +202,13 @@ export function DiscardPile({ player, pos }) {
     discardTile,
     claimDiscard,
     catchDiscard,
+    returnDiscard,
   } = useContext(OkeyContext);
   function onDiscard(tile, index) {
+    const took = okeyState.tookDiscard;
     if (tile.source.startsWith("claim-"))
       claimDiscard(null); // put it back
+    else if (took?.tileId === tile.id && took.from === player) returnDiscard();
     else discardTile(player, tile, index);
   }
   const pile = myDiscardPile(player);

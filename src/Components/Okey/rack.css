@@ -628,7 +628,17 @@
   gap: 6px;
 }
 
-.phone .actions button {
+.phone .table .buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.phone .table .buttons:empty {
+  display: none;
+}
+
+.phone :is(.actions, .table .buttons) button {
   font-size: 13px;
   padding: 3px 8px;
 }

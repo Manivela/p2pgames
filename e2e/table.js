@@ -3,6 +3,7 @@
 // elements that overlap or fall off the screen.
 import * as game from "../src/Components/Okey/game.js";
 import * as americano from "../src/Components/Okey/americano.js";
+import { AMERICANO, ONE_O_ONE } from "../src/Components/Okey/rulesets.js";
 
 const NAMES = { 2: "Bora", 3: "Can", 4: "Deniz" };
 // seat 1 holds these from the deal: a küt that opens round 1
@@ -29,20 +30,23 @@ function seatBots(n) {
 }
 
 // n players dealt the same tiles every run: a fixed shuffle (tile i goes
-// to i * 37 mod 106), seat 1's hand starting with KUT
+// to i * 37 mod 106), seat 1's hand starting with KUT. mode: "americano",
+// "101" or "classic"
 export function start(n, mode = "americano") {
   seatBots(n);
+  const rules = { americano: AMERICANO, 101: ONE_O_ONE }[mode];
+  const size = rules?.handSize ?? 14;
   const drawPile = game.tiles.map((_, i) => ({
     ...game.tiles[(i * 37) % game.tiles.length],
     hidden: true,
   }));
   const rest = drawPile.map((t) => t.id).filter((id) => !KUT.includes(id));
-  const hands = [[...KUT, ...rest.splice(0, 12)]];
-  for (let i = 1; i < n; i++) hands.push(rest.splice(0, 14));
+  const hands = [[...KUT, ...rest.splice(0, size + 1 - KUT.length)]];
+  for (let i = 1; i < n; i++) hands.push(rest.splice(0, size));
   const deal = { okeyTile: rest.find((id) => !id.includes("👌")), hands };
-  const rules = mode === "americano" ? americano : game;
+  const s = { ...window.okey.get(), drawPile };
   window.okey.set(
-    ok(rules.startGame({ ...window.okey.get(), drawPile }, deal)),
+    ok(rules ? americano.startGame(s, deal, rules) : game.startGame(s, deal)),
   );
 }
 
@@ -98,6 +102,7 @@ const SEL = [
   ".scores",
   ".pile",
   ".actions > *",
+  ".table .buttons > *",
   ".fullscreen-toggle",
   ".menu-toggle",
   ".table-menu",

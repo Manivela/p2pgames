@@ -27,9 +27,10 @@ function kutOrder(tiles, indicator) {
 }
 
 // seri: 3+ consecutive ranks of one colour; 1 may follow 13 (12-13-1) but
-// not lead into 2 from there. Returns the tiles in run order, okeys filling
-// the gaps, or null.
-function seriOrder(tiles, indicator) {
+// not lead into 2 from there, unless `wrap` is off (101). Returns the tiles
+// in run order, okeys filling the gaps, or null.
+function seriOrder(tiles, indicator, wrap) {
+  const top = wrap ? 14 : 13;
   const wild = tiles.filter((t) => isOkey(t, indicator));
   const rest = tiles.filter((t) => !isOkey(t, indicator));
   const n = tiles.length;
@@ -42,7 +43,7 @@ function seriOrder(tiles, indicator) {
   const r = rankOf(tiles[a], indicator);
   const inPlace = (start) =>
     start >= 1 &&
-    start + n - 1 <= 14 &&
+    start + n - 1 <= top &&
     n <= 13 &&
     tiles.every(
       (t, j) =>
@@ -51,7 +52,7 @@ function seriOrder(tiles, indicator) {
     );
   if ((r === 1 ? [1 - a, 14 - a] : [r - a]).some(inPlace)) return tiles;
   // otherwise the lowest run they make
-  for (let start = 1; start + n - 1 <= 14; start++) {
+  for (let start = 1; start + n - 1 <= top; start++) {
     const end = start + n - 1;
     const slots = Array(n).fill(null);
     const fits = rest.every((t) => {
@@ -69,9 +70,26 @@ function seriOrder(tiles, indicator) {
   return null;
 }
 
-// tiles arranged as a meld of `type` ("kut" | "seri"), or null if they aren't one
-export const meldOrder = (tiles, type, indicator) =>
-  type === "kut" ? kutOrder(tiles, indicator) : seriOrder(tiles, indicator);
+// pair (101): two of the same tile, or an okey and any tile
+function pairOrder(tiles, indicator) {
+  const [a, b] = tiles;
+  const ok =
+    tiles.length === 2 &&
+    (isOkey(a, indicator) ||
+      isOkey(b, indicator) ||
+      (rankOf(a, indicator) === rankOf(b, indicator) &&
+        colorOf(a, indicator) === colorOf(b, indicator)));
+  return ok ? tiles : null;
+}
+
+// tiles arranged as a meld of `type` ("kut" | "seri" | "pair"), or null if
+// they aren't one; `wrap`: whether 12-13-1 is a seri
+export const meldOrder = (tiles, type, indicator, wrap = true) =>
+  type === "kut"
+    ? kutOrder(tiles, indicator)
+    : type === "pair"
+      ? pairOrder(tiles, indicator)
+      : seriOrder(tiles, indicator, wrap);
 
 // What a table okey stands for, fixed by where it sits: in a seri its place
 // gives the rank; in a küt it's the rank and whichever colours are missing.
@@ -85,6 +103,7 @@ export function okeyStandsFor(meld, i, indicator) {
     const all = Object.values(colorMap); // tiles carry the hex colour
     return { rank, colors: all.filter((c) => !have.includes(c)) };
   }
+  if (meld.type === "pair") return { rank, colors: [color] };
   if (rank === 1 && a > 0) rank = 14; // the 1 after 13
   return { rank: ((rank + i - a - 1) % 13) + 1, colors: [color] };
 }
@@ -97,27 +116,36 @@ const combos = (arr, k) =>
       );
 
 // Splits the picked tiles into melds, using every tile. `shapes` is a list of
-// [type, size] to make exactly (an opening); without it any küts and seris of
-// 3+ will do (laying down later). A group that could be both is a seri.
-// Returns [{ type, tiles }] with each meld's tiles in order, or null.
-export function splitMelds(tiles, indicator, shapes) {
+// [type, size] to make exactly (an opening); without it any küts (3–4) and
+// seris of 3+ will do (laying down later). A group that could be both is a
+// seri. Returns [{ type, tiles }] with each meld's tiles in order, or null.
+export function splitMelds(tiles, indicator, shapes, wrap = true) {
   if (!tiles.length) return shapes?.length ? null : [];
   if (shapes && !shapes.length) return null;
   const [first, ...rest] = tiles;
   const options = shapes
-    ? shapes.map((shape, i) => [...shape, i])
-    : ["seri", "kut"].flatMap((type) =>
-        Array.from({ length: tiles.length - 2 }, (_, k) => [type, k + 3]),
-      );
+    ? shapes
+        .map((shape, i) => [...shape, i])
+        // the same shape twice is the same try
+        .filter(
+          ([type, size], i) =>
+            shapes.findIndex(([t, s]) => t === type && s === size) === i,
+        )
+    : [
+        ...Array.from({ length: tiles.length - 2 }, (_, k) => ["seri", k + 3]),
+        ["kut", 3],
+        ["kut", 4],
+      ];
   for (const [type, size, i] of options) {
     for (const others of combos(rest, size - 1)) {
-      const ordered = meldOrder([first, ...others], type, indicator);
+      const ordered = meldOrder([first, ...others], type, indicator, wrap);
       if (!ordered) continue;
       const left = rest.filter((t) => !others.includes(t));
       const more = splitMelds(
         left,
         indicator,
         shapes?.filter((_, j) => j !== i),
+        wrap,
       );
       if (more) return [{ type, tiles: ordered }, ...more];
     }

@@ -85,7 +85,7 @@ export function AmericanoInfo() {
     okeyState.gameState === "play" &&
     okeyState.currentPlayer === me &&
     okeyState.drawn &&
-    rounds[round - 1].melds &&
+    rounds[round - 1].melds !== null && // not in Elden
     selected.length > 0;
   const [{ over }, drop] = useDrop(
     () => ({
@@ -123,7 +123,10 @@ export function AmericanoInfo() {
   return (
     <>
       <h3 className="round">
-        {t(`Round ${round}/${rounds.length}`)} · {t(rounds[round - 1].name)}
+        {/* 101 has the same opening every hand */}
+        {rules.opening
+          ? `${rules.name} · ${t(`Round ${round}/${rounds.length}`)}`
+          : `${t(`Round ${round}/${rounds.length}`)} · ${t(rounds[round - 1].name)}`}
         {message && ` — ${t(message)}`}
         {wanting.length > 0 && offered && (
           <span className="claims">
@@ -216,7 +219,8 @@ export function Scores({ children }) {
                 <th>{t(r.name)}</th>
                 {players.map((p) => (
                   <td key={p.id}>
-                    {scores[p.id]?.[i] === rules.finishScore
+                    {/* Americano's finish is a line; 101's varies */}
+                    {!rules.opening && scores[p.id]?.[i] === rules.finishScore
                       ? "—"
                       : scores[p.id]?.[i]}
                   </td>

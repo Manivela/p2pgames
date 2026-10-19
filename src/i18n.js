@@ -28,6 +28,15 @@ const TR = [
   ],
   [/^You've already opened$/, "Zaten açtın"],
   [/^Open with exactly: (.+)$/, "Tam olarak şununla aç: $1"],
+  [/^Open with (\d+)\+ or (\d+) pairs$/, "$1+ sayıyla ya da $2 çiftle aç"],
+  [
+    /^Use the tile you took from the discard, or put it back$/,
+    "Yerden aldığın taşı işle ya da geri koy",
+  ],
+  [
+    /^You opened with pairs: lay pairs, or add to sets and runs$/,
+    "Çiftle açtın: çift aç ya da yerdekilere işle",
+  ],
   [/^That's not a küt or a seri$/, "Bu küt ya da seri değil"],
   [/^That tile doesn't fit there$/, "Bu taş oraya işlemez"],
   [
@@ -69,6 +78,10 @@ const TR = [
   ],
   [/^(.+) finished round (\d+)$/, "$1 $2. eli bitirdi"],
   [/^Round (\d+): no tiles left$/, "$1. el: taş kalmadı"],
+  [
+    /^Round (\d+): no tiles left, dealt again$/,
+    "$1. el: taş kalmadı, yeniden dağıtılır",
+  ],
   [/^(.+) wins with (-?\d+)$/, "$1 kazandı: $2"],
   [/^(.+) wins!$/, "$1 kazandı!"],
   [/^(.+) left$/, "$1 ayrıldı"],
@@ -88,6 +101,7 @@ const TR = [
   // labels
   [/^Start Okey$/, "Okey başlat"],
   [/^Start Americano$/, "Americano başlat"],
+  [/^Start 101$/, "101 başlat"],
   [/^Reset Game$/, "Oyunu sıfırla"],
   [/^New Game$/, "Yeni oyun"],
   [/^Open$/, "Aç"],
@@ -105,7 +119,8 @@ const TR = [
   [/^Table menu$/, "Masa menüsü"],
   [/^Sure\? Tap again$/, "Emin misin? Tekrar dokun"],
   [/^Saved games$/, "Kayıtlı oyunlar"],
-  [/^Set up Americano$/, "Americano ayarla"],
+  [/^Set up a game$/, "Oyun ayarla"],
+  [/^Rules$/, "Kurallar"],
   [/^On this device$/, "Bu cihazda"],
   [
     /^No saved games on this device yet\.$/,

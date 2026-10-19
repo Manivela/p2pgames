@@ -5,7 +5,9 @@ import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
 import * as americano from "./americano";
 import * as game from "./game";
-import { AMERICANO } from "./rulesets";
+import { AMERICANO, ONE_O_ONE } from "./rulesets";
+
+const PRESETS = [AMERICANO, ONE_O_ONE];
 import { t } from "../../i18n";
 
 // Every device keeps the latest game it saw, in any room, so it can be
@@ -202,12 +204,15 @@ function LoadDialog({ onClose }) {
   );
 }
 
-// a fresh deal at any round, with each player's total and who starts
+// a fresh deal of a ruleset at any round, with each player's total and who
+// starts
 function SetUpDialog({ onClose }) {
   const { okeyState, loadGame } = useContext(OkeyContext);
-  const rules = okeyState.rules ?? AMERICANO;
+  const [id, setId] = useState(okeyState.rules?.id ?? AMERICANO.id);
+  const rules = PRESETS.find((r) => r.id === id);
   const seated = okeyState.players.filter((p) => p.user);
-  const [round, setRound] = useState(okeyState.round ?? 1);
+  const [picked, setRound] = useState(okeyState.round ?? 1);
+  const round = Math.min(picked, rules.rounds.length);
   const [totals, setTotals] = useState(() =>
     Object.fromEntries(
       seated.map((p) => [p.id, sum(okeyState.scores?.[p.id] ?? [])]),
@@ -221,7 +226,21 @@ function SetUpDialog({ onClose }) {
     onClose();
   };
   return (
-    <Dialog title={t("Set up Americano")} onClose={onClose}>
+    <Dialog title={t("Set up a game")} onClose={onClose}>
+      <label className="round-pick">
+        {t("Rules")}{" "}
+        <select
+          id="setup-rules"
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+        >
+          {PRESETS.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="round-pick">
         {t("Round")}{" "}
         <select
@@ -231,7 +250,8 @@ function SetUpDialog({ onClose }) {
         >
           {rules.rounds.map((r, i) => (
             <option key={r.name} value={i + 1}>
-              {i + 1}. {t(r.name)}
+              {/* 101's hands are just numbered */}
+              {rules.opening ? i + 1 : `${i + 1}. ${t(r.name)}`}
             </option>
           ))}
         </select>
@@ -319,9 +339,7 @@ export default function TableMenu() {
               ))}
           <button onClick={() => show("load")}>{t("Saved games")}</button>
           {(okeyState.gameState === "start" || okeyState.rules) && (
-            <button onClick={() => show("setup")}>
-              {t("Set up Americano")}
-            </button>
+            <button onClick={() => show("setup")}>{t("Set up a game")}</button>
           )}
         </div>
       )}

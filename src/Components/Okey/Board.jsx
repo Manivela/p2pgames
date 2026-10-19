@@ -14,7 +14,7 @@ import {
 import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
-import { AMERICANO } from "./rulesets";
+import { AMERICANO, ONE_O_ONE } from "./rulesets";
 import { useMoves } from "./moves";
 
 function rotateArray(array, x) {
@@ -96,6 +96,12 @@ function GameButtons({ phone }) {
       >
         {t("Start Americano")}
       </button>
+      <button
+        {...place(phone, { marginLeft: 150, marginTop: 67 })}
+        onClick={() => startGame(ONE_O_ONE)}
+      >
+        {t("Start 101")}
+      </button>
     </>
   ) : (
     <button
@@ -131,18 +137,24 @@ function PhoneBoard({ players, style }) {
         {americano ? (
           <AmericanoInfo />
         ) : (
-          okeyState.message && <h3 className="round">{t(okeyState.message)}</h3>
+          <>
+            {okeyState.message && (
+              <h3 className="round">{t(okeyState.message)}</h3>
+            )}
+            {/* in a row on the empty table: the column has no room */}
+            <div className="buttons">
+              <GameButtons phone />
+            </div>
+          </>
         )}
       </div>
       <div className="actions">
         <TableMenu />
         {americano && <AmericanoActions phone />}
-        {americano ? (
+        {americano && (
           <Scores>
             <GameButtons phone />
           </Scores>
-        ) : (
-          <GameButtons phone />
         )}
       </div>
       <Rack player={mine.id} />
