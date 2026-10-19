@@ -3,6 +3,7 @@ import * as Y from "yjs";
 import * as game from "./game";
 import * as americano from "./americano";
 import { readState, replaceState, writeState } from "./sync";
+import { AMERICANO } from "./rulesets";
 
 // unshuffled table with the first `count` seats taken
 function seated(count) {
@@ -286,7 +287,26 @@ test("a claim made while the current player moves survives sync", () => {
     merged,
     2,
     player(merged, 2).hand.find(Boolean),
-    merged.offer.at + americano.CLAIM_WAIT_SECONDS * 1000,
+    merged.offer.at + AMERICANO.claimWaitSeconds * 1000,
   );
   assert.equal(player(done, 3).inbox.length, 2);
+});
+
+test("a game keeps its ruleset, synced and saved", async () => {
+  const s = americano.startGame(seated(2));
+  assert.deepEqual(s.rules, AMERICANO);
+  const map = new Y.Doc().getMap("okey-state");
+  replaceState(map, s);
+  assert.deepEqual(readState(map).rules, AMERICANO);
+  assert.notProperty(map.get(`${map.get("deal")}/turn`), "rules");
+
+  const loaded = await game.decodeSave(await game.encodeSave(s));
+  assert.deepEqual(loaded.rules, AMERICANO);
+  assert.equal(
+    americano.discardTile(loaded, 1, player(loaded, 1).hand.find(Boolean))
+      .currentPlayer,
+    2,
+  );
+  const classic = await game.decodeSave(await game.encodeSave(seated(2)));
+  assert.notProperty(classic, "rules");
 });

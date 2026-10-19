@@ -14,6 +14,7 @@ import {
 import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
+import { AMERICANO } from "./rulesets";
 
 const playerPositions = [
   {
@@ -127,7 +128,7 @@ function GameButtons({ phone }) {
       {/* right under Start Okey, clear of your discard pile */}
       <button
         {...place(phone, { marginLeft: 150, marginTop: 15 })}
-        onClick={() => startGame("americano")}
+        onClick={() => startGame(AMERICANO)}
       >
         {t("Start Americano")}
       </button>
@@ -147,7 +148,7 @@ function GameButtons({ phone }) {
 // seat order from the one before you.
 function PhoneBoard({ players, style }) {
   const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
-  const americano = okeyState.mode === "americano";
+  const americano = !!okeyState.rules;
   const [mine, ...others] = players;
   return (
     <div className="board phone" style={style}>
@@ -196,7 +197,7 @@ function Board() {
     myIndex !== -1
       ? rotateArray(okeyState.players, myIndex)
       : okeyState.players;
-  const americano = okeyState.mode === "americano";
+  const americano = !!okeyState.rules;
   const two = rotatedPlayers.length === 2;
   const [fitRef, box] = useBoxSize();
   // same test as the CSS that moves the corner buttons (index.css)

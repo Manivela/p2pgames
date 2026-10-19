@@ -182,17 +182,19 @@ function getPreviousPlayer(players, currentPlayer) {
 const handOf = (state, player) =>
   state.players.find((p) => p.id === player)?.hand || [];
 
-// Deals every seat from drawPile; the starter gets 15 tiles and moves first.
+// Deals every seat from drawPile: the ruleset's hand size (14 without one),
+// one more for the starter, who moves first.
 // deal: optional { okeyTile: id, hands: [[id | null, ...], ...] } in seat
 // order, to start from a known position instead of a random one
 export function dealRound(state, drawPile, deal, starter = 0) {
   const okeyTile = pickOkeyTile(drawPile, deal?.okeyTile);
   const taken = new Set([okeyTile.id]);
+  const size = state.rules?.handSize ?? 14;
   const players = state.players.map((p, i) => {
     const hand = dealHand(
       drawPile.filter((t) => !taken.has(t.id)),
       p.id,
-      i === starter ? 15 : 14,
+      i === starter ? size + 1 : size,
       deal?.hands?.[i],
     );
     hand.forEach((t) => t && taken.add(t.id));

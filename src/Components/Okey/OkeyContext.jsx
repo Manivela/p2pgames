@@ -121,7 +121,7 @@ export function OkeyProvider({ children }) {
     [okeyState.players],
   );
 
-  const rules = okeyState.mode === "americano" ? americano : game;
+  const moves = okeyState.rules ? americano : game;
 
   // Racks only take drops for the local player; game.* enforces the rules.
   // Returns true when the move went through.
@@ -137,8 +137,8 @@ export function OkeyProvider({ children }) {
   );
 
   const drawTile = useCallback(
-    (player, tile, toIndex) => act(rules.drawTile, player, tile, toIndex),
-    [act, rules],
+    (player, tile, toIndex) => act(moves.drawTile, player, tile, toIndex),
+    [act, moves],
   );
 
   // Tiles picked on your own rack (local only, not shared): dragging one
@@ -170,19 +170,21 @@ export function OkeyProvider({ children }) {
   );
 
   const discardTile = useCallback(
-    (player, tile) => act(rules.discardTile, player, tile),
-    [act, rules],
+    (player, tile) => act(moves.discardTile, player, tile),
+    [act, moves],
   );
 
   const finishGame = useCallback(
-    (tile) => !ghost(tile) && act(rules.finishGame, me, tile),
-    [act, rules, me],
+    (tile) => !ghost(tile) && act(moves.finishGame, me, tile),
+    [act, moves, me],
   );
 
+  // rules: a ruleset (rulesets.js), or none for the classic game
   const startGame = useCallback(
-    (mode) => {
-      const start = mode === "americano" ? americano.startGame : game.startGame;
-      const next = start(okeyState);
+    (rules) => {
+      const next = rules
+        ? americano.startGame(okeyState, undefined, rules)
+        : game.startGame(okeyState);
       // a failed start would still replace the table, seats and all
       if (next.gameState !== "play") toast(t(next.message));
       else replaceState(map, next);

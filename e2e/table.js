@@ -48,7 +48,7 @@ export function start(n, mode = "americano") {
 
 // whoever's turn it is draws from the pile and throws their last tile
 function turn(s) {
-  const rules = s.mode === "americano" ? americano : game;
+  const rules = s.rules ? americano : game;
   const id = s.currentPlayer;
   if (!s.drawn) {
     const slot = seat(s, id).hand.indexOf(null);

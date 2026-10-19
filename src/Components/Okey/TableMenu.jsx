@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
 import * as americano from "./americano";
 import * as game from "./game";
+import { AMERICANO } from "./rulesets";
 import { t } from "../../i18n";
 
 // Every device keeps the latest game it saw, in any room, so it can be
@@ -73,11 +74,9 @@ function summary(s) {
     .map((p) => `${p.user.name} ${sum(s.scores?.[p.id] ?? [])}`)
     .join(", ");
   return [
-    s.mode === "americano"
-      ? t(`Round ${s.round}/${americano.rounds.length}`)
-      : "Okey",
+    s.rules ? t(`Round ${s.round}/${s.rules.rounds.length}`) : "Okey",
     turn && t(`${turn}'s turn`),
-    s.mode === "americano" && scores,
+    s.rules && scores,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -206,6 +205,7 @@ function LoadDialog({ onClose }) {
 // a fresh deal at any round, with each player's total and who starts
 function SetUpDialog({ onClose }) {
   const { okeyState, loadGame } = useContext(OkeyContext);
+  const rules = okeyState.rules ?? AMERICANO;
   const seated = okeyState.players.filter((p) => p.user);
   const [round, setRound] = useState(okeyState.round ?? 1);
   const [totals, setTotals] = useState(() =>
@@ -215,7 +215,7 @@ function SetUpDialog({ onClose }) {
   );
   const [starter, setStarter] = useState(seated[0]?.id);
   const deal = () => {
-    const next = americano.setUp(okeyState, round, totals, starter);
+    const next = americano.setUp(okeyState, round, totals, starter, rules);
     if (typeof next === "string") return toast(t(next));
     loadGame(next);
     onClose();
@@ -229,7 +229,7 @@ function SetUpDialog({ onClose }) {
           value={round}
           onChange={(e) => setRound(Number(e.target.value))}
         >
-          {americano.rounds.map((r, i) => (
+          {rules.rounds.map((r, i) => (
             <option key={r.name} value={i + 1}>
               {i + 1}. {t(r.name)}
             </option>
@@ -318,8 +318,7 @@ export default function TableMenu() {
                 />
               ))}
           <button onClick={() => show("load")}>{t("Saved games")}</button>
-          {(okeyState.gameState === "start" ||
-            okeyState.mode === "americano") && (
+          {(okeyState.gameState === "start" || okeyState.rules) && (
             <button onClick={() => show("setup")}>
               {t("Set up Americano")}
             </button>

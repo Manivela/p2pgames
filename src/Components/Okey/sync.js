@@ -16,7 +16,9 @@ function parts(s) {
     seats: s.players.map((p) =>
       omit(p, ["hand", "discardPile", "inbox", "claim", "caught"]),
     ),
-    turn: omit(s, ["deal", "players", "message", "drawPile"]),
+    turn: omit(s, ["deal", "players", "message", "drawPile", "rules"]),
+    // the same all game: apart, so it isn't sent again with every move
+    rules: s.rules ?? null,
     message: s.message,
     drawPile: s.drawPile,
     ...Object.fromEntries(
@@ -38,6 +40,7 @@ export function readState(map) {
   return (
     seats && {
       ...get("turn"),
+      rules: get("rules") ?? null,
       deal,
       message: get("message"),
       drawPile: get("drawPile"),

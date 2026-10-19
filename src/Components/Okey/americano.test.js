@@ -4,6 +4,7 @@ import * as americano from "./americano";
 import * as game from "./game";
 import { isOkey, meldOrder, okeyStandsFor, rankOf } from "./melds";
 import { createTile } from "./utils";
+import { AMERICANO } from "./rulesets";
 
 const indicator = createTile("blue", 13, 1); // okey is blue1, fake okey = blue1
 const t = (color, rank, i = 0) => createTile(color, rank, i);
@@ -98,7 +99,7 @@ function assertAllTiles(s) {
 }
 
 // a discard time past the wait that lets the others take the discard
-const afterWait = (s) => s.offer.at + americano.CLAIM_WAIT_SECONDS * 1000;
+const afterWait = (s) => s.offer.at + AMERICANO.claimWaitSeconds * 1000;
 
 const kut5 = ["red5-0", "blue5-0", "black5-0"];
 const seri789 = ["red7-0", "red8-0", "red9-0"];
@@ -167,8 +168,8 @@ test("round 1: open exactly, lay and add later, finish by discarding the last ti
   s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
   assert.equal(s.gameState, "roundEnd");
   assert.deepEqual(s.scores, {
-    1: [americano.FINISH_SCORE],
-    2: [americano.NOT_OPENED_SCORE],
+    1: [AMERICANO.finishScore],
+    2: [AMERICANO.notOpenedScore],
   });
 
   assert.equal(s.players.length, 4); // free seats to sit in
@@ -293,7 +294,7 @@ test("Elden: no opening, finish from hand, lowest total wins the game", () => {
       .map((x) => x.rank),
   );
   assert.equal(s.gameState, "finish");
-  assert.equal(s.scores[1][11], americano.FINISH_SCORE);
+  assert.equal(s.scores[1][11], AMERICANO.finishScore);
   assert.equal(s.scores[2][11], p2Sum);
   assert.equal(s.message, `P2 wins with ${p2Sum}`); // 220 for P1
 });
@@ -377,7 +378,7 @@ test("at most 3 out-of-turn takes per player per round", () => {
   let s = americano.startGame(seated(3));
   s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
   s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  s = { ...s, takes: { 3: americano.MAX_TAKES } };
+  s = { ...s, takes: { 3: AMERICANO.maxTakes } };
   assert.equal(americano.claimDiscard(s, 3, 25), "You can take 3 a round");
 });
 
@@ -606,7 +607,7 @@ test("a discard that fits a table meld can be caught: +20, and nobody takes it",
   const inHand = sum(
     hand.map((x) => (isOkey(x, s.okeyTile) ? 25 : rankOf(x, s.okeyTile))),
   );
-  assert.equal(s.scores[1][0], inHand + americano.CATCH_PENALTY);
+  assert.equal(s.scores[1][0], inHand + AMERICANO.catchPenalty);
 });
 
 test("a claim waits in the slot it was dropped on, and can be taken back", () => {

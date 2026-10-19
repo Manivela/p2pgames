@@ -2,7 +2,7 @@ import { useContext, useLayoutEffect, useRef } from "react";
 import { useDrop } from "react-dnd";
 import { sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
-import { FINISH_SCORE, claimants, rounds, upForClaim } from "./americano";
+import { claimants, upForClaim } from "./americano";
 import { allSeats } from "./game";
 import { colorOf, isOkey, rankOf } from "./melds";
 import Tile from "./Tile";
@@ -60,7 +60,8 @@ export const place = (phone, style) =>
 export function AmericanoInfo({ phone }) {
   const { okeyState, me, selected, openHand, layMelds } =
     useContext(OkeyContext);
-  const { round, melds, message, players, opened } = okeyState;
+  const { round, melds, message, players, opened, rules } = okeyState;
+  const { rounds } = rules;
   const offer = upForClaim(okeyState);
   // everyone sees who wants the discard, so others can claim it too
   const wanting = claimants(okeyState);
@@ -177,7 +178,7 @@ export function AmericanoTable() {
 // children: extra controls under the sheet (the phone puts Reset / New Game here)
 export function Scores({ children }) {
   const { okeyState, me } = useContext(OkeyContext);
-  const { scores, gameState } = okeyState;
+  const { scores, gameState, rules } = okeyState;
   // a freed seat keeps its column: whoever sits there next carries it on
   const players = allSeats(okeyState.players).filter(
     (p) => p.user || scores?.[p.id],
@@ -197,12 +198,12 @@ export function Scores({ children }) {
             </tr>
           </thead>
           <tbody>
-            {rounds.map((r, i) => (
+            {rules.rounds.map((r, i) => (
               <tr key={r.name}>
                 <th>{t(r.name)}</th>
                 {players.map((p) => (
                   <td key={p.id}>
-                    {scores[p.id]?.[i] === FINISH_SCORE
+                    {scores[p.id]?.[i] === rules.finishScore
                       ? "—"
                       : scores[p.id]?.[i]}
                   </td>

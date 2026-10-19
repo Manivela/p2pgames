@@ -56,8 +56,7 @@ function Rack({ initialHand, className = "", ...props }) {
     !tile && ghost?.slot === index
       ? { tile: ghost.tile, className: "ghost" }
       : { tile };
-  const americano =
-    okeyState.mode === "americano" && okeyState.gameState === "play";
+  const americano = okeyState.rules && okeyState.gameState === "play";
   // anyone else can catch the latest discard while it's on top; whether it
   // fits a meld is for them to see
   const canCatch =

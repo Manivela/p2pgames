@@ -8,87 +8,21 @@ import {
   rankOf,
   splitMelds,
 } from "./melds";
+import { AMERICANO } from "./rulesets";
 
 // Americano: 12 rounds, each with its own opening (el açma) requirement.
 // Same shape as game.js: (state, player, ...args) => new state | message.
-
-// Score sheet values; lowest total after the 12 rounds wins.
-export const FINISH_SCORE = -20; // shown as a line on the sheet
-export const NOT_OPENED_SCORE = 100;
-export const OKEY_IN_HAND_SCORE = 25;
-// out-of-turn takes allowed per player per round
-export const MAX_TAKES = 3;
-// from this round on, a real tile can take an okey's place in a table meld
-export const OKEY_SWAP_FROM_ROUND = 6;
-// after drawing from the pile, the others get this long to take the discard
-export const CLAIM_WAIT_SECONDS = 8;
-// discarding a tile that fits a table meld (işler taş): whoever catches it
-// adds this to the discarder's round score, and nobody can take the tile
-export const CATCH_PENALTY = 20;
-
-// The opening must be exactly these melds, [type, size] each.
-// Elden has no opening: you finish with your whole hand in one go.
-export const rounds = [
-  { name: "3'lü küt", melds: [["kut", 3]] },
-  { name: "3'lü seri", melds: [["seri", 3]] },
-  {
-    name: "3'lü küt + 3'lü seri",
-    melds: [
-      ["kut", 3],
-      ["seri", 3],
-    ],
-  },
-  {
-    name: "2 × 3'lü küt",
-    melds: [
-      ["kut", 3],
-      ["kut", 3],
-    ],
-  },
-  {
-    name: "2 × 3'lü seri",
-    melds: [
-      ["seri", 3],
-      ["seri", 3],
-    ],
-  },
-  { name: "4'lü küt", melds: [["kut", 4]] },
-  { name: "4'lü seri", melds: [["seri", 4]] },
-  {
-    name: "4'lü küt + 4'lü seri",
-    melds: [
-      ["kut", 4],
-      ["seri", 4],
-    ],
-  },
-  {
-    name: "2 × 4'lü küt",
-    melds: [
-      ["kut", 4],
-      ["kut", 4],
-    ],
-  },
-  {
-    name: "2 × 4'lü seri",
-    melds: [
-      ["seri", 4],
-      ["seri", 4],
-    ],
-  },
-  { name: "5'li seri", melds: [["seri", 5]] },
-  { name: "Elden", melds: null },
-];
+// The numbers come from the game's ruleset (state.rules, rulesets.js).
 
 const seat = (state, player) => state.players.find((p) => p.id === player);
 const tableTile = (tile) => ({ ...tile, source: "table", hidden: false });
-const isElden = (state) => !rounds[state.round - 1].melds;
+const isElden = (state) => !state.rules.rounds[state.round - 1].melds;
 
-export function startGame(state, deal) {
-  const s = game.startGame(state, deal);
+export function startGame(state, deal, rules = AMERICANO) {
+  const s = game.startGame({ ...state, rules }, deal);
   if (s.gameState !== "play") return s;
   return {
     ...s,
-    mode: "americano",
     round: 1,
     scores: {},
     melds: [],
@@ -139,8 +73,8 @@ export function nextRound(state, deal) {
 // Picks a game up from anywhere: a fresh deal at `round`, with each seated
 // player's total so far (in the row before that round) and `starter` to
 // play first.
-export function setUp(state, round, totals, starter) {
-  const s = startGame(state);
+export function setUp(state, round, totals, starter, rules = AMERICANO) {
+  const s = startGame(state, undefined, rules);
   if (s.gameState !== "play") return s.message;
   const carried = (id) =>
     round > 1 ? [...Array(round - 2).fill(null), Number(totals[id]) || 0] : [];
@@ -193,7 +127,7 @@ function canBuild(state, player) {
 }
 
 export function openHand(state, player, groups) {
-  const required = rounds[state.round - 1].melds;
+  const required = state.rules.rounds[state.round - 1].melds;
   if (!required) return "No opening in the Elden round: finish from your hand";
   if (state.opened[player]) return "You've already opened";
   const taken = takeFromHand(state, player, groups);
@@ -203,7 +137,9 @@ export function openHand(state, player, groups) {
   // the picked tiles, wherever they sit on the rack, make exactly the
   // required melds
   const melds = splitMelds(tiles.flat(), s.okeyTile, required);
-  if (!melds) return `Open with exactly: ${rounds[state.round - 1].name}`;
+  if (!melds) {
+    return `Open with exactly: ${state.rules.rounds[state.round - 1].name}`;
+  }
   lay(s, player, melds, groups.flat());
   s.opened = { ...s.opened, [player]: true };
   s.justOpened = player;
@@ -265,8 +201,9 @@ export function addToMeld(state, player, tileId, meldIndex) {
 
 // Trades the real tile a table okey stands for (okeyStandsFor) for that
 // okey, which goes to the hand. Once you've opened, any round; before that,
-// from OKEY_SWAP_FROM_ROUND and only to open with it the same turn (or put
-// it back). A küt gives its okey up only with all four colours there.
+// from the ruleset's okeySwapFromRound and only to open with it the same
+// turn (or put it back). A küt gives its okey up only with all four colours
+// there.
 const NO_OKEY = "No okey there that tile can replace";
 
 export function swapOkey(state, player, tileId, meldIndex) {
@@ -291,8 +228,9 @@ export function swapOkey(state, player, tileId, meldIndex) {
     return "Complete all four of the küt to take its okey";
   }
   const opened = state.opened[player];
-  if (!opened && state.round < OKEY_SWAP_FROM_ROUND) {
-    return `Before opening, okeys can be taken from round ${OKEY_SWAP_FROM_ROUND}`;
+  const from = state.rules.okeySwapFromRound;
+  if (!opened && state.round < from) {
+    return `Before opening, okeys can be taken from round ${from}`;
   }
 
   const s = cloneDeep(state);
@@ -369,7 +307,7 @@ const offerId = (s) => `${s.round}.${s.discards ?? 0}`;
 // take themselves, so a claim can wait for it (and lapses if they take it).
 export function upForClaim(state) {
   if (state.offer) return state.offer;
-  if (state.mode !== "americano" || state.gameState !== "play" || state.drawn) {
+  if (!state.rules || state.gameState !== "play" || state.drawn) {
     return null;
   }
   const n = state.players.length;
@@ -397,8 +335,9 @@ export function claimDiscard(state, player, slot = null) {
   if (state.gameState !== "play" || !offer) return "Nothing to take right now";
   if (player === state.currentPlayer) return "You already drew this turn";
   if (player === offer.from) return "That's your own tile";
-  if ((state.takes?.[player] ?? 0) >= MAX_TAKES) {
-    return `You can take ${MAX_TAKES} a round`;
+  const { maxTakes } = state.rules;
+  if ((state.takes?.[player] ?? 0) >= maxTakes) {
+    return `You can take ${maxTakes} a round`;
   }
   if (seat(state, offer.from).discardPile.at(-1)?.id !== offer.tileId) {
     return "Nothing to take right now";
@@ -483,7 +422,7 @@ function claimable(state, player) {
         p.user &&
         p.id !== player &&
         p.id !== offer.from &&
-        (state.takes?.[p.id] ?? 0) < MAX_TAKES,
+        (state.takes?.[p.id] ?? 0) < state.rules.maxTakes,
     )
   );
 }
@@ -491,7 +430,7 @@ function claimable(state, player) {
 export function discardTile(state, player, tile, now = Date.now()) {
   const last = seat(state, player)?.hand.filter(Boolean).length === 1;
   const wait =
-    state.offer && CLAIM_WAIT_SECONDS - (now - state.offer.at) / 1000;
+    state.offer && state.rules.claimWaitSeconds - (now - state.offer.at) / 1000;
   if (!last && wait > 0 && claimable(state, player)) {
     return `Give the others ${Math.ceil(wait)}s to take the discard`;
   }
@@ -530,7 +469,7 @@ export function catchDiscard(state, player) {
   const s = cloneDeep(state);
   const me = seat(s, player);
   me.caught = [...(me.caught ?? []), tile.id];
-  s.message = `${me.user?.name} caught ${from.user?.name}'s tile: +${CATCH_PENALTY}`;
+  s.message = `${me.user?.name} caught ${from.user?.name}'s tile: +${s.rules.catchPenalty}`;
   return s;
 }
 
@@ -544,18 +483,19 @@ export function finishGame(state, player, tile) {
   return endRound(s, player);
 }
 
-function handScore(hand, indicator) {
+function handScore(hand, { okeyTile, rules }) {
   return sum(
     hand
       .filter(Boolean)
       .map((t) =>
-        isOkey(t, indicator) ? OKEY_IN_HAND_SCORE : rankOf(t, indicator),
+        isOkey(t, okeyTile) ? rules.okeyInHandScore : rankOf(t, okeyTile),
       ),
   );
 }
 
 function endRound(state, finisher) {
   const s = cloneDeep(state);
+  const { rules } = s;
   const i = s.round - 1;
   const caught = s.players.flatMap((p) => p.caught ?? []);
   for (const p of s.players) {
@@ -564,17 +504,18 @@ function endRound(state, finisher) {
     s.scores[p.id] = s.scores[p.id] ?? [];
     s.scores[p.id][i] =
       p.id === finisher
-        ? FINISH_SCORE
+        ? rules.finishScore
         : finisher && !isElden(s) && !s.opened[p.id]
-          ? NOT_OPENED_SCORE
-          : handScore(p.hand, s.okeyTile);
+          ? rules.notOpenedScore
+          : handScore(p.hand, s);
     s.scores[p.id][i] +=
-      CATCH_PENALTY * p.discardPile.filter((t) => caught.includes(t.id)).length;
+      rules.catchPenalty *
+      p.discardPile.filter((t) => caught.includes(t.id)).length;
     p.hand = p.hand.map((t) => t && { ...t, hidden: false });
   }
   const name = (id) => seat(s, id)?.user?.name ?? "Player";
 
-  if (s.round < rounds.length) {
+  if (s.round < rules.rounds.length) {
     return {
       ...s,
       players: game.allSeats(s.players), // free seats to sit in

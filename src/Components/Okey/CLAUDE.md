@@ -3,7 +3,8 @@
 Rules (vitest, `npx vitest run`):
 - Rules are pure functions in `game.js`: `(state, player, ...args) => newState | "toast message" | undefined` (no change). `OkeyContext.jsx` only wires them to Yjs. New rules go in `game.js` or a pure sibling like `checkFinish.js`, with tests.
 - Pattern in `game.test.js`: `seated(n)` for an unshuffled table, `game.startGame(state, { okeyTile, hands })` to deal a known position.
-- Americano: round table and score constants at the top of `americano.js`; küt/seri checks in `melds.js`. `americano.*` wraps `game.*` for the moves that differ (start, discard, finish). Tests in `americano.test.js`.
+- Rulesets: a game's numbers and switches (rounds, hand size, scores, takes, catch penalty) are a preset in `rulesets.js` (`AMERICANO`), stored in the game state as `rules` (its own sync key) and read from there by every rule, so a game keeps the rules it started with. A classic game has `rules` null.
+- Americano: küt/seri checks in `melds.js`. `americano.*` wraps `game.*` for the moves that differ (start, discard, finish); `americano.startGame(state, deal, rules)`. Tests in `americano.test.js`.
 - A discard can be claimed before the current player draws: `upForClaim` gives the discard up for claim, the offer once they draw from the pile. A table okey's value is fixed by where it sits (`okeyStandsFor`); a seri keeps the order it was laid in off the rack.
 - Tile id `${color}${rank}-${copy}` (`red7-0`, fake okey `yellow👌-1`). `okeyTile` is the indicator; the okey is the next rank in the same colour. A hand has 26 slots (13 per row); `null` is a gap, and gaps separate groups.
 

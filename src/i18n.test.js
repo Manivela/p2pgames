@@ -3,7 +3,7 @@ import { assert, test } from "vitest";
 import { t } from "./i18n";
 
 test("every message the rules return has a Turkish version", () => {
-  const rules = ["game.js", "americano.js"]
+  const rules = ["game.js", "americano.js", "rulesets.js"]
     .map((f) => readFileSync(`src/Components/Okey/${f}`, "utf8"))
     .join("\n");
   const messages = [...rules.matchAll(/return "([^"]+)"/g)].map((m) => m[1]);
