@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 *.PNG
+
+# Playwright: run output; the e2e screenshots are committed (*.PNG above
+# matches .png too on a case-insensitive disk)
+test-results
+playwright-report
+!e2e/**/*.png

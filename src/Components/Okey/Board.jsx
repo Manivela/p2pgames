@@ -124,8 +124,9 @@ function GameButtons({ phone }) {
       >
         {t("Start Okey")}
       </button>
+      {/* right under Start Okey, clear of your discard pile */}
       <button
-        {...place(phone, { marginLeft: 150, marginTop: 50 })}
+        {...place(phone, { marginLeft: 150, marginTop: 15 })}
         onClick={() => startGame("americano")}
       >
         {t("Start Americano")}

@@ -98,16 +98,20 @@ export function startGame(state, deal) {
   };
 }
 
-// Deals whoever sits now. A seat keeps its score, whoever sits in it; a seat
-// new to the game starts level with whoever is losing.
+// Deals every seat in the game, sat in or not: its player can sit back down
+// (a phone that slept) or a friend take over, and the seat is scored either
+// way. A seat freed from the menu (left) is out until someone sits in it.
+// Someone who sits in a new seat starts level with whoever is losing.
 export function nextRound(state, deal) {
   if (state.gameState !== "roundEnd") return;
-  const players = state.players.filter((p) => p.user);
-  if (players.length < 2) return "not enough players to start the game";
-  const totals = players
-    .filter((p) => state.scores[p.id])
-    .map((p) => sum(state.scores[p.id]));
-  const worst = totals.length ? Math.max(...totals) : 0;
+  const players = state.players.filter(
+    (p) => p.user || (state.scores[p.id] && !p.left),
+  );
+  const worst = Math.max(
+    ...players
+      .filter((p) => state.scores[p.id])
+      .map((p) => sum(state.scores[p.id])),
+  );
   const scores = { ...state.scores };
   for (const p of players) {
     if (!scores[p.id])

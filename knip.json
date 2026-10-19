@@ -1,6 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@3/schema.json",
   "entry": ["src/main.jsx", "vite.config.js"],
+  "ignoreUnresolved": ["/e2e/table.js"],
   "project": ["src/**/*.{js,jsx}"],
   "ignoreDependencies": [],
   "ignoreExportsUsedInFile": true,
@@ -20,7 +21,7 @@
   },
   "workspaces": {
     ".": {
-      "entry": "src/main.jsx"
+      "entry": ["src/main.jsx", "e2e/table.js"]
     }
   }
 }

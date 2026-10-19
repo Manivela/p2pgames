@@ -7,10 +7,16 @@ Rules (vitest, `npx vitest run`):
 - A discard can be claimed before the current player draws: `upForClaim` gives the discard up for claim, the offer once they draw from the pile. A table okey's value is fixed by where it sits (`okeyStandsFor`); a seri keeps the order it was laid in off the rack.
 - Tile id `${color}${rank}-${copy}` (`red7-0`, fake okey `yellow👌-1`). `okeyTile` is the indicator; the okey is the next rank in the same colour. A hand has 26 slots (13 per row); `null` is a gap, and gaps separate groups.
 
+End to end (Playwright Test):
+- `npm run test:e2e` runs everything in Playwright's Linux Docker image (`e2e/docker.sh`, image version = `@playwright/test`'s), so screenshots render the same on every machine and in CI. Its Linux node_modules live in the `p2pgames-e2e-modules` volume. The image is ~1 GB to download (3.5 GB unpacked): the first run fetches it; `docker image rm` it when Docker's disk is tight. A plain `npx playwright test` on the Mac (~15 s; once: `npx playwright install chromium`) runs the same tests but skips screenshot comparisons (`ignoreSnapshots` off Linux).
+- `e2e/okey.e2e.js` runs on a phone and a small phone (Turkish, touch) and on desktop (English), against the dev server (it starts one if none is running). Each table stage (lobby, play, menu, round end, classic) must have no overlapping or off-screen parts and match its reference screenshot; behaviour tests cover drag to open, moving picked tiles, seats between rounds and save codes.
+- Positions come from `e2e/table.js`, run in the page: the real rules on a fixed deal, written with `window.okey`, so every run looks the same.
+- After an intended visual change: `npm run test:e2e -- --update-snapshots`, look at the new images in `e2e/okey.e2e.js-snapshots/`, commit them.
+
 Design:
 - Prefer gestures to buttons wherever one fits: drag picked tiles onto the table to open, drag a picked tile to move the whole pick, hold to flip. Moves that end or replace the game (new game, reset, stand, load, set up Americano) live in the ⋯ table menu (`TableMenu.jsx`) behind a second tap.
 - Every device auto-saves the latest game it saw, in any room, to `localStorage` (`okey-save`, one slot) as a save code (`game.encodeSave`: deflated and base64'd, so hands aren't readable at a glance); loading seats whoever sits in each seat now (`game.restore`).
-- Between games and Americano rounds every seat shows (`game.allSeats`), so people can sit down or be freed from the ⋯ menu; the next deal goes to whoever sits. A seat keeps its score whoever sits in it; a seat new to the game starts at the worst total of those still playing (`americano.nextRound`).
+- Between games and Americano rounds every seat shows (`game.allSeats`), so people can sit down or be freed from the ⋯ menu. The next deal goes to every seat in the game, sat in or not (a phone that slept sits back down), plus new seats someone sat in, but not a seat freed from the menu (`left`) until someone sits there. A seat keeps its score whoever sits in it; a new seat starts at the worst total (`americano.nextRound`).
 
 Multiplayer and UI (Playwright MCP):
 - With the dev server running, open the same `/<room>/okey` in several tabs of one browser. They sync over BroadcastChannel, with no signaling. Log in per tab; login is in memory, so a reload logs out.

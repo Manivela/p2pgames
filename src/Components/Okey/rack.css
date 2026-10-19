@@ -12,12 +12,15 @@
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
+/* the board's zoom rounds the borders down, leaving a few spare pixels in a
+   row: centred, the 13 slots get the same margin on both sides */
 .rack > .top {
   width: 100%;
   height: 50%;
   border: 4px solid #8b5a2b;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
 }
 
 .rack > .bottom {
@@ -26,6 +29,7 @@
   border: 4px solid #8b5a2b;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
@@ -592,4 +596,18 @@
   text-align: center;
   font-size: 18px;
   color: #ffd54f;
+}
+
+/* Desktop buttons in px: Bootstrap 3 (index.html) sets the root font to 10px,
+   so 1rem buttons came out tiny, and the table is zoomed to fit the window;
+   20px on the table reads at about 15px on a laptop. Phones size their own. */
+.board:not(.phone) > button,
+.board:not(.phone) .discardPile .catch {
+  font-size: 20px;
+  padding: 6px 16px;
+}
+
+.fit > .table-menu .menu button,
+.fit > .table-menu .dialog :is(button, input, select, textarea) {
+  font-size: 15px;
 }

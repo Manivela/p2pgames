@@ -242,8 +242,7 @@ export function OkeyProvider({ children }) {
 
   const nextRound = useCallback(() => {
     const next = americano.nextRound(okeyState);
-    if (typeof next === "string") toast(t(next));
-    else if (next) replaceState(map, next);
+    if (next) replaceState(map, next);
   }, [map, okeyState]);
 
   // a saved or set-up game replaces the table whole
@@ -274,6 +273,7 @@ export function OkeyProvider({ children }) {
 
       seat.user = currentUser;
       seat.userKey = localID;
+      delete seat.left;
 
       setOkeyState({
         ...newState,
@@ -298,6 +298,7 @@ export function OkeyProvider({ children }) {
       const userName = seat.user?.name || "Someone";
       seat.user = null;
       seat.userKey = null;
+      seat.left = true; // out of the next deal, unlike a phone that slept
 
       setOkeyState({
         ...newState,

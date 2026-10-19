@@ -198,29 +198,33 @@ test("between rounds seats can be freed and taken", () => {
     scores: { 1: [10, 5], 2: [30, 12], 3: [-20, 40] },
   };
   s = { ...s, players: game.allSeats(s.players) };
-  s = sit(s, 3, null); // P3 left
+  s = sit(s, 3, null); // P3's phone slept
   s = sit(s, 4, "Deniz");
+  // P2 was freed from the menu
+  s = sit(s, 2, null);
+  s.players = s.players.map((p) => (p.id === 2 ? { ...p, left: true } : p));
 
   s = americano.nextRound(s);
+  // P3's seat is still dealt, waiting for them or someone to sit down; P2's
+  // is out, its score kept
   assert.deepEqual(
     s.players.map((p) => p.id),
-    [1, 2, 4],
+    [1, 3, 4],
   );
-  // Deniz starts level with the worst total; P3's score waits for their seat
-  assert.deepEqual(s.scores[4], [null, 42]);
-  assert.deepEqual(s.scores[3], [-20, 40]);
+  assert.deepEqual(s.scores[2], [30, 12]);
+  assert.isNull(player(s, 3).user);
+  assert.equal(player(s, 3).hand.filter(Boolean).length, 14);
+  // Deniz starts level with the worst total still playing
+  assert.deepEqual(s.scores[4], [null, 20]);
   assertAllTiles(s);
 
-  s = { ...s, gameState: "roundEnd", players: game.allSeats(s.players) };
-  for (const id of [2, 4]) s = sit(s, id, null);
-  assert.equal(americano.nextRound(s), "not enough players to start the game");
-  s = sit(s, 3, "Can"); // takes over P3's seat and score
-  s = americano.nextRound(s);
-  assert.deepEqual(
-    s.players.map((p) => p.id),
-    [1, 3],
-  );
-  assert.deepEqual(s.scores[3], [-20, 40]);
+  // nobody sits back down in seat 3: it's scored all the same
+  while (s.gameState === "play") {
+    const p = s.currentPlayer;
+    if (!s.drawn) s = game.drawTile(s, p, s.drawPile.at(-1), 25);
+    s = americano.discardTile(s, p, player(s, p).hand.find(Boolean));
+  }
+  assert.equal(s.scores[3].length, 3);
 });
 
 test("two-meld openings match in either order, okey included", () => {
