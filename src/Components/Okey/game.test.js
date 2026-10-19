@@ -119,6 +119,53 @@ test("4 players can draw the whole pile without losing a tile", () => {
   assertAllTiles(s);
 });
 
+test("a loaded game seats whoever sits there now", () => {
+  const saved = game.startGame(seated(2));
+  const tonight = {
+    ...game.initialState,
+    players: game.initialState.players.map((p) =>
+      p.id === 1 ? { ...p, user: { id: "x", name: "Ayşe" }, userKey: 9 } : p,
+    ),
+  };
+  const s = game.restore(saved, tonight);
+  assert.equal(player(s, 1).user.name, "Ayşe");
+  assert.equal(player(s, 1).userKey, 9);
+  assert.isNull(player(s, 2).user);
+  assert.deepEqual(player(s, 1).hand, player(saved, 1).hand);
+});
+
+test("a save code hides the state and loads it back", async () => {
+  const s = game.startGame(seated(4));
+  const code = await game.encodeSave(s);
+  assert.match(code, /^[A-Za-z0-9+/=]+$/); // no JSON, no tile ids
+  assert.isBelow(code.length, JSON.stringify(s).length / 5);
+  assert.deepEqual(await game.decodeSave(code), s);
+  assert.isNull(await game.decodeSave("hello"));
+  assert.isNull(await game.decodeSave(JSON.stringify(s)));
+});
+
+test("picked tiles move together, side by side in rack order", () => {
+  let s = game.startGame(seated(2));
+  const hand = () => player(s, 1).hand;
+  const at = (i) => hand()[i]?.id;
+  const [a, b, c] = [hand()[0], hand()[4], hand()[9]].map((t) => t.id);
+  const inTheWay = [at(14), at(15)];
+
+  s = game.moveTiles(s, 1, [c, a, b], 14);
+  assert.deepEqual([at(14), at(15), at(16)], [a, b, c]);
+  // what sat in 14 and 15 took the picked tiles' old slots
+  assert.sameMembers(
+    inTheWay.filter(Boolean),
+    [at(0), at(4), at(9)].filter(Boolean),
+  );
+  assertAllTiles(s);
+
+  // dropped near the end of a row, the group stays in that row
+  s = game.moveTiles(s, 1, [a, b, c], 12);
+  assert.deepEqual([at(10), at(11), at(12)], [a, b, c]);
+  assertAllTiles(s);
+});
+
 // two peers that start in sync; sync() swaps what each wrote since
 function twoPeers(state) {
   const [a, b] = [new Y.Doc(), new Y.Doc()];
@@ -191,11 +238,17 @@ test("a reset racing a move replaces the game whole", () => {
 
 test("a rejoining player who sits before syncing can't reset the game", () => {
   // which of two concurrent writes to a key wins depends on the clientIDs
-  for (const [tableId, phoneId] of [[1, 2], [2, 1]]) {
+  for (const [tableId, phoneId] of [
+    [1, 2],
+    [2, 1],
+  ]) {
     const [table, phone] = [new Y.Doc(), new Y.Doc()];
     table.clientID = tableId;
     phone.clientID = phoneId;
-    const [mapT, mapP] = [table.getMap("okey-state"), phone.getMap("okey-state")];
+    const [mapT, mapP] = [
+      table.getMap("okey-state"),
+      phone.getMap("okey-state"),
+    ];
     writeState(mapT, undefined, seated(2));
     replaceState(mapT, game.startGame(readState(mapT)));
 

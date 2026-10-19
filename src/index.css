@@ -161,14 +161,14 @@ form[action$="destroy"] button {
     top: 4px;
     right: 4px;
     z-index: 201;
-    padding: 0.8rem 1.2rem;
-    font-size: 2.4rem;
-    line-height: 1;
+    /* the same square as the fullscreen button */
+    padding: 1rem;
+    line-height: 0;
   }
 
   /* left of the menu button */
   .fullscreen-toggle {
-    right: 56px;
+    right: 52px;
   }
 }
 

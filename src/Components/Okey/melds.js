@@ -1,3 +1,5 @@
+import { colorMap } from "./constants";
+
 // Meld checks. `indicator` is the face-up tile (okeyTile in state): the okey
 // is the same colour, next rank (13 → 1) and is wild; fake okeys stand in
 // for the okey's own face value.
@@ -34,6 +36,21 @@ function seriOrder(tiles, indicator) {
   if (n < 3 || new Set(rest.map((t) => colorOf(t, indicator))).size > 1) {
     return null;
   }
+  // in the order given (as laid out on the rack) if that's already a run, so
+  // an okey stands where the player put it: 4-5-okey makes it a 6
+  const a = tiles.findIndex((t) => !isOkey(t, indicator));
+  const r = rankOf(tiles[a], indicator);
+  const inPlace = (start) =>
+    start >= 1 &&
+    start + n - 1 <= 14 &&
+    n <= 13 &&
+    tiles.every(
+      (t, j) =>
+        isOkey(t, indicator) ||
+        rankOf(t, indicator) === ((start + j - 1) % 13) + 1,
+    );
+  if ((r === 1 ? [1 - a, 14 - a] : [r - a]).some(inPlace)) return tiles;
+  // otherwise the lowest run they make
   for (let start = 1; start + n - 1 <= 14; start++) {
     const end = start + n - 1;
     const slots = Array(n).fill(null);
@@ -55,6 +72,22 @@ function seriOrder(tiles, indicator) {
 // tiles arranged as a meld of `type` ("kut" | "seri"), or null if they aren't one
 export const meldOrder = (tiles, type, indicator) =>
   type === "kut" ? kutOrder(tiles, indicator) : seriOrder(tiles, indicator);
+
+// What a table okey stands for, fixed by where it sits: in a seri its place
+// gives the rank; in a küt it's the rank and whichever colours are missing.
+export function okeyStandsFor(meld, i, indicator) {
+  const a = meld.tiles.findIndex((t) => !isOkey(t, indicator));
+  const real = meld.tiles.filter((t) => !isOkey(t, indicator));
+  const color = colorOf(meld.tiles[a], indicator);
+  let rank = rankOf(meld.tiles[a], indicator);
+  if (meld.type === "kut") {
+    const have = real.map((t) => colorOf(t, indicator));
+    const all = Object.values(colorMap); // tiles carry the hex colour
+    return { rank, colors: all.filter((c) => !have.includes(c)) };
+  }
+  if (rank === 1 && a > 0) rank = 14; // the 1 after 13
+  return { rank: ((rank + i - a - 1) % 13) + 1, colors: [color] };
+}
 
 const combos = (arr, k) =>
   k === 0

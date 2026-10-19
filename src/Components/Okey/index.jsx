@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { DndProvider, useDragLayer } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import Board from "./Board";
-import { OkeyProvider } from "./OkeyContext";
+import { OkeyContext, OkeyProvider } from "./OkeyContext";
 import Tile from "./Tile";
 import "./rack.css";
 
@@ -11,20 +11,21 @@ import "./rack.css";
 // backend, which also takes the mouse on touch laptops
 const touch = navigator.maxTouchPoints > 0;
 
-// the touch backend draws no ghost, so a tile follows the finger
+// the touch backend draws no ghost, so a tile follows the finger, with
+// how many picked tiles come along
 function TouchPreview() {
+  const { selected } = useContext(OkeyContext);
   const { item, offset } = useDragLayer((monitor) => ({
     item: monitor.isDragging() && monitor.getItem(),
     offset: monitor.getClientOffset(),
   }));
   if (!item || !offset) return null;
+  const group = selected.includes(item.tile.id) ? selected.length : 1;
   return (
-    <Tile
-      tile={item.tile}
-      className="dragPreview"
-      style={{ left: offset.x, top: offset.y }}
-      disabled
-    />
+    <div className="dragPreview" style={{ left: offset.x, top: offset.y }}>
+      <Tile tile={item.tile} disabled />
+      {group > 1 && <span className="badge">×{group}</span>}
+    </div>
   );
 }
 

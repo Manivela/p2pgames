@@ -2,22 +2,30 @@ import { useContext, useLayoutEffect, useRef } from "react";
 import { useDrop } from "react-dnd";
 import { sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
-import { FINISH_SCORE, claimants, rounds } from "./americano";
+import { FINISH_SCORE, claimants, rounds, upForClaim } from "./americano";
+import { allSeats } from "./game";
 import { colorOf, isOkey, rankOf } from "./melds";
 import Tile from "./Tile";
 import { t } from "../../i18n";
 
 function Meld({ meld, index }) {
-  const { playOnMeld, okeyState } = useContext(OkeyContext);
+  const { playOnMeld, okeyState, me, selected, openHand, layMelds } =
+    useContext(OkeyContext);
   const [{ isOver }, drop] = useDrop(
     () => ({
       accept: "TILE",
       drop: (e) => {
-        playOnMeld(e.tile, index);
+        // one tile of a bigger pick brings the pick: that's opening or
+        // laying down, wherever on the table it lands
+        if (selected.length > 1 && selected.includes(e.tile.id)) {
+          (okeyState.opened[me] ? layMelds : openHand)();
+        } else {
+          playOnMeld(e.tile, index);
+        }
       },
       collect: (monitor) => ({ isOver: monitor.isOver() }),
     }),
-    [playOnMeld, index],
+    [playOnMeld, index, selected, okeyState.opened, me, openHand, layMelds],
   );
   // a full küt (all four colours, no okey left to swap out) is one tile
   const ind = okeyState.okeyTile;
@@ -50,14 +58,38 @@ export const place = (phone, style) =>
 
 // round, the claims on the last discard and the melds on the table
 export function AmericanoInfo({ phone }) {
-  const { okeyState } = useContext(OkeyContext);
-  const { round, melds, message, players, offer } = okeyState;
+  const { okeyState, me, selected, openHand, layMelds } =
+    useContext(OkeyContext);
+  const { round, melds, message, players, opened } = okeyState;
+  const offer = upForClaim(okeyState);
   // everyone sees who wants the discard, so others can claim it too
   const wanting = claimants(okeyState);
   const from = offer && players.find((p) => p.id === offer.from);
   const offered = from?.discardPile.at(-1);
   // clear of the top player's discard pile and the side racks
   const inset = players.length === 2 ? 100 : 380;
+
+  // Picked tiles open (or, once opened, lay down) when one of them is
+  // dragged onto the table; a drop on a meld adds to that meld instead.
+  const canLay =
+    okeyState.gameState === "play" &&
+    okeyState.currentPlayer === me &&
+    okeyState.drawn &&
+    rounds[round - 1].melds &&
+    selected.length > 0;
+  const [{ over }, drop] = useDrop(
+    () => ({
+      accept: "TILE",
+      drop: (e, monitor) => {
+        if (monitor.didDrop() || !canLay || !selected.includes(e.tile.id)) {
+          return;
+        }
+        (opened[me] ? layMelds : openHand)();
+      },
+      collect: (monitor) => ({ over: monitor.isOver({ shallow: true }) }),
+    }),
+    [canLay, selected, opened, me, openHand, layMelds],
+  );
 
   // every meld stays in view: they all shrink until they fit the band
   const band = useRef(null);
@@ -98,10 +130,18 @@ export function AmericanoInfo({ phone }) {
         )}
       </h3>
       <div
-        ref={band}
-        className="melds"
+        ref={(el) => {
+          band.current = el;
+          drop(el);
+        }}
+        className={`melds ${canLay ? "droppable" : ""} ${over ? "over" : ""}`}
         style={phone ? undefined : { left: inset, right: inset }}
       >
+        {canLay && (
+          <span className="hint">
+            {t(opened[me] ? "Drag here to lay down" : "Drag here to open")}
+          </span>
+        )}
         {melds.map((meld, i) => (
           <Meld key={meld.tiles[0].id} meld={meld} index={i} />
         ))}
@@ -110,51 +150,18 @@ export function AmericanoInfo({ phone }) {
   );
 }
 
-// open / lay down, catch the discard, next round
+// next round, once one ends (opening and catching happen at the tiles)
 export function AmericanoActions({ phone }) {
-  const { okeyState, me, openHand, layMelds, catchDiscard, nextRound } =
-    useContext(OkeyContext);
-  const { round, opened, gameState, players, melds, lastDiscard } = okeyState;
-  const elden = !rounds[round - 1].melds;
-  // the latest discard, while it's on top, can be caught if it fits a meld
-  const discarder = players.find(
-    (p) => lastDiscard && p.discardPile.at(-1)?.id === lastDiscard,
-  );
-  const canCatch =
-    gameState === "play" &&
-    me &&
-    melds.length > 0 &&
-    discarder &&
-    discarder.id !== me &&
-    !players.some((p) => p.caught?.includes(lastDiscard));
-
+  const { okeyState, nextRound } = useContext(OkeyContext);
   return (
-    <>
-      {gameState === "play" && me && !elden && (
-        <button
-          {...place(phone, { marginLeft: -220 })}
-          onClick={opened[me] ? layMelds : openHand}
-        >
-          {t(opened[me] ? "Lay down" : "Open")}
-        </button>
-      )}
-      {canCatch && (
-        <button
-          {...place(phone, { marginLeft: -220, marginTop: 20 })}
-          onClick={catchDiscard}
-        >
-          {t("Catch discard")}
-        </button>
-      )}
-      {gameState === "roundEnd" && (
-        <button
-          {...place(phone, { marginLeft: 150, marginTop: 100 })}
-          onClick={nextRound}
-        >
-          {t("Next Round")}
-        </button>
-      )}
-    </>
+    okeyState.gameState === "roundEnd" && (
+      <button
+        {...place(phone, { marginLeft: 150, marginTop: 100 })}
+        onClick={nextRound}
+      >
+        {t("Next Round")}
+      </button>
+    )
   );
 }
 
@@ -169,10 +176,15 @@ export function AmericanoTable() {
 
 // children: extra controls under the sheet (the phone puts Reset / New Game here)
 export function Scores({ children }) {
-  const { okeyState } = useContext(OkeyContext);
-  const { players, scores, gameState } = okeyState;
+  const { okeyState, me } = useContext(OkeyContext);
+  const { scores, gameState } = okeyState;
+  // a freed seat keeps its column: whoever sits there next carries it on
+  const players = allSeats(okeyState.players).filter(
+    (p) => p.user || scores?.[p.id],
+  );
   return (
-    <details className="scores" open={gameState !== "play"}>
+    // closed for someone not seated: on phones it would cover the free seats
+    <details className="scores" open={gameState !== "play" && !!me}>
       <summary>{t("Scores")}</summary>
       <div className="sheet">
         <table>
@@ -200,7 +212,8 @@ export function Scores({ children }) {
             <tr>
               <th>{t("Total")}</th>
               {players.map((p) => (
-                <td key={p.id}>{sum(scores[p.id] ?? [])}</td>
+                // blank for someone new: their total comes with the deal
+                <td key={p.id}>{scores?.[p.id] && sum(scores[p.id])}</td>
               ))}
             </tr>
           </tbody>

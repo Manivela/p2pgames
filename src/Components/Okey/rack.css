@@ -374,7 +374,7 @@
   }
 }
 
-/* next to a name: has opened, and down to the last tile */
+/* next to a name: has opened, down to the last tile, has drawn */
 .badge {
   display: inline-block;
   margin: 0 4px;
@@ -390,6 +390,11 @@
 
 .badge.last {
   background-color: #e53935;
+}
+
+/* the player whose turn it is has drawn and is about to discard */
+.badge.drew {
+  background-color: #1565c0;
 }
 
 .phone .badge {
@@ -415,4 +420,176 @@
   box-shadow:
     0 0 0 3px #ffd54f,
     0 0 14px 4px rgba(255, 213, 79, 0.9);
+}
+
+/* Table menu (TableMenu.jsx): ⋯ in the table's bottom-left corner, on
+   phones in the column of buttons, unfolding upwards */
+.table-menu {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 40;
+}
+
+.table-menu .dots {
+  font-size: 18px;
+  padding: 0 10px;
+}
+
+.table-menu .menu,
+.dialog {
+  border-radius: 8px;
+  background-color: #fff;
+  color: #222;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.table-menu .menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.phone .table-menu {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  align-self: flex-end;
+}
+
+/* beside the ⋯, so a short screen has room for it */
+.phone .table-menu .menu {
+  left: auto;
+  right: calc(100% + 6px);
+  bottom: auto;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+/* a second tap confirms */
+.table-menu button.armed {
+  background-color: #e53935;
+  color: #fff;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.dialog {
+  position: relative;
+  width: min(460px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 12px 16px;
+  font-size: 14px;
+  white-space: normal;
+}
+
+.dialog h3 {
+  margin: 0 32px 8px 0;
+}
+
+.dialog h4 {
+  margin: 12px 0 4px;
+}
+
+.dialog .close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dialog .saves {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dialog .saves button {
+  width: 100%;
+  text-align: left;
+}
+
+.dialog .saves small {
+  display: block;
+  opacity: 0.7;
+}
+
+.dialog .seats {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+
+.dialog .round-pick {
+  display: block;
+  margin: 8px 0;
+}
+
+.dialog input[type="number"] {
+  width: 70px;
+}
+
+.dialog th {
+  text-align: left;
+  padding-right: 8px;
+}
+
+/* Catch (Yakala) beside the latest discard; on phones over its lower edge,
+   since the row of opponents has no room around it */
+.discardPile .catch {
+  position: absolute;
+  left: 100%;
+  top: 40%;
+  margin-left: 4px;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+@media (max-height: 500px) {
+  .discardPile .catch {
+    left: 50%;
+    top: auto;
+    bottom: 2px;
+    margin-left: 0;
+    translate: -50% 0;
+    max-width: 100%;
+    padding: 1px 4px;
+    font-size: 11px;
+  }
+}
+
+/* picked tiles open when dragged onto the table */
+.melds.droppable {
+  outline: 2px dashed #ffd54f;
+}
+
+.melds.droppable.over {
+  outline-color: #fff;
+}
+
+.melds .hint {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 18px;
+  color: #ffd54f;
 }

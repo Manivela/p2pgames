@@ -141,9 +141,32 @@ export function OkeyProvider({ children }) {
     [act, rules],
   );
 
+  // Tiles picked on your own rack (local only, not shared): dragging one
+  // moves them all, and in Americano the rules split them into melds,
+  // wherever they sit on the rack.
+  const [selected, setSelected] = React.useState([]);
+  // a new deal can hand out the same tile ids again
+  React.useEffect(() => setSelected([]), [okeyState.deal]);
+  // and a picked tile that leaves the rack (discarded, laid) is unpicked
+  const inHand = myHand(me)
+    .filter(Boolean)
+    .map((t) => t.id)
+    .join();
+  React.useEffect(
+    () =>
+      setSelected((ids) => {
+        const kept = ids.filter((id) => inHand.split(",").includes(id));
+        return kept.length === ids.length ? ids : kept;
+      }),
+    [inHand],
+  );
+
   const swapTile = useCallback(
-    (player, tile, toIndex) => act(game.swapTile, player, tile, toIndex),
-    [act],
+    (player, tile, toIndex) =>
+      selected.length > 1 && selected.includes(tile.id)
+        ? act(game.moveTiles, player, selected, toIndex)
+        : act(game.swapTile, player, tile, toIndex),
+    [act, selected],
   );
 
   const discardTile = useCallback(
@@ -167,22 +190,14 @@ export function OkeyProvider({ children }) {
     [map, okeyState],
   );
 
-  // Americano: tiles picked on your own rack (local only, not shared). The
-  // rules split them into melds, wherever they sit on the rack.
-  const [selected, setSelected] = React.useState([]);
-  // a new deal can hand out the same tile ids again
-  React.useEffect(() => setSelected([]), [okeyState.deal]);
-
   const toggleSelected = useCallback(
-    (tile) => {
-      if (okeyState.mode !== "americano") return;
+    (tile) =>
       setSelected((ids) =>
         ids.includes(tile.id)
           ? ids.filter((id) => id !== tile.id)
           : [...ids, tile.id],
-      );
-    },
-    [okeyState.mode],
+      ),
+    [],
   );
 
   const picked = useCallback(
@@ -227,8 +242,12 @@ export function OkeyProvider({ children }) {
 
   const nextRound = useCallback(() => {
     const next = americano.nextRound(okeyState);
-    if (next) replaceState(map, next);
+    if (typeof next === "string") toast(t(next));
+    else if (next) replaceState(map, next);
   }, [map, okeyState]);
+
+  // a saved or set-up game replaces the table whole
+  const loadGame = useCallback((next) => replaceState(map, next), [map]);
 
   const resetGame = useCallback(() => {
     replaceState(map, game.initialState);
@@ -237,7 +256,7 @@ export function OkeyProvider({ children }) {
   const newGame = useCallback(() => {
     replaceState(map, {
       ...game.initialState,
-      players: okeyState.players.map((p) => ({
+      players: game.allSeats(okeyState.players).map((p) => ({
         ...p,
         discardPile: [],
         hand: [],
@@ -364,6 +383,7 @@ export function OkeyProvider({ children }) {
       myIndex,
       resetGame,
       newGame,
+      loadGame,
       me,
       currentUser,
       toggleHidden,
@@ -393,6 +413,7 @@ export function OkeyProvider({ children }) {
       myIndex,
       resetGame,
       newGame,
+      loadGame,
       me,
       currentUser,
       toggleHidden,

@@ -2,7 +2,7 @@ import { assert, test } from "vitest";
 import { sum } from "lodash";
 import * as americano from "./americano";
 import * as game from "./game";
-import { isOkey, meldOrder, rankOf } from "./melds";
+import { isOkey, meldOrder, okeyStandsFor, rankOf } from "./melds";
 import { createTile } from "./utils";
 
 const indicator = createTile("blue", 13, 1); // okey is blue1, fake okey = blue1
@@ -44,6 +44,20 @@ test("seri: one colour in a row, 12-13-1 but not 13-1-2, okey fills gaps", () =>
     "red3-0",
     "blue1-0",
     "red5-0",
+  ]);
+  // an okey stands where it was put on the rack; out of order, the low end
+  const okey = t("blue", 1);
+  assert.deepEqual(seri([t("red", 4), t("red", 5), okey]), [
+    ...["red4-0", "red5-0", "blue1-0"],
+  ]);
+  assert.deepEqual(seri([okey, t("red", 4), t("red", 5)]), [
+    ...["blue1-0", "red4-0", "red5-0"],
+  ]);
+  assert.deepEqual(seri([t("red", 12), t("red", 13), okey]), [
+    ...["red12-0", "red13-0", "blue1-0"],
+  ]);
+  assert.deepEqual(seri([t("red", 5), okey, t("red", 4)]), [
+    ...["blue1-0", "red4-0", "red5-0"],
   ]);
   // the fake okey is the okey's face value: blue1
   assert.isOk(seri([t("yellow", "👌"), t("blue", 2), t("blue", 3)]));
@@ -157,14 +171,56 @@ test("round 1: open exactly, lay and add later, finish by discarding the last ti
     2: [americano.NOT_OPENED_SCORE],
   });
 
+  assert.equal(s.players.length, 4); // free seats to sit in
+
   s = americano.nextRound(s);
   assert.equal(s.round, 2);
   assert.equal(s.gameState, "play");
+  assert.equal(s.players.length, 2);
   assert.equal(s.currentPlayer, 2); // the starter rotates
   assert.deepEqual(s.melds, []);
   assert.deepEqual(s.opened, {});
   assert.deepEqual(s.takes, {});
   assertAllTiles(s);
+});
+
+test("between rounds seats can be freed and taken", () => {
+  const sit = (s, id, name) => ({
+    ...s,
+    players: s.players.map((p) =>
+      p.id === id ? { ...p, user: name && { id: name, name }, userKey: id } : p,
+    ),
+  });
+  let s = {
+    ...americano.startGame(seated(3)),
+    gameState: "roundEnd",
+    round: 2,
+    scores: { 1: [10, 5], 2: [30, 12], 3: [-20, 40] },
+  };
+  s = { ...s, players: game.allSeats(s.players) };
+  s = sit(s, 3, null); // P3 left
+  s = sit(s, 4, "Deniz");
+
+  s = americano.nextRound(s);
+  assert.deepEqual(
+    s.players.map((p) => p.id),
+    [1, 2, 4],
+  );
+  // Deniz starts level with the worst total; P3's score waits for their seat
+  assert.deepEqual(s.scores[4], [null, 42]);
+  assert.deepEqual(s.scores[3], [-20, 40]);
+  assertAllTiles(s);
+
+  s = { ...s, gameState: "roundEnd", players: game.allSeats(s.players) };
+  for (const id of [2, 4]) s = sit(s, id, null);
+  assert.equal(americano.nextRound(s), "not enough players to start the game");
+  s = sit(s, 3, "Can"); // takes over P3's seat and score
+  s = americano.nextRound(s);
+  assert.deepEqual(
+    s.players.map((p) => p.id),
+    [1, 3],
+  );
+  assert.deepEqual(s.scores[3], [-20, 40]);
 });
 
 test("two-meld openings match in either order, okey included", () => {
@@ -194,7 +250,7 @@ test("the round ends with no finisher when the pile runs out", () => {
   assert.equal(s.gameState, "roundEnd");
   assert.equal(s.message, "Round 1: no tiles left");
   // no finisher, so nobody gets the never-opened 100: everyone scores their hand
-  for (const p of s.players) {
+  for (const p of s.players.filter((x) => x.user)) {
     const hand = p.hand.filter(Boolean);
     const expected = sum(
       hand.map((x) => (isOkey(x, s.okeyTile) ? 25 : rankOf(x, s.okeyTile))),
@@ -242,13 +298,17 @@ test("out of turn: earliest claimant after the current player gets the discard +
   let s = americano.startGame(seated(4));
   const thrown = player(s, 1).hand.find(Boolean);
   s = americano.discardTile(s, 1, thrown);
-  assert.equal(americano.claimDiscard(s, 3, 25), "Nothing to take right now");
+  // P3 asks before P2 has even drawn: the claim waits for the offer,
+  // hidden from P2 until they've drawn
+  s = americano.claimDiscard(s, 3, 25);
+  assert.isOk(player(s, 3).claim);
+  assert.isEmpty(americano.claimants(s));
 
   s = americano.drawTile(s, 2, s.drawPile.at(-1), 25); // P2 passes on it
   assert.equal(americano.claimDiscard(s, 1, 25), "That's your own tile");
   assert.equal(americano.claimDiscard(s, 2, 25), "You already drew this turn");
+  assert.deepEqual(ids(americano.claimants(s)), [3]);
   s = americano.claimDiscard(s, 4, 25);
-  s = americano.claimDiscard(s, 3, 25);
   const pile = s.drawPile.length;
   const tile = player(s, 2).hand.find(Boolean);
   assert.equal(
@@ -268,6 +328,19 @@ test("out of turn: earliest claimant after the current player gets the discard +
   const before = player(s, 3).hand.filter(Boolean).length;
   s = americano.collectInbox(s, 3);
   assert.equal(player(s, 3).hand.filter(Boolean).length, before + 2);
+  assert.isEmpty(player(s, 3).inbox);
+  assertAllTiles(s);
+});
+
+test("a claim made before the draw lapses if the current player takes the tile", () => {
+  let s = americano.startGame(seated(3));
+  const thrown = player(s, 1).hand.find(Boolean);
+  s = americano.discardTile(s, 1, thrown);
+  s = americano.claimDiscard(s, 3, 25);
+  s = americano.drawTile(s, 2, player(s, 1).discardPile.at(-1), 25);
+  assert.isOk(tileIn(s, 2, thrown.id));
+  assert.isEmpty(americano.claimants(s));
+  s = americano.discardTile(s, 2, player(s, 2).hand.find(Boolean));
   assert.isEmpty(player(s, 3).inbox);
   assertAllTiles(s);
 });
@@ -388,6 +461,105 @@ test("from round 6, a real tile swaps out a table okey, which can open the same 
   assert.deepEqual(ids(s.melds[1].tiles), ["red3-1", "red4-0", "red5-0"]);
   assert.isOk(tileIn(s, 2, "blue1-1"));
   assertAllTiles(s);
+});
+
+// okey is blue1, standing for the yellow 3 in yellow 1-2-okey-4 on the
+// table; it's P2's turn and they've drawn
+function okeyOnTable(round) {
+  const seri = ["yellow1-0", "yellow2-0", "blue1-0", "yellow4-0"];
+  let s = americano.startGame(seated(2), {
+    okeyTile: "blue13-1",
+    hands: [
+      [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        .map((r) => `red${r}-0`)
+        .concat(["black2-0", "black3-0", "black4-0", "black5-0"]),
+      ["yellow3-0", "yellow5-0", "black7-0", "black8-0", "black9-0"].concat(
+        [2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => `red${r}-1`),
+      ),
+    ],
+  });
+  const onTable = seri.map((id) => ({
+    ...game.tiles.find((x) => x.id === id),
+    source: "table",
+    hidden: false,
+  }));
+  s = {
+    ...s,
+    round,
+    drawPile: s.drawPile.filter((x) => !seri.includes(x.id)),
+    melds: [{ type: "seri", owner: 1, tiles: onTable }],
+  };
+  s = americano.discardTile(s, 1, tileIn(s, 1, "black5-0"));
+  return [game.drawTile(s, 2, s.drawPile.at(-1), 20), seri];
+}
+
+test("a table okey keeps its place: only the tile it stands for takes it", () => {
+  let [s] = okeyOnTable(3);
+  // before opening, round 3: the yellow 3 can't take it, nor push it to 5
+  assert.match(americano.playOnMeld(s, 2, "yellow3-0", 0), /from round 6/);
+
+  s = { ...s, opened: { 2: true } };
+  s = americano.playOnMeld(s, 2, "yellow5-0", 0);
+  assert.deepEqual(ids(s.melds[0].tiles), [
+    ...["yellow1-0", "yellow2-0", "blue1-0", "yellow4-0", "yellow5-0"],
+  ]);
+  // opened: any round, the yellow 3 takes the okey
+  s = americano.playOnMeld(s, 2, "yellow3-0", 0);
+  assert.deepEqual(ids(s.melds[0].tiles), [
+    ...["yellow1-0", "yellow2-0", "yellow3-0", "yellow4-0", "yellow5-0"],
+  ]);
+  assert.isOk(tileIn(s, 2, "blue1-0"));
+  assertAllTiles(s);
+});
+
+test("opening with 4-5-okey off the rack lays the okey as the 6", () => {
+  let [s] = okeyOnTable(2); // 3'lü seri
+  s = { ...s, melds: [] };
+  // P2 gets the other okey, blue1-1, unless they just drew it
+  const okey = s.drawPile.find((x) => x.id === "blue1-1");
+  if (okey) {
+    s = game.drawTile(
+      { ...s, drawn: false },
+      2,
+      okey,
+      player(s, 2).hand.indexOf(null),
+    );
+  }
+  // picked in rack order: red4, red5, okey
+  s = americano.openHand(s, 2, [["red4-1", "red5-1", "blue1-1"]]);
+  assert.deepEqual(ids(s.melds[0].tiles), ["red4-1", "red5-1", "blue1-1"]);
+  assert.equal(okeyStandsFor(s.melds[0], 2, s.okeyTile).rank, 6);
+});
+
+test("an okey taken before opening (round 6+) means opening that turn, or putting it back", () => {
+  let [s, seri] = okeyOnTable(6);
+  s = americano.playOnMeld(s, 2, "yellow3-0", 0);
+  assert.isOk(tileIn(s, 2, "blue1-0"));
+  assert.match(
+    americano.discardTile(s, 2, tileIn(s, 2, "black7-0")),
+    /open your hand, or put the okey back/,
+  );
+  s = americano.playOnMeld(s, 2, "blue1-0", 0);
+  assert.deepEqual(ids(s.melds[0].tiles), seri);
+  assert.isOk(tileIn(s, 2, "yellow3-0"));
+  s = americano.discardTile(s, 2, tileIn(s, 2, "black7-0"));
+  assert.equal(s.currentPlayer, 1);
+  assertAllTiles(s);
+});
+
+test("a game can be set up at any round, with totals and a starter", () => {
+  const s = americano.setUp(seated(3), 7, { 1: 115, 2: "74", 3: 58 }, 3);
+  assert.equal(s.round, 7);
+  assert.equal(s.gameState, "play");
+  assert.equal(s.currentPlayer, 3);
+  assert.equal(player(s, 3).hand.filter(Boolean).length, 15);
+  assert.deepEqual(
+    s.players.map((p) => sum(s.scores[p.id])),
+    [115, 74, 58],
+  );
+  assert.equal(s.scores[1][5], 115); // the row before round 7
+  assertAllTiles(s);
+  assert.match(americano.setUp(seated(1), 3, {}, 1), /not enough players/);
 });
 
 test("nobody waits when no one else could take the discard", () => {

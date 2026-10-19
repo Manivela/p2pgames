@@ -150,6 +150,13 @@ export const initialState = {
   message: "",
 };
 
+// Every seat, the empty ones too: a started game keeps only the seats that
+// were taken, and between games and rounds anyone can sit down again.
+export const allSeats = (players) =>
+  initialState.players.map(
+    (empty) => players.find((p) => p.id === empty.id) ?? empty,
+  );
+
 function getNextPlayer(players, currentPlayer) {
   const previousIndex = players.findIndex((p) => p.id === currentPlayer);
   const nextIndex = (previousIndex + 1) % players.length;
@@ -256,6 +263,76 @@ export function swapTile(state, player, tile, toIndex) {
 
   const oldIndex = myPlayer.hand.findIndex((t) => t?.id === tile.id);
   myPlayer.hand = swapItems(myPlayer.hand, oldIndex, toIndex);
+  return newState;
+}
+
+// A saved game loaded at today's table: each seat goes to whoever sits in
+// it now (logins differ from night to night).
+export function restore(saved, now) {
+  return {
+    ...saved,
+    players: saved.players.map((p) => {
+      const sitting = now.players.find((x) => x.id === p.id);
+      return {
+        ...p,
+        user: sitting?.user ?? null,
+        userKey: sitting?.userKey ?? null,
+      };
+    }),
+  };
+}
+
+// A save code: the state deflated and base64'd, so nobody reads the hands
+// at a glance or edits their own. Deflating also makes it ~10x shorter.
+// ponytail: obfuscation, not encryption; anyone who knows deflate can open
+// it, and every phone at the table holds the whole state anyway
+export async function encodeSave(state) {
+  const deflated = new Blob([JSON.stringify(state)])
+    .stream()
+    .pipeThrough(new CompressionStream("deflate-raw"));
+  const bytes = new Uint8Array(await new Response(deflated).arrayBuffer());
+  return btoa(Array.from(bytes, (b) => String.fromCharCode(b)).join(""));
+}
+
+// the state in a save code, or null if it isn't one
+export async function decodeSave(code) {
+  try {
+    const bytes = Uint8Array.from(atob(code), (c) => c.charCodeAt(0));
+    const inflated = new Blob([bytes])
+      .stream()
+      .pipeThrough(new DecompressionStream("deflate-raw"));
+    const state = JSON.parse(await new Response(inflated).text());
+    return state?.players ? state : null;
+  } catch {
+    return null;
+  }
+}
+
+// Moves several picked tiles at once: they land side by side, in rack order,
+// from toIndex on (within one row when they fit), and tiles already in
+// those slots take the picked tiles' old ones, like a single tile's swap.
+export function moveTiles(state, player, ids, toIndex) {
+  if (roundOver(state)) return roundOver(state);
+  const newState = cloneDeep(state);
+  const myPlayer = newState.players.find((p) => p.id === player);
+  if (!myPlayer) return;
+  const hand = [...myPlayer.hand];
+  const from = hand.flatMap((t, i) => (t && ids.includes(t.id) ? [i] : []));
+  if (!from.length) return;
+  const rowStart = toIndex - (toIndex % 13);
+  const start =
+    from.length <= 13
+      ? Math.min(toIndex, rowStart + 13 - from.length)
+      : Math.min(toIndex, hand.length - from.length);
+  const to = from.map((_, j) => start + j);
+
+  const moving = from.map((i) => hand[i]);
+  from.forEach((i) => (hand[i] = null));
+  const displaced = to.map((i) => hand[i]).filter(Boolean);
+  to.forEach((i, j) => (hand[i] = moving[j]));
+  const vacated = from.filter((i) => !to.includes(i));
+  displaced.forEach((t, j) => (hand[vacated[j]] = t));
+  myPlayer.hand = hand;
   return newState;
 }
 

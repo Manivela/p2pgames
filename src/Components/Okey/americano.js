@@ -1,6 +1,13 @@
 import { cloneDeep, sum } from "lodash";
 import * as game from "./game";
-import { isOkey, meldOrder, rankOf, splitMelds } from "./melds";
+import {
+  colorOf,
+  isOkey,
+  meldOrder,
+  okeyStandsFor,
+  rankOf,
+  splitMelds,
+} from "./melds";
 
 // Americano: 12 rounds, each with its own opening (el açma) requirement.
 // Same shape as game.js: (state, player, ...args) => new state | message.
@@ -91,12 +98,27 @@ export function startGame(state, deal) {
   };
 }
 
+// Deals whoever sits now. A seat keeps its score, whoever sits in it; a seat
+// new to the game starts level with whoever is losing.
 export function nextRound(state, deal) {
   if (state.gameState !== "roundEnd") return;
+  const players = state.players.filter((p) => p.user);
+  if (players.length < 2) return "not enough players to start the game";
+  const totals = players
+    .filter((p) => state.scores[p.id])
+    .map((p) => sum(state.scores[p.id]));
+  const worst = totals.length ? Math.max(...totals) : 0;
+  const scores = { ...state.scores };
+  for (const p of players) {
+    if (!scores[p.id])
+      scores[p.id] = [...Array(state.round - 1).fill(null), worst];
+  }
   const round = state.round + 1;
   return game.dealRound(
     {
       ...state,
+      players,
+      scores,
       round,
       melds: [],
       opened: {},
@@ -106,7 +128,30 @@ export function nextRound(state, deal) {
     },
     game.shuffledPile(),
     deal,
-    (round - 1) % state.players.length,
+    (round - 1) % players.length,
+  );
+}
+
+// Picks a game up from anywhere: a fresh deal at `round`, with each seated
+// player's total so far (in the row before that round) and `starter` to
+// play first.
+export function setUp(state, round, totals, starter) {
+  const s = startGame(state);
+  if (s.gameState !== "play") return s.message;
+  const carried = (id) =>
+    round > 1 ? [...Array(round - 2).fill(null), Number(totals[id]) || 0] : [];
+  return game.dealRound(
+    {
+      ...s,
+      round,
+      scores: Object.fromEntries(s.players.map((p) => [p.id, carried(p.id)])),
+    },
+    game.shuffledPile(),
+    undefined,
+    Math.max(
+      0,
+      s.players.findIndex((p) => p.id === starter),
+    ),
   );
 }
 
@@ -197,13 +242,27 @@ export function addToMeld(state, player, tileId, meldIndex) {
   const [s, [[tile]]] = taken;
 
   const ordered = meldOrder([...meld.tiles, tile], meld.type, s.okeyTile);
-  if (!ordered) return "That tile doesn't fit there";
+  // a table okey keeps the rank it stands for; the tile it stands for
+  // swaps it out instead (swapOkey)
+  const okeyRanks = (tiles) =>
+    tiles.flatMap((t, i) =>
+      isOkey(t, s.okeyTile)
+        ? [okeyStandsFor({ ...meld, tiles }, i, s.okeyTile).rank]
+        : [],
+    );
+  const moved =
+    ordered &&
+    meld.type === "seri" &&
+    !okeyRanks(meld.tiles).every((r) => okeyRanks(ordered).includes(r));
+  if (!ordered || moved) return "That tile doesn't fit there";
   s.melds[meldIndex] = { ...meld, tiles: ordered.map(tableTile) };
   return s;
 }
 
-// Trades a real tile from the hand for an okey in a table meld that it can
-// stand in for; the okey goes to the hand (e.g. to open with, same turn).
+// Trades the real tile a table okey stands for (okeyStandsFor) for that
+// okey, which goes to the hand. Once you've opened, any round; before that,
+// from OKEY_SWAP_FROM_ROUND and only to open with it the same turn (or put
+// it back). A küt gives its okey up only with all four colours there.
 const NO_OKEY = "No okey there that tile can replace";
 
 export function swapOkey(state, player, tileId, meldIndex) {
@@ -214,35 +273,63 @@ export function swapOkey(state, player, tileId, meldIndex) {
   const tile = seat(state, player).hand.find((t) => t?.id === tileId);
   if (!meld || !tile) return;
   const ind = state.okeyTile;
-  const swapped = (i) => meld.tiles.map((t, j) => (j === i ? tile : t));
   const i = isOkey(tile, ind)
     ? -1
-    : meld.tiles.findIndex(
-        (t, j) => isOkey(t, ind) && meldOrder(swapped(j), meld.type, ind),
-      );
+    : meld.tiles.findIndex((t, j) => {
+        if (!isOkey(t, ind)) return false;
+        const { rank, colors } = okeyStandsFor(meld, j, ind);
+        return (
+          rankOf(tile, ind) === rank && colors.includes(colorOf(tile, ind))
+        );
+      });
   if (i === -1) return NO_OKEY;
-  if (state.round < OKEY_SWAP_FROM_ROUND) {
-    return `Okeys can be swapped from round ${OKEY_SWAP_FROM_ROUND}`;
-  }
-  // a küt gives up its okey only once all four colours are there
   if (meld.type === "kut" && meld.tiles.length < 4) {
     return "Complete all four of the küt to take its okey";
+  }
+  const opened = state.opened[player];
+  if (!opened && state.round < OKEY_SWAP_FROM_ROUND) {
+    return `Before opening, okeys can be taken from round ${OKEY_SWAP_FROM_ROUND}`;
   }
 
   const s = cloneDeep(state);
   const okey = { ...meld.tiles[i], source: `hand-${player}`, hidden: false };
-  s.melds[meldIndex] = {
-    ...meld,
-    tiles: meldOrder(swapped(i), meld.type, ind).map(tableTile),
-  };
+  s.melds[meldIndex].tiles[i] = tableTile(tile);
   const me = seat(s, player);
   me.hand = me.hand.map((t) => (t?.id === tileId ? okey : t));
+  if (!opened) s.tookOkey = { player, meld: meldIndex, tileId };
+  return s;
+}
+
+// an okey taken before opening goes back where it came from, the real tile
+// back to the hand, if you can't open with it after all
+function putOkeyBack(state, player, tileId, meldIndex) {
+  const took = state.tookOkey;
+  const okey = seat(state, player).hand.find((t) => t?.id === tileId);
+  if (
+    took?.player !== player ||
+    took.meld !== meldIndex ||
+    state.opened[player] ||
+    !okey ||
+    !isOkey(okey, state.okeyTile)
+  ) {
+    return;
+  }
+  const s = cloneDeep(state);
+  const tiles = s.melds[meldIndex].tiles;
+  const i = tiles.findIndex((t) => t.id === took.tileId);
+  const real = { ...tiles[i], source: `hand-${player}` };
+  tiles[i] = tableTile(okey);
+  const me = seat(s, player);
+  me.hand = me.hand.map((t) => (t?.id === tileId ? real : t));
+  s.tookOkey = null;
   return s;
 }
 
 // A tile dropped on a meld: swap out an okey if it can (that's why you'd
 // drop the exact tile an okey stands for), otherwise add it.
 export function playOnMeld(state, player, tileId, meldIndex) {
+  const back = putOkeyBack(state, player, tileId, meldIndex);
+  if (back) return back;
   const swap = swapOkey(state, player, tileId, meldIndex);
   if (swap && typeof swap !== "string") return swap;
   const add = addToMeld(state, player, tileId, meldIndex);
@@ -263,20 +350,40 @@ export function drawTile(state, player, tile, toIndex, now = Date.now()) {
   const i = s.players.findIndex((p) => p.id === player);
   const from = s.players[(i + s.players.length - 1) % s.players.length];
   const top = from.discardPile.at(-1);
-  s.offers = (s.offers ?? 0) + 1;
   s.offer =
     tile.source === "draw-pile" && top && !isCaught(s, top.id)
-      ? { id: `${s.round}.${s.offers}`, from: from.id, tileId: top.id, at: now }
+      ? { id: offerId(s), from: from.id, tileId: top.id, at: now }
       : null;
   return s;
 }
 
-// Out-of-turn take: the player drags the tile on offer onto an empty slot of
-// their rack, where it waits as a ghost until the current player discards.
+// one id per discard, so a claim made before the draw matches its offer
+const offerId = (s) => `${s.round}.${s.discards ?? 0}`;
+
+// The discard the others can claim: the offer once the player whose turn it
+// is draws from the pile; before that, the previous discard they could still
+// take themselves, so a claim can wait for it (and lapses if they take it).
+export function upForClaim(state) {
+  if (state.offer) return state.offer;
+  if (state.mode !== "americano" || state.gameState !== "play" || state.drawn) {
+    return null;
+  }
+  const n = state.players.length;
+  const i = state.players.findIndex((p) => p.id === state.currentPlayer);
+  const from = state.players[(i + n - 1) % n];
+  const top = from.discardPile.at(-1);
+  return top && top.id === state.lastDiscard && !isCaught(state, top.id)
+    ? { id: offerId(state), from: from.id, tileId: top.id }
+    : null;
+}
+
+// Out-of-turn take: the player drags the discard up for claim (upForClaim,
+// even before the current player draws) onto an empty slot of their rack,
+// where it waits as a ghost until the current player discards.
 // Claims are per player (their own sync key), so claiming never collides
 // with the current move. slot null takes the claim back.
 export function claimDiscard(state, player, slot = null) {
-  const { offer } = state;
+  const offer = upForClaim(state);
   if (slot === null) {
     if (!seat(state, player)?.claim) return;
     const s = cloneDeep(state);
@@ -325,7 +432,8 @@ function intoHand(hand, tiles) {
 }
 
 // Who has claimed the discard on offer, first in line first: turn order
-// after the player whose turn it is.
+// after the player whose turn it is. Claims made before the draw stay
+// hidden until then, so they can't sway the current player's choice.
 export function claimants(state, current = state.currentPlayer) {
   const { offer, players } = state;
   if (!offer || isCaught(state, offer.tileId)) return [];
@@ -383,9 +491,14 @@ export function discardTile(state, player, tile, now = Date.now()) {
   if (!last && wait > 0 && claimable(state, player)) {
     return `Give the others ${Math.ceil(wait)}s to take the discard`;
   }
+  if (state.tookOkey?.player === player && !state.opened[player]) {
+    return "You took an okey: open your hand, or put the okey back";
+  }
   const s = game.discardTile(state, player, tile);
   if (!s || typeof s === "string") return s;
   s.justOpened = null;
+  s.tookOkey = null;
+  s.discards = (s.discards ?? 0) + 1;
   if (!seat(s, player).hand.some(Boolean)) return endRound(s, player);
   resolveOffer(s, player);
   if (!s.drawPile.length) return endRound(s, null);
@@ -460,6 +573,7 @@ function endRound(state, finisher) {
   if (s.round < rounds.length) {
     return {
       ...s,
+      players: game.allSeats(s.players), // free seats to sit in
       gameState: "roundEnd",
       message: finisher
         ? `${name(finisher)} finished round ${s.round}`

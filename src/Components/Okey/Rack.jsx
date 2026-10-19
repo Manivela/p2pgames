@@ -3,6 +3,7 @@ import Slot from "./Slot";
 import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
+import { upForClaim } from "./americano";
 
 function Rack({ initialHand, className = "", ...props }) {
   const {
@@ -15,12 +16,11 @@ function Rack({ initialHand, className = "", ...props }) {
     sit,
     okeyState,
     isAlreadySitting,
-    stand,
-    currentUser,
     me,
     claimDiscard,
+    catchDiscard,
   } = useContext(OkeyContext);
-  const { offer } = okeyState;
+  const offer = upForClaim(okeyState);
   function onDrop(tile, toIndex) {
     if (tile.source.startsWith("claim-")) {
       claimDiscard(toIndex); // move the ghost
@@ -58,6 +58,15 @@ function Rack({ initialHand, className = "", ...props }) {
       : { tile };
   const americano =
     okeyState.mode === "americano" && okeyState.gameState === "play";
+  // anyone else can catch the latest discard while it's on top; whether it
+  // fits a meld is for them to see
+  const canCatch =
+    americano &&
+    me &&
+    me !== props.player &&
+    okeyState.melds.length > 0 &&
+    top?.id === okeyState.lastDiscard &&
+    !caught;
   const tilesLeft = myHand(props.player).filter(Boolean).length;
 
   return (
@@ -112,6 +121,11 @@ function Rack({ initialHand, className = "", ...props }) {
           tile={top}
           canDiscard={() => isMyTurn(props.player)}
         />
+        {canCatch && (
+          <button className="catch" onClick={catchDiscard}>
+            {t("Catch")}
+          </button>
+        )}
       </div>
       {sittingPlayer.user ? (
         <h1
@@ -123,14 +137,14 @@ function Rack({ initialHand, className = "", ...props }) {
           }}
         >
           <span className="name">{sittingPlayer.user.name}</span>{" "}
+          {okeyState.gameState === "play" &&
+            okeyState.currentPlayer === props.player &&
+            okeyState.drawn && <span className="badge drew">{t("drew")}</span>}
           {americano && okeyState.opened[props.player] && (
             <span className="badge">{t("opened")}</span>
           )}
           {americano && tilesLeft === 1 && (
             <span className="badge last">{t("1 tile")}</span>
-          )}
-          {sittingPlayer.user.id === currentUser.id && (
-            <button onClick={() => stand(props.player)}>{t("Stand")}</button>
           )}
         </h1>
       ) : (

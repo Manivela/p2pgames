@@ -13,6 +13,7 @@ import {
 } from "./AmericanoTable";
 import "./rack.css";
 import { t } from "../../i18n";
+import TableMenu from "./TableMenu";
 
 const playerPositions = [
   {
@@ -111,7 +112,10 @@ function useBoxSize() {
 }
 
 function GameButtons({ phone }) {
-  const { okeyState, startGame, resetGame, newGame } = useContext(OkeyContext);
+  const { okeyState, startGame, newGame } = useContext(OkeyContext);
+  // Reset, and New Game mid-game, live in the table menu; once a game is
+  // over, New Game is the obvious next step
+  if (!["start", "finish"].includes(okeyState.gameState)) return null;
   return okeyState.gameState === "start" ? (
     <>
       <button
@@ -128,20 +132,12 @@ function GameButtons({ phone }) {
       </button>
     </>
   ) : (
-    <>
-      <button
-        {...place(phone, { marginLeft: 150, marginTop: 50 })}
-        onClick={resetGame}
-      >
-        {t("Reset Game")}
-      </button>
-      <button
-        {...place(phone, { marginLeft: 150, marginTop: 0 })}
-        onClick={newGame}
-      >
-        {t("New Game")}
-      </button>
-    </>
+    <button
+      {...place(phone, { marginLeft: 150, marginTop: 0 })}
+      onClick={newGame}
+    >
+      {t("New Game")}
+    </button>
   );
 }
 
@@ -177,6 +173,7 @@ function PhoneBoard({ players, style }) {
         )}
       </div>
       <div className="actions">
+        <TableMenu />
         {americano && <AmericanoActions phone />}
         {americano ? (
           <Scores>
@@ -219,6 +216,7 @@ function Board() {
       ref={fitRef}
       data-rotate={t("Turn your phone sideways to play")}
     >
+      {!phone && <TableMenu />}
       {americano && !phone && <Scores />}
       {phone ? (
         <PhoneBoard players={rotatedPlayers} style={{ width, height, zoom }} />

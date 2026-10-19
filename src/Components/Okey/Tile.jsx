@@ -14,6 +14,12 @@ function Tile({ tile, disabled, className, style }) {
     /^(discard|claim)-/.test(tile.source) &&
     okeyState.okeyTile &&
     isOkey(tile, okeyState.okeyTile);
+  // a face-down tile keeps its colour out of the page too, or inspecting the
+  // draw pile would show the next tile's
+  const faceUp =
+    (canSee || ["finish", "roundEnd"].includes(okeyState.gameState)) &&
+    !tile.hidden &&
+    !thrownOkey;
   function handleClick(e) {
     e.preventDefault();
     // Android long-presses fire contextmenu too; touch has its own hold below
@@ -53,7 +59,7 @@ function Tile({ tile, disabled, className, style }) {
     <div
       ref={dragRef}
       className={`${className} tile ${myTile && selected.includes(tile.id) ? "selected" : ""}`}
-      style={{ ...style, color: tile.color, opacity }}
+      style={{ ...style, color: faceUp ? tile.color : undefined, opacity }}
       onClick={() => {
         // a hold already flipped the tile; don't also select it
         if (held.current) held.current = false;
@@ -65,14 +71,12 @@ function Tile({ tile, disabled, className, style }) {
       onTouchEnd={endHold}
       onTouchCancel={endHold}
     >
-      {(canSee || ["finish", "roundEnd"].includes(okeyState.gameState)) &&
-        !tile.hidden &&
-        !thrownOkey && (
-          <>
-            <div className="rank">{tile.rank}</div>
-            <div className="heart">♥</div>
-          </>
-        )}
+      {faceUp && (
+        <>
+          <div className="rank">{tile.rank}</div>
+          <div className="heart">♥</div>
+        </>
+      )}
     </div>
   );
 }

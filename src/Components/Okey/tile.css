@@ -50,3 +50,10 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
+
+/* how many picked tiles move with the one under the finger */
+.dragPreview .badge {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+}

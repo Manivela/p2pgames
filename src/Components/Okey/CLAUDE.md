@@ -4,7 +4,13 @@ Rules (vitest, `npx vitest run`):
 - Rules are pure functions in `game.js`: `(state, player, ...args) => newState | "toast message" | undefined` (no change). `OkeyContext.jsx` only wires them to Yjs. New rules go in `game.js` or a pure sibling like `checkFinish.js`, with tests.
 - Pattern in `game.test.js`: `seated(n)` for an unshuffled table, `game.startGame(state, { okeyTile, hands })` to deal a known position.
 - Americano: round table and score constants at the top of `americano.js`; küt/seri checks in `melds.js`. `americano.*` wraps `game.*` for the moves that differ (start, discard, finish). Tests in `americano.test.js`.
+- A discard can be claimed before the current player draws: `upForClaim` gives the discard up for claim, the offer once they draw from the pile. A table okey's value is fixed by where it sits (`okeyStandsFor`); a seri keeps the order it was laid in off the rack.
 - Tile id `${color}${rank}-${copy}` (`red7-0`, fake okey `yellow👌-1`). `okeyTile` is the indicator; the okey is the next rank in the same colour. A hand has 26 slots (13 per row); `null` is a gap, and gaps separate groups.
+
+Design:
+- Prefer gestures to buttons wherever one fits: drag picked tiles onto the table to open, drag a picked tile to move the whole pick, hold to flip. Moves that end or replace the game (new game, reset, stand, load, set up Americano) live in the ⋯ table menu (`TableMenu.jsx`) behind a second tap.
+- Every device auto-saves the latest game it saw, in any room, to `localStorage` (`okey-save`, one slot) as a save code (`game.encodeSave`: deflated and base64'd, so hands aren't readable at a glance); loading seats whoever sits in each seat now (`game.restore`).
+- Between games and Americano rounds every seat shows (`game.allSeats`), so people can sit down or be freed from the ⋯ menu; the next deal goes to whoever sits. A seat keeps its score whoever sits in it; a seat new to the game starts at the worst total of those still playing (`americano.nextRound`).
 
 Multiplayer and UI (Playwright MCP):
 - With the dev server running, open the same `/<room>/okey` in several tabs of one browser. They sync over BroadcastChannel, with no signaling. Log in per tab; login is in memory, so a reload logs out.
