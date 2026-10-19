@@ -131,11 +131,6 @@ form[action$="destroy"] button {
     padding: 0;
   }
 
-  /* the Buy me a coffee widget covers the rack */
-  #bmc-wbtn {
-    display: none !important;
-  }
-
   #sidebar {
     width: 0;
     overflow: hidden;
@@ -217,14 +212,36 @@ form[action$="destroy"] button {
   box-shadow: none;
 }
 
-:fullscreen .menu-toggle,
-:fullscreen #bmc-wbtn {
+:fullscreen .menu-toggle {
   display: none !important;
 }
 
 #sidebar > * {
   padding-left: 2rem;
   padding-right: 2rem;
+}
+
+/* Buy me a coffee's own button, sized to the sidebar */
+.bmc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: #ff5f5f;
+  color: #fff;
+  font: 24px/1 "Cookie", cursive;
+  white-space: nowrap;
+}
+
+.bmc-btn:is(:hover, :focus) {
+  color: #fff;
+  text-decoration: none;
+}
+
+.bmc-btn img {
+  height: 26px;
 }
 
 #sidebar h1 {

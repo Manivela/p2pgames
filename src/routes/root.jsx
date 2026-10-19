@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Awareness from "../Components/Awareness";
 import Credits from "../Components/Credits";
+import coffee from "../assets/coffee.svg";
 import { t } from "../i18n";
 
 export default function Root() {
@@ -116,7 +117,6 @@ export default function Root() {
             </li>
           </ul>
         </nav>
-        <div style={{ flexGrow: 1 }} />
         <button
           onClick={() => {
             navigator.clipboard.writeText(window.location.href);
@@ -125,6 +125,17 @@ export default function Root() {
         >
           {t("Share Link")}
         </button>
+        <div>
+          <a
+            className="bmc-btn"
+            href="https://buymeacoffee.com/manivela"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img src={coffee} alt="" />
+            Buy me a coffee
+          </a>
+        </div>
         <Credits />
         <Awareness />
       </div>
