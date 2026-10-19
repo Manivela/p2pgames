@@ -375,11 +375,15 @@ export function useMoves() {
     // round over: the finisher's tiles wave, the others' scores count up
     if (prev.gameState === "play" && next.gameState !== "play") {
       const i = next.round - 1;
-      const finisher = next.rules
-        ? next.players.find(
-            (p) => next.scores?.[p.id]?.[i] === next.rules.finishScore,
-          )?.id
-        : next.currentPlayer;
+      // 101's finish score varies (doubled for pairs or the okey), but the
+      // finisher's dealt hand is empty; Americano's Elden finish keeps it
+      const finisher = !next.rules
+        ? next.currentPlayer
+        : next.players.find((p) =>
+            next.rules.opening
+              ? p.hand.length && !p.hand.some(Boolean)
+              : next.scores?.[p.id]?.[i] === next.rules.finishScore,
+          )?.id;
       // nobody finishes when the pile runs out
       const tiles =
         finisher === undefined
@@ -409,7 +413,7 @@ export function useMoves() {
       if (next.rules) {
         for (const p of next.players) {
           const score = next.scores?.[p.id]?.[i];
-          if (p.id === finisher || score == null) continue;
+          if (p.id === finisher || !score) continue;
           countUp(p.id === me ? q(".rack > .playerName") : seatEl(p.id), score);
         }
       }
