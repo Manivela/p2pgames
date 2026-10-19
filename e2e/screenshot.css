@@ -2,3 +2,9 @@
 #detail:has(.fit) {
   background: #28641c !important;
 }
+
+/* the turn timer as reduced motion shows it: a full ring; Playwright would
+   fast-forward its red overtime */
+.timer {
+  animation: none !important;
+}

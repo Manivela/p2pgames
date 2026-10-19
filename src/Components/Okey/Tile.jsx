@@ -1,9 +1,14 @@
 import { useDrag } from "react-dnd";
+import { getEmptyImage } from "react-dnd-html5-backend";
 import "./tile.css";
-import { useContext, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { OkeyContext } from "./OkeyContext";
 import { isOkey } from "./melds";
 import { symbols } from "./constants";
+
+// HTML5 drag and drop only follows a mouse; touch screens get the touch
+// backend (index.jsx), which also takes the mouse on touch laptops
+export const touch = navigator.maxTouchPoints > 0;
 
 function Tile({ tile, disabled, className, style }) {
   const { me, toggleHidden, okeyState, selected, toggleSelected } =
@@ -45,7 +50,7 @@ function Tile({ tile, disabled, className, style }) {
   function endHold() {
     clearTimeout(hold.current);
   }
-  const [{ opacity }, dragRef] = useDrag(
+  const [{ opacity }, dragRef, preview] = useDrag(
     () => ({
       type: "TILE",
       item: { tile },
@@ -56,6 +61,11 @@ function Tile({ tile, disabled, className, style }) {
     }),
     [tile],
   );
+  // the mouse drags our own lifted tile (index.jsx) instead of the
+  // browser's picture of it
+  useEffect(() => {
+    if (!touch) preview(getEmptyImage());
+  }, [preview]);
   // the colour comes from the id (red7-0), as a class: the hex in the tile
   // is part of the game state and stays as it is
   const color = tile.id.match(/^[a-z]+/)[0];

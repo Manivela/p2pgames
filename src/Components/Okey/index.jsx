@@ -4,16 +4,12 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import Board from "./Board";
 import { OkeyContext, OkeyProvider } from "./OkeyContext";
-import Tile from "./Tile";
+import Tile, { touch } from "./Tile";
 import "./rack.css";
 
-// HTML5 drag and drop only follows a mouse; touch screens get the touch
-// backend, which also takes the mouse on touch laptops
-const touch = navigator.maxTouchPoints > 0;
-
-// the touch backend draws no ghost, so a tile follows the finger, with
-// how many picked tiles come along
-function TouchPreview() {
+// the dragged tile, lifted, under the finger or the mouse (neither backend
+// draws one here), with how many picked tiles come along
+function DragPreview() {
   const { selected } = useContext(OkeyContext);
   const { item, offset } = useDragLayer((monitor) => ({
     item: monitor.isDragging() && monitor.getItem(),
@@ -62,7 +58,7 @@ function Okey(props) {
         }
       >
         <Board />
-        {touch && <TouchPreview />}
+        <DragPreview />
       </DndProvider>
     </OkeyProvider>
   );

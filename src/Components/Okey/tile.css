@@ -61,11 +61,19 @@
   touch-action: auto;
 }
 
+/* held above the pointer, so the slot it will land in shows */
 .dragPreview {
   position: fixed;
   z-index: 300;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -80%);
   pointer-events: none;
+}
+
+/* lifted and tilted while it's dragged */
+.dragPreview .tile {
+  rotate: -6deg;
+  scale: 1.1;
+  filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.45));
 }
 
 /* how many picked tiles move with the one under the finger */

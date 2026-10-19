@@ -13,7 +13,7 @@ function Slot({
   disabled,
   ...props
 }) {
-  const [{ isOver, canDrop }, drop] = useDrop(
+  const [{ isOver }, drop] = useDrop(
     () => ({
       accept: "TILE",
       drop: (e) => {
@@ -24,7 +24,6 @@ function Slot({
       //   (type === "DISCARD" ? canDiscard : true),
       collect: (monitor) => ({
         isOver: !!monitor.isOver(),
-        canDrop: !!monitor.canDrop(),
       }),
     }),
     [index, canDiscard, onDrop],
@@ -32,7 +31,13 @@ function Slot({
   return (
     <div
       ref={drop}
-      className={["slot", showBorder && "border", className]
+      className={[
+        "slot",
+        showBorder && "border",
+        // where a tile dragged over your rack will land
+        type === "HAND" && isOver && "over",
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
       {...props}

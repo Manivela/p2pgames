@@ -212,12 +212,146 @@
 .rack > .playerName {
   position: absolute;
   left: 50%;
-  top: -40px;
+  top: -48px;
   translate: -50% 0;
 }
 
-.active {
-  color: red;
+/* whose turn it is: their name on amber */
+.playerName.active {
+  background: #ffd54f;
+  color: #2b2100;
+}
+
+/* ...a soft glow around your rack on your turn, and a 30 s timer: a ring
+   that empties around their avatar, a bar over your rack. It loops, never
+   skipping anyone, and turns red after the first lap. */
+@property --lap {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 360deg;
+}
+
+@property --ring {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #ffd54f;
+}
+
+@keyframes lap {
+  from {
+    --lap: 360deg;
+  }
+  to {
+    --lap: 0deg;
+  }
+}
+
+@keyframes drain {
+  from {
+    scale: 1 1;
+  }
+  to {
+    scale: 0 1;
+  }
+}
+
+@keyframes overtime {
+  to {
+    --ring: #ef5350;
+  }
+}
+
+.rack.turn {
+  box-shadow:
+    0 0 26px 6px rgba(255, 213, 79, 0.55),
+    0 10px 22px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.timer {
+  position: absolute;
+  pointer-events: none;
+}
+
+.avatar .timer {
+  inset: -9px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--ring) var(--lap),
+    rgba(255, 255, 255, 0.2) 0
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 5px),
+    #000 calc(100% - 4px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 5px),
+    #000 calc(100% - 4px)
+  );
+  animation:
+    lap 30s linear infinite,
+    overtime 0s 30s forwards;
+}
+
+.phone .avatar .timer {
+  inset: -6px;
+}
+
+.rack > .timer {
+  left: 18px;
+  right: 18px;
+  top: -12px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ring);
+  transform-origin: left;
+  animation:
+    drain 30s linear infinite,
+    overtime 0s 30s forwards;
+}
+
+/* phones: the bar sits under the opponents' row, clear of your name */
+.phone .rack > .timer {
+  left: 12px;
+  right: 12px;
+  top: -8px;
+}
+
+/* the tea glass: in front of the seat, towards the table's centre; on
+   phones next to the name */
+.glass {
+  position: absolute;
+  top: 8px;
+  left: calc(100% + 14px);
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.4));
+  pointer-events: none;
+}
+
+.seat.pos-1 .glass {
+  left: auto;
+  right: calc(100% + 14px);
+}
+
+.rack > .playerName .glass {
+  top: -8px;
+  left: calc(100% + 10px);
+}
+
+.phone .glass {
+  position: static;
+  width: auto;
+  height: 1.2em;
+  margin-left: 2px;
+  vertical-align: middle;
+}
+
+/* your name's column is narrow: two lines at most */
+.phone .rack > .playerName .badge {
+  margin: 0 1px;
+  padding: 1px 4px;
+  font-size: 10px;
 }
 
 /* a seat: round avatar in the seat's colour, tiles left on a badge */
@@ -299,6 +433,11 @@
   top: 0;
   left: 100%;
   margin: 0 0 0 40px;
+}
+
+/* a picked tile lifts */
+.tile {
+  transition: transform 0.12s ease-out;
 }
 
 .tile.selected {
@@ -531,6 +670,8 @@
   top: 0;
   left: calc(100% + 12px);
   translate: none;
+  /* past the rack's edge it would shrink to its narrowest */
+  width: max-content;
   max-width: 150px;
   white-space: normal;
 }
@@ -623,6 +764,14 @@
 
 .ghost .tile {
   outline: 2px dashed #1e90ff;
+}
+
+/* where a tile dragged over your rack will land */
+.rack .slot.over {
+  outline: 2px dashed rgba(255, 255, 255, 0.95);
+  outline-offset: 2px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* the latest discard */
@@ -777,17 +926,49 @@
   z-index: 5;
 }
 
-@media (max-height: 500px) {
-  .discardPile .catch {
-    left: 50%;
-    top: auto;
-    bottom: 2px;
-    margin-left: 0;
-    translate: -50% 0;
-    max-width: 100%;
-    padding: 1px 4px;
-    font-size: 11px;
+/* phones: a full-size button beside the discard */
+.phone .discardPile .catch {
+  position: static;
+  translate: none;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+/* table buttons: dark see-through pills; Catch in amber, nudging while it
+   can be used */
+.board button:not(.menu button, .dialog button),
+.table-menu > .dots,
+.scores:not([open]) {
+  border: none;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.38);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.scores:not([open]) {
+  padding: 6px 14px;
+}
+
+.board .playerName button {
+  background: #fff;
+  color: #1b5e20;
+}
+
+@keyframes nudge {
+  50% {
+    scale: 1.07;
   }
+}
+
+.board .discardPile .catch {
+  background: #ffb300;
+  color: #3a2600;
+  animation: nudge 1.4s ease-in-out infinite;
 }
 
 /* picked tiles open when dragged onto the table */
@@ -820,6 +1001,11 @@
   font-size: 15px;
 }
 
-.board > .rack.mine {
-  zoom: 1.25;
+/* the timer keeps still, Catch stops nudging */
+@media (prefers-reduced-motion: reduce) {
+  .avatar .timer,
+  .rack > .timer,
+  .board .discardPile .catch {
+    animation: none;
+  }
 }
