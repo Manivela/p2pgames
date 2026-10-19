@@ -101,7 +101,6 @@ const TR = [
   [/^Free seat: (.+)$/, "Yeri boşalt: $1"],
   [/^Player (\d+)$/, "Oyuncu $1"],
   [/^opened$/, "açtı"],
-  [/^1 tile$/, "1 taş"],
   [/^drew$/, "çekti"],
   [/^Table menu$/, "Masa menüsü"],
   [/^Sure\? Tap again$/, "Emin misin? Tekrar dokun"],

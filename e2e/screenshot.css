@@ -1,0 +1,4 @@
+/* applied while taking screenshots (playwright.config.js) */
+#detail:has(.fit) {
+  background: #28641c !important;
+}

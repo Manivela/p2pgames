@@ -1,36 +1,61 @@
+/* Your rack: wood with a ledge under each row and darker end caps standing
+   a little proud. 13 slots (702px) fill each row between the caps. */
 .rack {
-  margin: 10px;
-  width: 718px;
+  position: relative;
+  width: 738px;
   height: 200px;
+  padding: 0 18px;
   display: flex;
   flex-direction: column;
-  flex-wrap: wrap;
-  align-content: space-between;
-  justify-content: space-between;
-  background-color: #d2b48c;
-  border: 4px solid #8b5a2b;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(
+      92deg,
+      rgba(255, 255, 255, 0.05) 0 2px,
+      transparent 2px 11px,
+      rgba(0, 0, 0, 0.04) 11px 13px,
+      transparent 13px 23px
+    ),
+    linear-gradient(#c99560, #9b6536);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-/* the board's zoom rounds the borders down, leaving a few spare pixels in a
-   row: centred, the 13 slots get the same margin on both sides */
-.rack > .top {
-  width: 100%;
-  height: 50%;
-  border: 4px solid #8b5a2b;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+.rack::after {
+  content: "";
+  position: absolute;
+  inset: -5px -3px;
+  border-radius: 12px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #8a5629, #5a3015 85%, #3e200c) left / 20px 100%
+      no-repeat,
+    linear-gradient(90deg, #3e200c, #5a3015 15%, #8a5629) right / 20px 100%
+      no-repeat;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.35));
 }
 
+.rack > .top,
 .rack > .bottom {
-  width: 100%;
   height: 50%;
-  border: 4px solid #8b5a2b;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  padding-bottom: 9px;
+  box-shadow:
+    inset 0 -8px 0 #6f4321,
+    inset 0 -9px 0 rgba(255, 255, 255, 0.18),
+    inset 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* lit felt with a faint cloth grain, out to the window's edges */
+#detail:has(.fit),
+.fit::after {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 50% 42%, #3b8f2c 0%, #2a6a1f 48%, #163f10 100%);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.45);
 }
 
 .fit {
@@ -41,13 +66,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #28641c;
 }
 
 .board {
   position: relative;
 }
 
+/* placed from the table's centre */
 .drawPile {
   left: 50%;
   top: 50%;
@@ -56,37 +81,236 @@
   margin-top: -37.5px;
 }
 
-.discardPile {
+/* the draw pile as a stack, its count on a badge, the indicator turned */
+.draw {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.stack .tile {
+  box-shadow:
+    2px 2px 0 #e7d9b6,
+    4px 4px 0 #d8c69c,
+    6px 6px 0 #c8b483,
+    8px 10px 14px rgba(0, 0, 0, 0.45);
+}
+
+.draw .count {
   position: absolute;
-  top: -100px;
-  right: 0px;
+  z-index: 1;
+  top: -10px;
+  left: -12px;
+  padding: 0 7px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #222;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.draw .indicator {
+  rotate: 6deg;
+}
+
+/* Desktop: your rack along the bottom, a bit bigger than the tiles on the
+   table; the others' seats around it, and each discard pile between its
+   player and the next (you take from the one on your left) */
+.board:not(.phone) > .rack {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  translate: -50% 0;
+  zoom: 1.25;
+}
+
+.board:not(.phone) > :is(.seat, .discardPile) {
+  position: absolute;
+}
+
+.seat.pos-0 {
+  left: 50%;
+  bottom: 70px;
+  translate: -50% 0;
+}
+
+.seat.pos-1 {
+  right: 24px;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.seat.pos-2 {
+  left: 50%;
+  top: 12px;
+  translate: -50% 0;
+}
+
+.seat.pos-3 {
+  left: 24px;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.discardPile.pos-0 {
+  right: 30px;
+  bottom: 130px;
+}
+
+.discardPile.pos-1 {
+  right: 180px;
+  top: 24px;
+}
+
+.discardPile.pos-2 {
+  left: 180px;
+  top: 24px;
+}
+
+.discardPile.pos-3 {
+  left: 30px;
+  bottom: 130px;
+}
+
+.discardPile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* centred over the rack, clear of the discard pile at its end; translate
-   leaves transform free for the rotated seats */
+.discardPile h4 {
+  margin: 0 0 4px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* a name on a pill; yours over your rack */
 .playerName {
-  left: 50%;
-  translate: -50% 0;
-  position: absolute;
-  top: -75px;
+  margin: 0;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
   white-space: nowrap;
+}
+
+/* long names get cut short so the badges stay on screen */
+.playerName .name {
+  display: inline-block;
+  max-width: 8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.rack > .playerName {
+  position: absolute;
+  left: 50%;
+  top: -40px;
+  translate: -50% 0;
 }
 
 .active {
   color: red;
 }
 
+/* a seat: round avatar in the seat's colour, tiles left on a badge */
+.seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.avatar {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.avatar.empty {
+  border-style: dashed;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.avatar .tilesLeft {
+  position: absolute;
+  right: -10px;
+  bottom: -4px;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  background: #222;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.avatar .tilesLeft.last {
+  background: #e53935;
+}
+
+/* the hand a seat held when the round ended, upright and small */
+.seat .shown {
+  position: absolute;
+  top: 100%;
+  zoom: 0.4;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.seat .shown > div {
+  display: flex;
+}
+
+.seat .shown > div:empty {
+  display: none;
+}
+
+.seat.pos-1 .shown {
+  right: 0;
+}
+
+.seat.pos-3 .shown {
+  left: 0;
+}
+
+/* the top seat's goes beside it, clear of the round's name */
+.seat:is(.pos-0, .pos-2) .shown {
+  top: 0;
+  left: 100%;
+  margin: 0 0 0 40px;
+}
+
 .tile.selected {
   transform: translateY(-10px);
-  box-shadow: 0 0 0 3px #1e90ff;
+  box-shadow:
+    0 3px 0 #cbb68a,
+    0 0 0 3px #1e90ff;
 }
 
 .round {
   position: absolute;
-  top: 265px;
+  top: 116px;
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
@@ -101,11 +325,14 @@
   color: #ffd54f;
 }
 
-/* between the top player's name and the draw pile count */
+/* between the round's name and the draw pile, clear of the seats and the
+   top discard piles */
 .melds {
   position: absolute;
-  top: 310px;
+  top: 160px;
   bottom: calc(50% + 70px);
+  left: 130px;
+  right: 130px;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
@@ -126,21 +353,15 @@
   outline: 3px dashed #fff;
 }
 
-/* a full küt: its number and the four colours */
+/* a full küt: its number and the four colours' symbols */
 .tile.full .rank {
   color: #333;
 }
 
-.tile.full .dots {
+.tile.full .syms {
   display: flex;
-  gap: 3px;
-  margin-top: 6px;
-}
-
-.tile.full .dots span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
+  gap: 1px;
+  font-size: 12px;
 }
 
 .scores {
@@ -176,7 +397,7 @@
 /* Phone layout (short landscape screens), see PhoneBoard */
 .board.phone {
   display: grid;
-  grid-template-columns: 718px 1fr;
+  grid-template-columns: 726px 1fr;
   grid-template-rows: auto 1fr auto;
   grid-template-areas:
     "opponents pile"
@@ -193,16 +414,43 @@
   align-items: center;
 }
 
+/* the others: their discard pile and seat; ponytail: their hands aren't
+   shown at round end on phones */
+.phone .opponent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phone .opponent .discardPile {
+  flex-direction: row;
+  gap: 4px;
+}
+
+.phone .seat {
+  flex-direction: row;
+}
+
+.phone .avatar {
+  width: 34px;
+  height: 34px;
+  border-width: 2px;
+  font-size: 15px;
+}
+
+.phone .seat .shown {
+  display: none;
+}
+
 .phone .pile {
   grid-area: pile;
   display: flex;
   align-items: flex-end;
-  gap: 6px;
 }
 
-.phone .pile h4 {
-  margin: 0;
-  color: #fff;
+.phone .draw {
+  position: relative;
+  gap: 6px;
 }
 
 .phone .table {
@@ -248,10 +496,14 @@
 
 .phone .rack {
   grid-area: rack;
-  position: relative;
-  margin: 0;
+  width: 726px;
   height: auto;
   min-height: 174px;
+  padding: 0 12px;
+}
+
+.phone .rack::after {
+  background-size: 14px 100%;
 }
 
 .phone .rack > .top,
@@ -260,18 +512,12 @@
 }
 
 .phone .playerName {
-  font-size: 16px;
-  margin: 0;
-  white-space: nowrap;
+  font-size: 15px;
+  padding: 2px 10px;
 }
 
-/* long names get cut short so the Stand button stays on screen */
 .phone .playerName .name {
-  display: inline-block;
   max-width: 7em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: bottom;
 }
 
 .phone .playerName button {
@@ -279,63 +525,24 @@
   padding: 2px 6px;
 }
 
-/* your discard pile and name sit right of your rack */
-.phone .rack .discardPile {
-  top: auto;
-  bottom: 0;
-  left: calc(100% + 12px);
-  right: auto;
-}
-
-.phone .rack .playerName {
+/* your name and discard pile sit right of your rack */
+.phone .rack > .playerName {
+  border-radius: 12px;
   top: 0;
   left: calc(100% + 12px);
   translate: none;
-  width: 150px;
+  max-width: 150px;
   white-space: normal;
+}
+
+.phone > .discardPile {
+  grid-area: discard;
+  align-self: end;
+  justify-self: start;
 }
 
 .phone .discardPile h4 {
   margin: 0;
-  color: #fff;
-}
-
-/* the others: just their discard pile and name; ponytail: their hands
-   aren't shown at round end on phones */
-.phone .rack.mini {
-  grid-area: auto;
-  width: auto;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  box-shadow: none;
-}
-
-.phone .rack.mini > .top,
-.phone .rack.mini > .bottom {
-  display: none;
-}
-
-.phone .rack.mini .discardPile,
-.phone .rack.mini .playerName {
-  position: static;
-}
-
-.phone .rack.mini .playerName {
-  width: auto;
-  white-space: nowrap;
-}
-
-.phone .rack.mini {
-  min-height: 0;
-}
-
-.phone .rack.mini .discardPile {
-  flex-direction: row;
-  gap: 4px;
 }
 
 /* Scores sits with the buttons and opens over the table */
@@ -374,7 +581,6 @@
     text-align: center;
     font-size: 1.6rem;
     color: #fff;
-    background-color: #28641c;
   }
 }
 
@@ -422,6 +628,7 @@
 /* the latest discard */
 .latest .tile {
   box-shadow:
+    0 3px 0 #cbb68a,
     0 0 0 3px #ffd54f,
     0 0 14px 4px rgba(255, 213, 79, 0.9);
 }
@@ -558,13 +765,14 @@
   padding-right: 8px;
 }
 
-/* Catch (Yakala) beside the latest discard; on phones over its lower edge,
+/* Catch (Yakala) under the latest discard; on phones over its lower edge,
    since the row of opponents has no room around it */
 .discardPile .catch {
   position: absolute;
-  left: 100%;
-  top: 40%;
-  margin-left: 4px;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  margin-top: 10px;
   white-space: nowrap;
   z-index: 5;
 }
@@ -610,4 +818,8 @@
 .fit > .table-menu .menu button,
 .fit > .table-menu .dialog :is(button, input, select, textarea) {
   font-size: 15px;
+}
+
+.board > .rack.mine {
+  zoom: 1.25;
 }

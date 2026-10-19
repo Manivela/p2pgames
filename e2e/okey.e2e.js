@@ -25,7 +25,7 @@ const handIds = async (page) =>
 
 const sitInSeat1 = (page) =>
   page
-    .locator(".rack", { hasText: SEAT_1 })
+    .locator(".playerName", { hasText: SEAT_1 })
     .getByRole("button", { name: SIT })
     .click();
 

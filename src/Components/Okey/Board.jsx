@@ -1,7 +1,7 @@
 import _ from "lodash";
-import { useContext, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { OkeyContext } from "./OkeyContext";
-import Rack from "./Rack";
+import Rack, { DiscardPile, Seat } from "./Rack";
 import Slot from "./Slot";
 import Tile from "./Tile";
 import {
@@ -15,63 +15,6 @@ import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { AMERICANO } from "./rulesets";
-
-const playerPositions = [
-  {
-    left: "50%",
-    bottom: "0px",
-    marginLeft: "-358px",
-    position: "absolute",
-    discardTransform: "translateY(-30px)",
-    discardCountTransform: "translate(-300%, -150%)",
-  },
-  {
-    top: "50%",
-    right: "0px",
-    position: "absolute",
-    marginRight: "-258px",
-    marginTop: "-100px",
-    transform: "rotate(-90deg)",
-    discardTransform: "translateY(-30px) rotate(90deg)",
-    discardCountTransform: "translate(200%,-150%)",
-  },
-  {
-    left: "50%",
-    marginLeft: "-358px",
-    position: "absolute",
-    transform: "rotate(180deg)",
-    nameTransform: "rotate(180deg)",
-    discardTransform: "translateY(-15px) rotate(180deg)",
-    discardCountTransform: "translate(300%,-330%)",
-  },
-  {
-    top: "50%",
-    marginLeft: "-258px",
-    marginTop: "-100px",
-    position: "absolute",
-    transform: "rotate(90deg)",
-    discardTransform: "translate(-30px, -30px) rotate(-90deg)",
-    discardCountTransform: "translate(-200%,-400%)",
-  },
-];
-
-const playerPositionsFor2 = [
-  {
-    left: "50%",
-    bottom: "0px",
-    marginLeft: "-358px",
-    position: "absolute",
-    discardTransform: "translateY(-30px)",
-  },
-  {
-    left: "50%",
-    marginLeft: "-358px",
-    position: "absolute",
-    transform: "rotate(180deg)",
-    nameTransform: "rotate(180deg)",
-    discardTransform: "translateY(-15px) rotate(180deg)",
-  },
-];
 
 function rotateArray(array, x) {
   // Normalize the rotation count
@@ -112,6 +55,26 @@ function useBoxSize() {
   return [ref, size];
 }
 
+// the draw pile as a stack, its count, and the indicator beside it
+function DrawPile({ className = "" }) {
+  const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
+  return (
+    <div className={`draw ${className}`}>
+      <Slot
+        className="stack"
+        showBorder
+        tile={nextDrawTile}
+        type="DRAW"
+        onDrop={finishGame}
+      />
+      <span className="count">{okeyState.drawPile.length}</span>
+      {okeyState.okeyTile && (
+        <Tile className="indicator" tile={okeyState.okeyTile} disabled />
+      )}
+    </div>
+  );
+}
+
 function GameButtons({ phone }) {
   const { okeyState, startGame, newGame } = useContext(OkeyContext);
   // Reset, and New Game mid-game, live in the table menu; once a game is
@@ -144,32 +107,28 @@ function GameButtons({ phone }) {
 }
 
 // Short landscape screens (phones): your rack runs along the bottom and the
-// other players shrink to their name and discard pile, left to right in
+// other players shrink to their seat and discard pile, left to right in
 // seat order from the one before you.
 function PhoneBoard({ players, style }) {
-  const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
+  const { okeyState } = useContext(OkeyContext);
   const americano = !!okeyState.rules;
   const [mine, ...others] = players;
   return (
     <div className="board phone" style={style}>
       <div className="opponents">
         {[...others].reverse().map((player) => (
-          <Rack
-            key={player.id}
-            player={player.id}
-            className="mini"
-            style={{}}
-          />
+          <div key={player.id} className="opponent">
+            <DiscardPile player={player.id} />
+            <Seat player={player.id} />
+          </div>
         ))}
       </div>
       <div className="pile">
-        <Slot showBorder tile={nextDrawTile} type="DRAW" onDrop={finishGame} />
-        {okeyState.okeyTile && <Tile tile={okeyState.okeyTile} disabled />}
-        <h4>{okeyState.drawPile.length}</h4>
+        <DrawPile />
       </div>
       <div className="table">
         {americano ? (
-          <AmericanoInfo phone />
+          <AmericanoInfo />
         ) : (
           okeyState.message && <h3 className="round">{t(okeyState.message)}</h3>
         )}
@@ -185,14 +144,14 @@ function PhoneBoard({ players, style }) {
           <GameButtons phone />
         )}
       </div>
-      <Rack player={mine.id} style={{}} />
+      <Rack player={mine.id} />
+      <DiscardPile player={mine.id} />
     </div>
   );
 }
 
 function Board() {
-  const { okeyState, nextDrawTile, finishGame, myIndex } =
-    useContext(OkeyContext);
+  const { okeyState, myIndex, me } = useContext(OkeyContext);
   const rotatedPlayers =
     myIndex !== -1
       ? rotateArray(okeyState.players, myIndex)
@@ -202,14 +161,10 @@ function Board() {
   const [fitRef, box] = useBoxSize();
   // same test as the CSS that moves the corner buttons (index.css)
   const phone = window.innerHeight <= 500;
-  // smallest sizes where no racks, names or discard piles overlap;
+  // smallest sizes where no seats, names or discard piles overlap;
   // Americano needs extra height for the melds above the draw pile
-  const width = phone ? 890 : two ? 760 : 1340;
-  const height = phone
-    ? americano
-      ? 400
-      : 330
-    : (two ? 700 : 820) + (americano ? (two ? 360 : 320) : 0);
+  const width = phone ? 898 : 1160;
+  const height = phone ? (americano ? 400 : 330) : americano ? 900 : 740;
   // shrink the fixed-size table to fit, never grow it
   const zoom = Math.min(1, box.width / width, box.height / height);
   return (
@@ -225,16 +180,7 @@ function Board() {
       ) : (
         <div className="board" style={{ width, height, zoom }}>
           {americano && <AmericanoTable />}
-          <Slot
-            className="drawPile"
-            showBorder
-            tile={nextDrawTile}
-            type="DRAW"
-            onDrop={finishGame}
-          />
-          <h4 className="drawPile" style={{ marginTop: -60, marginLeft: -10 }}>
-            {okeyState.drawPile.length}
-          </h4>
+          <DrawPile className="drawPile" />
           {okeyState.message && !americano && (
             // left of the draw pile: above it, 2 players' names leave no room
             <h1
@@ -251,27 +197,22 @@ function Board() {
               {t(okeyState.message)}
             </h1>
           )}
-          {okeyState.okeyTile && (
-            <Tile
-              className="drawPile"
-              style={{ marginLeft: 40 }}
-              tile={okeyState.okeyTile}
-              disabled
-            />
-          )}
           <GameButtons />
-          {rotatedPlayers.map((player, index) => (
-            <Rack
-              key={player.id}
-              player={player.id}
-              initialHand={player.hand}
-              style={
-                rotatedPlayers.length === 2
-                  ? playerPositionsFor2[index]
-                  : playerPositions[index]
-              }
-            />
-          ))}
+          {/* you at the bottom, then the others around the table; with two
+              players the other one sits across */}
+          {rotatedPlayers.map((player, index) => {
+            const pos = two ? index * 2 : index;
+            return (
+              <Fragment key={player.id}>
+                {player.id === me ? (
+                  <Rack player={me} />
+                ) : (
+                  <Seat player={player.id} pos={pos} />
+                )}
+                <DiscardPile player={player.id} pos={pos} />
+              </Fragment>
+            );
+          })}
         </div>
       )}
     </div>

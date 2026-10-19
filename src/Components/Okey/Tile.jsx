@@ -3,6 +3,7 @@ import "./tile.css";
 import { useContext, useRef } from "react";
 import { OkeyContext } from "./OkeyContext";
 import { isOkey } from "./melds";
+import { symbols } from "./constants";
 
 function Tile({ tile, disabled, className, style }) {
   const { me, toggleHidden, okeyState, selected, toggleSelected } =
@@ -55,11 +56,20 @@ function Tile({ tile, disabled, className, style }) {
     }),
     [tile],
   );
+  // the colour comes from the id (red7-0), as a class: the hex in the tile
+  // is part of the game state and stays as it is
+  const color = tile.id.match(/^[a-z]+/)[0];
+  const classes = [
+    "tile",
+    faceUp ? `c-${color}` : "back",
+    className,
+    myTile && selected.includes(tile.id) && "selected",
+  ];
   return (
     <div
       ref={dragRef}
-      className={`${className} tile ${myTile && selected.includes(tile.id) ? "selected" : ""}`}
-      style={{ ...style, color: faceUp ? tile.color : undefined, opacity }}
+      className={classes.filter(Boolean).join(" ")}
+      style={{ ...style, opacity }}
       onClick={() => {
         // a hold already flipped the tile; don't also select it
         if (held.current) held.current = false;
@@ -74,7 +84,7 @@ function Tile({ tile, disabled, className, style }) {
       {faceUp && (
         <>
           <div className="rank">{tile.rank}</div>
-          <div className="heart">♥</div>
+          {tile.rank !== "👌" && <div className="sym">{symbols[color]}</div>}
         </>
       )}
     </div>

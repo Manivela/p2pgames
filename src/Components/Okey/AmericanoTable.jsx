@@ -1,10 +1,11 @@
 import { useContext, useLayoutEffect, useRef } from "react";
 import { useDrop } from "react-dnd";
-import { sum } from "lodash";
+import { findKey, sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
 import { claimants, upForClaim } from "./americano";
 import { allSeats } from "./game";
 import { colorOf, isOkey, rankOf } from "./melds";
+import { colorMap, symbols } from "./constants";
 import Tile from "./Tile";
 import { t } from "../../i18n";
 
@@ -38,10 +39,16 @@ function Meld({ meld, index }) {
       {full ? (
         <div className="tile full">
           <div className="rank">{rankOf(meld.tiles[0], ind)}</div>
-          <div className="dots">
-            {meld.tiles.map((x) => (
-              <span key={x.id} style={{ backgroundColor: colorOf(x, ind) }} />
-            ))}
+          <div className="syms">
+            {meld.tiles.map((x) => {
+              // a fake okey takes the okey's colour
+              const color = findKey(colorMap, (c) => c === colorOf(x, ind));
+              return (
+                <span key={x.id} className={`c-${color}`}>
+                  {symbols[color]}
+                </span>
+              );
+            })}
           </div>
         </div>
       ) : (
@@ -57,7 +64,7 @@ export const place = (phone, style) =>
   phone ? {} : { className: "drawPile", style };
 
 // round, the claims on the last discard and the melds on the table
-export function AmericanoInfo({ phone }) {
+export function AmericanoInfo() {
   const { okeyState, me, selected, openHand, layMelds } =
     useContext(OkeyContext);
   const { round, melds, message, players, opened, rules } = okeyState;
@@ -67,8 +74,6 @@ export function AmericanoInfo({ phone }) {
   const wanting = claimants(okeyState);
   const from = offer && players.find((p) => p.id === offer.from);
   const offered = from?.discardPile.at(-1);
-  // clear of the top player's discard pile and the side racks
-  const inset = players.length === 2 ? 100 : 380;
 
   // Picked tiles open (or, once opened, lay down) when one of them is
   // dragged onto the table; a drop on a meld adds to that meld instead.
@@ -136,7 +141,6 @@ export function AmericanoInfo({ phone }) {
           drop(el);
         }}
         className={`melds ${canLay ? "droppable" : ""} ${over ? "over" : ""}`}
-        style={phone ? undefined : { left: inset, right: inset }}
       >
         {canLay && (
           <span className="hint">
@@ -157,7 +161,12 @@ export function AmericanoActions({ phone }) {
   return (
     okeyState.gameState === "roundEnd" && (
       <button
-        {...place(phone, { marginLeft: 150, marginTop: 100 })}
+        // under the draw pile, clear of the hands shown by the seats
+        {...place(phone, {
+          marginLeft: 0,
+          marginTop: 60,
+          translate: "-50% 0",
+        })}
         onClick={nextRound}
       >
         {t("Next Round")}

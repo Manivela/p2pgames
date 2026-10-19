@@ -1,12 +1,32 @@
+/* a thick tile: cream face, darker bottom edge, soft shadow */
 .tile {
   width: 54px;
   height: 75px;
-  border: 1px solid #d6d6c2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: #fbf3df;
-  border-radius: 3px;
+  border-radius: 6px;
+  background: linear-gradient(#fffbf2, #f2e4c2);
+  box-shadow:
+    0 3px 0 #cbb68a,
+    0 5px 8px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 #fff;
+}
+
+.c-red {
+  color: #d81f26;
+}
+
+.c-black {
+  color: #1d1d1d;
+}
+
+.c-blue {
+  color: #1673d6;
+}
+
+.c-yellow {
+  color: #ef8a00;
 }
 
 .rank {
@@ -16,19 +36,16 @@
   line-height: 44px;
 }
 
-.heart {
+/* the colour's symbol under the number */
+.sym {
   width: 25px;
   height: 25px;
-  font-size: 20px;
-  font-weight: bold;
-
   display: flex;
   justify-content: center;
   align-items: center;
-
   border-radius: 50%;
-  box-shadow: 0px 12px 12px 0 rgba(0, 0, 0, 0.1) inset,
-    0px -8px 12px 0 rgba(255, 255, 255, 0.3) inset;
+  background: rgba(0, 0, 0, 0.05);
+  font-size: 15px;
 }
 
 /* a finger on a tile drags it instead of scrolling or selecting text */

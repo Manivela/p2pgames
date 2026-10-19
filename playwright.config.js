@@ -10,6 +10,11 @@ export default defineConfig({
   testMatch: "*.e2e.js",
   fullyParallel: true,
   ignoreSnapshots: process.platform !== "linux",
+  // flat felt in the screenshots: its grain and dithered light make every
+  // PNG ~6x bigger
+  expect: {
+    toHaveScreenshot: { stylePath: "e2e/screenshot.css" },
+  },
   use: { baseURL: "http://localhost:5173" },
   webServer: {
     command: "npm run dev -- --port 5173 --strictPort",

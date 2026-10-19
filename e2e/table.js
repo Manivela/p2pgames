@@ -85,7 +85,10 @@ export function playToEnd() {
 
 const SEL = [
   ".board > .rack",
-  ".opponents > .rack",
+  ".opponents > *",
+  ".seat",
+  ".seat .shown",
+  ".draw .indicator",
   ".discardPile",
   ".playerName",
   ".board > .drawPile",

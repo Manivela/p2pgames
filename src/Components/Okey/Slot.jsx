@@ -32,7 +32,9 @@ function Slot({
   return (
     <div
       ref={drop}
-      className={`slot ${showBorder && "border"} ${className}`}
+      className={["slot", showBorder && "border", className]
+        .filter(Boolean)
+        .join(" ")}
       {...props}
     >
       {tile && <Tile tile={tile} disabled={disabled} />}
