@@ -270,8 +270,12 @@ test("101: discarding the okey costs 101", () => {
   assert.deepEqual(s.penalties, { 2: 101 });
 });
 
-test("101: a hand nobody finishes counts only okeys held, and is dealt again", () => {
-  let s = americano.startGame(seated(3), undefined, ONE_O_ONE);
+test("101: a hand nobody finishes counts only okeys held and penalties, and is dealt again", () => {
+  // P2 threw the okey earlier in the hand
+  let s = {
+    ...americano.startGame(seated(3), undefined, ONE_O_ONE),
+    penalties: { 2: 101 },
+  };
   const starter = s.currentPlayer;
   while (s.gameState === "play") {
     const p = s.currentPlayer;
@@ -285,8 +289,10 @@ test("101: a hand nobody finishes counts only okeys held, and is dealt again", (
   assert.equal(s.message, "Round 1: no tiles left, dealt again");
   const okeys = (p) => p.hand.filter((x) => x && isOkey(x, s.okeyTile)).length;
   for (const p of s.players.filter((x) => x.user)) {
-    assert.equal(s.scores[p.id][0], 101 * okeys(p));
+    // more penalties if a player threw the okey on the way
+    assert.equal(s.scores[p.id][0], 101 * okeys(p) + (s.penalties[p.id] ?? 0));
   }
+  assert.isAtLeast(s.scores[2][0], 101);
   const before = sum(s.players.map((p) => s.scores[p.id]?.[0] ?? 0));
   s = americano.nextRound(s);
   assert.equal(s.round, 1);

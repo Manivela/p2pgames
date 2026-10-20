@@ -629,22 +629,23 @@ function endRound(state, finisher, last) {
     ? 1
     : (pairs(finisher) ? 2 : 1) * (last && isOkey(last, s.okeyTile) ? 2 : 1);
   // 101: a hand nobody finishes scores only the okeys held, and is dealt
-  // again by the same player
+  // again by the same player; penalties during play stand either way
   const voided = rules.opening && !finisher;
   for (const p of s.players) {
     p.hand = intoHand(p.hand, p.inbox ?? []);
     p.inbox = [];
     const okeys = p.hand.filter((t) => t && isOkey(t, s.okeyTile)).length;
-    const score = voided
-      ? rules.okeyInHandScore * okeys
-      : (p.id === finisher
+    const score =
+      (voided
+        ? rules.okeyInHandScore * okeys
+        : p.id === finisher
           ? rules.finishScore * times
           : finisher && !isElden(s) && !s.opened[p.id]
             ? rules.notOpenedScore * Math.min(times, 2)
             : handScore(p.hand, s) * (pairs(p.id) ? 2 : 1) * times) +
-        rules.catchPenalty *
-          p.discardPile.filter((t) => caught.includes(t.id)).length +
-        (s.penalties?.[p.id] ?? 0);
+      rules.catchPenalty *
+        p.discardPile.filter((t) => caught.includes(t.id)).length +
+      (s.penalties?.[p.id] ?? 0);
     // a hand dealt again adds to the same line
     s.scores[p.id] = s.scores[p.id] ?? [];
     s.scores[p.id][i] = (s.scores[p.id][i] ?? 0) + score;
