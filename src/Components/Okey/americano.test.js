@@ -727,6 +727,35 @@ test("a claim waits in the slot it was dropped on, and can be taken back", () =>
   assertAllTiles(s);
 });
 
+test("picked tiles that open do, the others stay on the rack", () => {
+  let s = americano.startGame(seated(2), deal); // round 1: 3'lü küt
+  s = americano.openHand(s, 1, [[...kut5, "red10-0"]]);
+  assert.deepEqual(
+    s.melds.map((m) => ids(m.tiles)),
+    [kut5],
+  );
+  assert.isOk(tileIn(s, 1, "red10-0"));
+  assertAllTiles(s);
+
+  // round 3, 3'lü küt + 3'lü seri, out of eight picked tiles
+  s = { ...americano.startGame(seated(2), deal), round: 3 };
+  s = americano.openHand(s, 1, [
+    [...seri789, "yellow13-0", ...kut5, "red10-0"],
+  ]);
+  assert.deepEqual(
+    s.melds.map((m) => ids(m.tiles)),
+    [seri789, kut5],
+  );
+  assert.isOk(tileIn(s, 1, "yellow13-0"));
+  assert.isOk(tileIn(s, 1, "red10-0"));
+  // still not enough without them
+  s = { ...americano.startGame(seated(2), deal), round: 3 };
+  assert.match(
+    americano.openHand(s, 1, [[...seri789, "yellow13-0", "red10-0"]]),
+    /Open with exactly/,
+  );
+});
+
 test("picked tiles open and lay down wherever they sit on the rack", () => {
   let s = americano.startGame(seated(2), deal);
   s = { ...s, round: 3 }; // 3'lü küt + 3'lü seri, picked mixed together

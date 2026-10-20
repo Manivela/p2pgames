@@ -115,13 +115,18 @@ const combos = (arr, k) =>
         combos(arr.slice(i + 1), k - 1).map((c) => [t, ...c]),
       );
 
-// Splits the picked tiles into melds, using every tile. `shapes` is a list of
-// [type, size] to make exactly (an opening); without it any küts (3–4) and
-// seris of 3+ will do (laying down later). A group that could be both is a
-// seri. Returns [{ type, tiles }] with each meld's tiles in order, or null.
-export function splitMelds(tiles, indicator, shapes, wrap = true) {
+// Splits the picked tiles into melds, using every tile, or with `spare` as
+// many as the shapes need. `shapes` is a list of [type, size] to make
+// exactly (an opening); without it any küts (3–4) and seris of 3+ will do
+// (laying down later). A group that could be both is a seri. Returns
+// [{ type, tiles }] with each meld's tiles in order, or null.
+export function splitMelds(tiles, indicator, shapes, wrap = true, spare) {
+  if (shapes && !shapes.length) return tiles.length && !spare ? null : [];
   if (!tiles.length) return shapes?.length ? null : [];
-  if (shapes && !shapes.length) return null;
+  // too few tiles left for the shapes
+  if (shapes && tiles.length < shapes.reduce((n, [, size]) => n + size, 0)) {
+    return null;
+  }
   const [first, ...rest] = tiles;
   const options = shapes
     ? shapes
@@ -146,9 +151,11 @@ export function splitMelds(tiles, indicator, shapes, wrap = true) {
         indicator,
         shapes?.filter((_, j) => j !== i),
         wrap,
+        spare,
       );
       if (more) return [{ type, tiles: ordered }, ...more];
     }
   }
-  return null;
+  // the first tile left out
+  return spare ? splitMelds(rest, indicator, shapes, wrap, spare) : null;
 }

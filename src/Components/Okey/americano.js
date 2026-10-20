@@ -106,6 +106,8 @@ export function setUp(state, round, totals, starter, rules = AMERICANO) {
   );
 }
 
+const KEEP = "Keep a tile to discard";
+
 // Takes the groups (arrays of tile ids) out of the player's hand on their
 // turn. Returns [newState, groups of tiles] or a message.
 function takeFromHand(state, player, groups) {
@@ -121,9 +123,7 @@ function takeFromHand(state, player, groups) {
   ) {
     return "Select tiles from your rack";
   }
-  if (hand.filter(Boolean).length - ids.length < 1) {
-    return "Keep a tile to discard";
-  }
+  if (hand.filter(Boolean).length - ids.length < 1) return KEEP;
   const s = cloneDeep(state);
   const me = seat(s, player);
   const tiles = groups.map((g) =>
@@ -150,10 +150,35 @@ const points = (meld, ind) =>
     ),
   );
 
+// The sets and runs a row of picked tiles makes as it lies on the rack (an
+// okey counts where it stands), the most points it can; a tile that fits
+// none stays on the rack.
+function asLaid(row, ind) {
+  const best = [{ total: 0, melds: [] }]; // for the row up to each tile
+  row.forEach((_, i) => {
+    const keep = (j, total, melds) => {
+      if (!best[j] || total > best[j].total) best[j] = { total, melds };
+    };
+    keep(i + 1, best[i].total, best[i].melds); // tile i stays
+    for (let j = i + 3; j <= row.length; j++) {
+      const g = row.slice(i, j);
+      const seri = meldOrder(g, "seri", ind, false);
+      const kut = !seri && meldOrder(g, "kut", ind);
+      const meld = seri
+        ? { type: "seri", tiles: seri }
+        : kut && { type: "kut", tiles: kut };
+      if (meld) {
+        keep(j, best[i].total + points(meld, ind), [...best[i].melds, meld]);
+      }
+    }
+  });
+  return best[row.length];
+}
+
 // 101's opening: sets and runs as laid out on the rack (a gap or a tile
 // left out separates them, and an okey counts where it stands) worth
-// `points`, or `pairs` pairs or more anywhere on the rack. Returns
-// [melds, with pairs] or null.
+// `points`, or `pairs` pairs or more anywhere on the rack; picked tiles
+// that make neither stay on the rack. Returns [melds, with pairs] or null.
 function openingOf(state, player, ids) {
   const { okeyTile: ind, rules } = state;
   const hand = seat(state, player).hand;
@@ -165,21 +190,23 @@ function openingOf(state, player, ids) {
     if (k === 0 || i !== at[k - 1] + 1 || i === 13) groups.push([]);
     groups.at(-1).push(hand[i]);
   });
-  const melds = groups.map((g) => {
-    const seri = meldOrder(g, "seri", ind, false);
-    const kut = !seri && meldOrder(g, "kut", ind);
-    return seri
-      ? { type: "seri", tiles: seri }
-      : kut && { type: "kut", tiles: kut };
-  });
-  const total = melds.every(Boolean) && sum(melds.map((m) => points(m, ind)));
-  if (total >= rules.opening.points) return [melds, false];
+  const laid = groups.map((g) => asLaid(g, ind));
+  if (sum(laid.map((l) => l.total)) >= rules.opening.points) {
+    return [laid.flatMap((l) => l.melds), false];
+  }
+  // as many pairs as there are
   const tiles = groups.flat();
-  const pairs =
-    tiles.length >= 2 * rules.opening.pairs &&
-    tiles.length % 2 === 0 &&
-    splitMelds(tiles, ind, pairsOf(tiles));
-  return pairs ? [pairs, true] : null;
+  for (let n = Math.floor(tiles.length / 2); n >= rules.opening.pairs; n--) {
+    const pairs = splitMelds(
+      tiles,
+      ind,
+      Array(n).fill(["pair", 2]),
+      false,
+      true,
+    );
+    if (pairs) return [pairs, true];
+  }
+  return null;
 }
 
 export function openHand(state, player, groups) {
@@ -189,20 +216,26 @@ export function openHand(state, player, groups) {
     return "No opening this round: finish from your hand";
   }
   if (state.opened[player]) return "You've already opened";
-  const taken = takeFromHand(state, player, groups);
-  if (typeof taken === "string") return taken;
-  const [s, tiles] = taken;
+  const picked = takeFromHand(state, player, groups);
+  if (typeof picked === "string" && picked !== KEEP) return picked;
+  const hand = seat(state, player).hand;
+  const tiles = groups.flat().map((id) => hand.find((t) => t?.id === id));
 
-  // Americano: the picked tiles, wherever they sit on the rack, make
-  // exactly the required melds
+  // Americano: the required melds, out of the picked tiles wherever they sit
+  // on the rack; picked tiles left over stay on the rack
   const [melds, pairs] = rules.opening
     ? (openingOf(state, player, groups.flat()) ?? [])
-    : [splitMelds(tiles.flat(), s.okeyTile, required, wrap(s)), false];
+    : [splitMelds(tiles, state.okeyTile, required, wrap(state), true), false];
   if (!melds) {
     return rules.opening
       ? `Open with ${rules.opening.points}+ or ${rules.opening.pairs} pairs`
       : `Open with exactly: ${rules.rounds[state.round - 1].name}`;
   }
+  const taken = takeFromHand(state, player, [
+    melds.flatMap((m) => m.tiles.map((t) => t.id)),
+  ]);
+  if (typeof taken === "string") return taken;
+  const [s] = taken;
   lay(s, player, melds, groups.flat());
   s.opened = { ...s.opened, [player]: true };
   if (pairs) s.openedWithPairs = { ...s.openedWithPairs, [player]: true };

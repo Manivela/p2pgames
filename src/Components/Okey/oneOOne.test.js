@@ -122,6 +122,37 @@ test("101: open with 101 points as laid out on the rack, an okey where it stands
   );
 });
 
+test("101: picked tiles that fit no set or run stay on the rack", () => {
+  // the red 3 right after red 10-11-okey, and a black 2 on its own
+  let s = start(2, [...seri, "red3-0"]);
+  s = americano.openHand(s, 1, [[...opening, "red3-0", "black2-0"]]);
+  assert.isTrue(s.opened[1]);
+  assert.deepEqual(
+    s.melds.map((m) => ids(m.tiles)),
+    [seri, kut, yellow],
+  );
+  assert.isOk(tileIn(s, 1, "red3-0"));
+  assert.isOk(tileIn(s, 1, "black2-0"));
+  assertAllTiles(s);
+  // the 13s and yellows alone are 70
+  assert.equal(
+    americano.openHand(start(), 1, [[...kut, ...yellow, "black2-0"]]),
+    "Open with 101+ or 5 pairs",
+  );
+  // P2: six pairs out of more picked tiles, all six laid
+  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  const sixPairs = [...fivePairs, "black6-0", "black6-1"];
+  s = americano.openHand(s, 2, [[...sixPairs, "blue2-0", "yellow4-0"]]);
+  assert.isTrue(s.openedWithPairs[2]);
+  assert.deepEqual(
+    s.melds.flatMap((m) => ids(m.tiles)).sort(),
+    [...sixPairs].sort(),
+  );
+  assert.isOk(tileIn(s, 2, "blue2-0"));
+  assert.isOk(tileIn(s, 2, "yellow4-0"));
+});
+
 test("101: open with 5 pairs; then only pairs, or adding to sets and runs", () => {
   let s = americano.openHand(start(), 1, [opening]);
   // laying more right after opening is allowed (this just isn't a meld)

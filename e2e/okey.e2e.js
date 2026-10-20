@@ -137,12 +137,16 @@ test("dragging picked tiles onto the table opens the hand", async ({
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
-  // the küt is dealt into my first three slots
-  for (const i of [0, 1, 2]) await slot(page, i).locator(".tile").click();
+  // the küt is dealt into my first three slots; the fourth tile is extra
+  const extra = (await handIds(page))[3];
+  for (const i of [0, 1, 2, 3]) await slot(page, i).locator(".tile").click();
   await expect(page.locator(".melds.droppable")).toBeVisible();
   await drag(page, slot(page, 1).locator(".tile"), page.locator(".melds"));
   await expect.poll(async () => (await state(page)).melds.length).toBe(1);
   expect((await state(page)).opened[1]).toBeTruthy();
+  // the extra tile stays on the rack, no longer picked
+  expect((await handIds(page))[3]).toBe(extra);
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
 // phones: holding a tile flips it; a finger that drifts after, and a touch
