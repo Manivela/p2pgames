@@ -28,47 +28,6 @@ export default function Root() {
   }, []);
   return (
     <>
-      <button
-        className="menu-toggle"
-        aria-label={t("Menu")}
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen(!menuOpen)}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-        >
-          <path d="M3 6h18M3 12h18M3 18h18" />
-        </svg>
-      </button>
-      {/* iPhone Safari has no fullscreen for pages, so no button there */}
-      {document.fullscreenEnabled && (
-        <button
-          className="fullscreen-toggle"
-          aria-label={t("Fullscreen")}
-          title={t("Fullscreen")}
-          onClick={() =>
-            document.fullscreenElement
-              ? document.exitFullscreen()
-              : document.documentElement.requestFullscreen()
-          }
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          >
-            <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" />
-          </svg>
-        </button>
-      )}
       <div id="sidebar" className={menuOpen ? "open" : ""}>
         <nav onClick={() => !docked() && setMenuOpen(false)}>
           <ul>
@@ -155,6 +114,50 @@ export default function Root() {
         </div>
         <Credits />
         <Awareness />
+      </div>
+      {/* top left on every page, beside the sidebar while it's open */}
+      <div className="corner">
+        <button
+          className="menu-toggle"
+          aria-label={t("Menu")}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
+        {/* iPhone Safari has no fullscreen for pages, so no button there */}
+        {document.fullscreenEnabled && (
+          <button
+            className="fullscreen-toggle"
+            aria-label={t("Fullscreen")}
+            title={t("Fullscreen")}
+            onClick={() =>
+              document.fullscreenElement
+                ? document.exitFullscreen()
+                : document.documentElement.requestFullscreen()
+            }
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" />
+            </svg>
+          </button>
+        )}
       </div>
       <div id="detail">
         <Outlet />
