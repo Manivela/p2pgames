@@ -70,6 +70,9 @@ test("scripted 2 player game: discard, take discard, draw, finish", () => {
 
   s = game.drawTile(s, 2, player(s, 1).discardPile.at(-1), 20);
   assert.equal(count(s, 2), 15);
+  assert.deepEqual(s.turnMoves, [
+    { by: 2, move: "took", tiles: ["yellow2-0"] },
+  ]);
   assert.equal(player(s, 1).discardPile.length, 0);
   s = game.discardTile(s, 2, tileIn(s, 2, "red9-0"));
   assert.equal(s.currentPlayer, 1);
@@ -83,6 +86,10 @@ test("scripted 2 player game: discard, take discard, draw, finish", () => {
   s = game.finishGame(s, 1, tileIn(s, 1, drawn.id));
   assert.equal(s.gameState, "finish");
   assert.equal(s.message, "P1 wins!");
+  // drawn from the pile, so the finish is all the round's end shows
+  assert.deepEqual(s.turnMoves, [
+    { by: 1, move: "finished", tiles: [drawn.id] },
+  ]);
   assert.equal(game.drawTile(s, 2, s.drawPile.at(-1), 20), "The round is over");
 });
 

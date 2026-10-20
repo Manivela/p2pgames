@@ -237,6 +237,12 @@ export function openHand(state, player, groups) {
   if (typeof taken === "string") return taken;
   const [s] = taken;
   lay(s, player, melds, groups.flat());
+  game.logMove(
+    s,
+    player,
+    "opened",
+    melds.flatMap((m) => m.tiles),
+  );
   s.opened = { ...s.opened, [player]: true };
   if (pairs) s.openedWithPairs = { ...s.openedWithPairs, [player]: true };
   s.justOpened = player;
@@ -272,6 +278,7 @@ export function layMelds(state, player, groups) {
     if (!pairs)
       return "You opened with pairs: lay pairs, or add to sets and runs";
     lay(s, player, pairs, groups.flat());
+    game.logMove(s, player, "laid", flat);
     return s;
   }
   const pairs = s.rules.rounds[s.round - 1].melds?.some(
@@ -284,6 +291,7 @@ export function layMelds(state, player, groups) {
       : "That's not a küt or a seri";
   }
   lay(s, player, melds, groups.flat());
+  game.logMove(s, player, "laid", flat);
   return s;
 }
 
@@ -299,6 +307,7 @@ export function addToMeld(state, player, tileId, meldIndex) {
   const ordered = withTile(s, meld, tile);
   if (!ordered) return "That tile doesn't fit there";
   s.melds[meldIndex] = { ...meld, tiles: ordered.map(tableTile) };
+  game.logMove(s, player, "added", [tile]);
   return s;
 }
 
@@ -371,6 +380,7 @@ export function swapOkey(state, player, tileId, meldIndex) {
   const me = seat(s, player);
   me.hand = me.hand.map((t) => (t?.id === tileId ? okey : t));
   if (!opened) s.tookOkey = { player, meld: meldIndex, tileId };
+  game.logMove(s, player, "swapped", [tile]);
   return s;
 }
 
@@ -396,6 +406,7 @@ function putOkeyBack(state, player, tileId, meldIndex) {
   const me = seat(s, player);
   me.hand = me.hand.map((t) => (t?.id === tileId ? real : t));
   s.tookOkey = null;
+  game.unlog(s, "swapped", took.tileId);
   return s;
 }
 
@@ -608,7 +619,9 @@ function throwTile(state, player, tile, now = Date.now()) {
     // the finishing tile lies in the middle, not on the pile
     seat(s, player).discardPile.pop();
     s.lastDiscard = null;
-    game.finish(s, tile);
+    // the finisher's turn: the discard emptied it for the next one
+    s.turnMoves = state.turnMoves;
+    game.finish(s, player, tile);
     return endRound(s, player, tile);
   }
   if (s.rules.okeyDiscardPenalty && isOkey(tile, s.okeyTile)) {
@@ -639,6 +652,7 @@ export function returnDiscard(state, player) {
   s.lastDiscard = tile.id;
   s.drawn = false;
   s.tookDiscard = null;
+  game.unlog(s, "took", tile.id);
   return s;
 }
 

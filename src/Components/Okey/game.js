@@ -169,6 +169,22 @@ export const previous = (players, player) => along(players, player, -1);
 export const seat = (state, player) =>
   state.players.find((p) => p.id === player);
 
+// What the player whose turn it is has done this turn, so the round's end
+// can show how it finished: [{ by, move, tiles: [ids] }], move one of
+// took (the discard), opened, laid, added, swapped (for a table okey),
+// finished. The turn passing empties it; drawing from the pile isn't shown.
+export function logMove(s, by, move, tiles) {
+  const entry = { by, move, tiles: tiles.map((t) => t.id) };
+  s.turnMoves = [...(s.turnMoves ?? []), entry];
+}
+
+// a move taken back (an okey or a discard put back)
+export function unlog(s, move, tileId) {
+  s.turnMoves = (s.turnMoves ?? []).filter(
+    (m) => m.move !== move || m.tiles[0] !== tileId,
+  );
+}
+
 // a tile on a player's discard pile
 export const onPile = (tile, player) => ({
   ...tile,
@@ -204,6 +220,7 @@ export function dealRound(state, drawPile, deal, starter = 0) {
     drawn: true,
     lastDiscard: null,
     finishTile: null,
+    turnMoves: [],
     message: "",
     drawPile: drawPile.filter((t) => !taken.has(t.id)),
   };
@@ -239,6 +256,8 @@ export function drawTile(state, player, tile, toIndex) {
 
   myPlayer.hand = insertItem(myPlayer.hand, toIndex, handTile(tile, player));
   newState.drawn = true;
+  if (tile.source.startsWith("discard"))
+    logMove(newState, player, "took", [tile]);
 
   if (tile.source === "draw-pile") {
     newState.drawPile = newState.drawPile.filter((t) => t.id !== tile.id);
@@ -349,6 +368,7 @@ export function discardTile(state, player, tile) {
   newState.currentPlayer = next(newState.players, newState.currentPlayer).id;
   newState.drawn = false;
   newState.lastDiscard = tile.id; // shown apart from the rest of the pile
+  newState.turnMoves = [];
   return newState;
 }
 
@@ -360,8 +380,9 @@ export function showHands(s) {
 }
 
 // the tile thrown to finish lies in the middle, and the hands show
-export function finish(s, tile) {
+export function finish(s, player, tile) {
   s.finishTile = { ...tile, source: "finish", hidden: false };
+  logMove(s, player, "finished", [tile]);
   showHands(s);
 }
 
@@ -380,7 +401,7 @@ export function finishGame(state, player, tile) {
 
   const newState = cloneDeep(state);
   seat(newState, player).hand = hand;
-  finish(newState, tile);
+  finish(newState, player, tile);
 
   const winner = seat(newState, newState.currentPlayer);
   const winnerName = winner?.user?.name || "Player";

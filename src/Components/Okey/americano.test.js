@@ -9,6 +9,8 @@ import { AMERICANO } from "./rulesets";
 const indicator = createTile("blue", 13, 1); // okey is blue1, fake okey = blue1
 const t = (color, rank, i = 0) => createTile(color, rank, i);
 const ids = (tiles) => tiles && tiles.map((x) => x.id);
+// the turn so far, as [who, move, tiles...]
+const turn = (s) => s.turnMoves.map((m) => [m.by, m.move, ...m.tiles]);
 
 test("küt: one rank, different colours, 3 or 4 tiles, okey is wild", () => {
   const kut = (tiles) => ids(meldOrder(tiles, "kut", indicator));
@@ -144,7 +146,9 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
     americano.layMelds(s, 1, [seri789]),
     "You can lay more from next turn",
   );
+  assert.deepEqual(turn(s), [[1, "opened", ...kut5]]);
   s = americano.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  assert.deepEqual(turn(s), []); // the turn passed
 
   assert.equal(americano.layMelds(s, 2, [["blue2-0"]]), "Open your hand first");
   s = game.drawTile(s, 2, s.drawPile.at(-1), 20);
@@ -179,6 +183,14 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
     1: [AMERICANO.finishScore],
     2: [AMERICANO.notOpenedScore],
   });
+  // the round's end shows how P1 finished
+  assert.deepEqual(turn(s), [
+    [1, "took", "yellow5-0"],
+    [1, "added", "yellow5-0"],
+    [1, "laid", ...seri789, ...seri234, ...kut10],
+    [1, "added", "red10-0"],
+    [1, "finished", "yellow11-0"],
+  ]);
 
   assert.equal(s.players.length, 4); // free seats to sit in
 
@@ -190,6 +202,7 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
   assert.deepEqual(s.melds, []);
   assert.deepEqual(s.opened, {});
   assert.deepEqual(s.takes, {});
+  assert.deepEqual(turn(s), []);
   assertAllTiles(s);
 });
 
@@ -276,6 +289,7 @@ test("the round ends with no finisher when the pile runs out", () => {
   }
   assert.equal(s.gameState, "roundEnd");
   assert.equal(s.message, "Round 1: no tiles left");
+  assert.deepEqual(turn(s), []); // nobody finished: nothing to show
   // no finisher, so nobody gets the never-opened 100: everyone scores their hand
   for (const p of s.players.filter((x) => x.user)) {
     const hand = p.hand.filter(Boolean);
@@ -642,6 +656,7 @@ test("an okey taken before opening (round 6+) means opening that turn, or puttin
   let [s, seri] = okeyOnTable(6);
   s = americano.playOnMeld(s, 2, "yellow3-0", 0);
   assert.isOk(tileIn(s, 2, "blue1-0"));
+  assert.deepInclude(turn(s), [2, "swapped", "yellow3-0"]);
   assert.match(
     americano.discardTile(s, 2, tileIn(s, 2, "black7-0")),
     /open your hand, or put the okey back/,
@@ -649,6 +664,7 @@ test("an okey taken before opening (round 6+) means opening that turn, or puttin
   s = americano.playOnMeld(s, 2, "blue1-0", 0);
   assert.deepEqual(ids(s.melds[0].tiles), seri);
   assert.isOk(tileIn(s, 2, "yellow3-0"));
+  assert.notDeepInclude(turn(s), [2, "swapped", "yellow3-0"]); // taken back
   s = americano.discardTile(s, 2, tileIn(s, 2, "black7-0"));
   assert.equal(s.currentPlayer, 1);
   assertAllTiles(s);

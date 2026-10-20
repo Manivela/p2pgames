@@ -208,8 +208,10 @@ test("101: a discard taken must go into a meld that turn, or back on its pile", 
     "Use the tile you took from the discard, or put it back",
   );
 
+  assert.deepEqual(s.turnMoves, [{ by: 2, move: "took", tiles: ["black9-0"] }]);
   // put back: P2 draws from the pile instead
   const back = americano.returnDiscard(s, 2);
+  assert.deepEqual(back.turnMoves, []);
   assert.equal(player(back, 1).discardPile.at(-1).id, "black9-0");
   assert.isNotOk(tileIn(back, 2, "black9-0"));
   assert.isFalse(back.drawn);
