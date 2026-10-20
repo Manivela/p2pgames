@@ -6,6 +6,7 @@ import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
 import { upForClaim } from "./americano";
 import { seatColors } from "./constants";
+import TeaGlass from "./TeaGlass";
 
 const shownAtEnd = (s) => ["finish", "roundEnd"].includes(s.gameState);
 const turnOf = (s, player) =>
@@ -17,39 +18,6 @@ const turnOf = (s, player) =>
 const Timer = ({ okeyState }) => (
   <i key={`${okeyState.deal}-${okeyState.currentPlayer}`} className="timer" />
 );
-
-// an ince belli tea glass on its saucer, in front of whoever's turn it is
-function TeaGlass() {
-  return (
-    <svg
-      className="glass"
-      viewBox="0 0 28 44"
-      width="28"
-      height="44"
-      aria-hidden="true"
-    >
-      <ellipse cx="14" cy="40" rx="13" ry="3.4" fill="#f6f1e6" />
-      <ellipse cx="14" cy="39.4" rx="7" ry="1.4" fill="#d9ccae" />
-      <path
-        d="M6 3C6 12 10.2 16 10.2 22S5.6 31 6.6 37.5h14.8c1-6.5-3.6-9.5-3.6-15.5S22 12 22 3z"
-        fill="rgba(255,255,255,.3)"
-        stroke="rgba(255,255,255,.9)"
-      />
-      <path
-        d="M6.5 10c.8 4.6 4.3 7 4.3 12S6.3 31 7.1 36.9h13.8c.8-5.9-3.7-8.9-3.7-14.9s3.5-7.4 4.3-12z"
-        fill="#b23a1a"
-      />
-      <ellipse cx="14" cy="10" rx="7.5" ry="1.3" fill="#d4643c" />
-      <path
-        d="M8 6c.3 6 3 9.5 3.4 14"
-        stroke="rgba(255,255,255,.75)"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
-  );
-}
 
 // A name and what everyone at the table can see about them, or an empty
 // seat to sit in
