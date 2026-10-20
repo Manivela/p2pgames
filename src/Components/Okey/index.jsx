@@ -4,7 +4,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import Board from "./Board";
 import { OkeyContext, OkeyProvider } from "./OkeyContext";
-import Tile, { touch } from "./Tile";
+import Tile, { SLOP, touch } from "./Tile";
 import "./rack.css";
 
 // the dragged tile, lifted, under the finger or the mouse (neither backend
@@ -63,7 +63,11 @@ function Okey(props) {
         backend={touch ? TouchBackend : HTML5Backend}
         options={
           touch
-            ? { enableMouseEvents: true, ignoreContextMenu: true }
+            ? {
+                enableMouseEvents: true,
+                ignoreContextMenu: true,
+                touchSlop: SLOP,
+              }
             : undefined
         }
       >

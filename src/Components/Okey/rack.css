@@ -522,6 +522,20 @@
     0 0 0 3px #1e90ff;
 }
 
+/* held long enough to flip when the finger lets go */
+.tile.armed {
+  animation: wiggle 0.3s ease-in-out;
+}
+
+@keyframes wiggle {
+  25% {
+    rotate: -7deg;
+  }
+  75% {
+    rotate: 7deg;
+  }
+}
+
 /* where the round stands, and the claims on the last discard */
 .round {
   margin: 0;
@@ -925,6 +939,10 @@
   .rack > .timer,
   .board .discardPile .catch {
     animation: none;
+  }
+  .tile.armed {
+    animation: none;
+    outline: 2px dashed #ffd54f;
   }
 }
 

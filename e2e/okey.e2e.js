@@ -149,9 +149,10 @@ test("dragging picked tiles onto the table opens the hand", async ({
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
-// phones: holding a tile flips it; a finger that drifts after, and a touch
-// the phone then cancels, leave nothing in the air
-test("holding a tile flips it, and nothing stays in the air", async ({
+// phones: a tile held still flips when the finger lets go (or the phone
+// cancels the touch); a finger that moves drags it instead, and nothing
+// stays in the air
+test("holding a tile still flips it, moving drags it", async ({
   page,
 }, info) => {
   test.skip(info.project.name === "desktop", "touch only");
@@ -183,12 +184,32 @@ test("holding a tile flips it, and nothing stays in the air", async ({
       },
       [id, type, dx],
     );
+  const hidden = async () => (await state(page)).players[0].hand[0].hidden;
+  // held still (a finger shakes a little): it wiggles, then flips on letting go
   await touch("touchstart");
-  await page.waitForTimeout(650);
-  await touch("touchmove", 20);
-  await touch("touchcancel", 20);
-  expect((await state(page)).players[0].hand[0].hidden).toBe(true);
-  await expect(page.locator(".dragPreview")).toHaveCount(0);
+  await touch("touchmove", 3);
+  await page.waitForTimeout(800);
+  await expect(page.locator(`.rack [data-tile-id="${id}"].armed`)).toHaveCount(
+    1,
+  );
+  expect(await hidden()).toBe(false);
+  await touch("touchend", 3);
+  await expect.poll(hidden).toBe(true);
+  // and back, through a touch the phone cancels
+  await touch("touchstart");
+  await page.waitForTimeout(800);
+  await touch("touchcancel");
+  await expect.poll(hidden).toBe(false);
+  // held, then moved: a drag, no flip, whether the touch ends or is cancelled
+  for (const end of ["touchend", "touchcancel"]) {
+    await touch("touchstart");
+    await page.waitForTimeout(800);
+    await touch("touchmove", 20);
+    await touch(end, 20);
+    expect(await hidden()).toBe(false);
+    await expect(page.locator(".dragPreview")).toHaveCount(0);
+  }
+  await expect(page.locator(".rack .tile.armed")).toHaveCount(0);
 });
 
 test("the last tile is thrown to the middle to finish", async ({ page }) => {
