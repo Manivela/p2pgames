@@ -111,109 +111,49 @@ form[action$="destroy"] button {
   flex-direction: column;
 }
 
-/* small screens give the room to the game. Width 0 instead of display: none
-   keeps the other players' cursor overlay, which is positioned on the page */
-.menu-toggle {
-  display: none;
+/* The menu button hides and shows the sidebar on any screen. Width 0
+   instead of display: none keeps the other players' cursor overlay, which
+   is positioned on the page */
+#sidebar:not(.open) {
+  width: 0;
+  overflow: hidden;
+  border: none;
 }
 
-.fullscreen-toggle {
-  position: fixed;
-  top: 4px;
-  right: 4px;
-  z-index: 201;
-  padding: 1rem;
-  line-height: 0;
-}
-
+/* small screens lay it over the game; visible overflow keeps the
+   full-page cursor overlay unclipped */
 @media (max-width: 1024px) {
-  #detail:has(.fit) {
-    padding: 0;
-  }
-
-  #sidebar {
-    width: 0;
-    overflow: hidden;
-    border: none;
-  }
-
-  /* visible overflow keeps the full-page cursor overlay unclipped */
   #sidebar.open {
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
     z-index: 200;
-    width: 22rem;
     overflow: visible;
-    border-right: solid 1px #e3e3e3;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
   }
-
-  .menu-toggle {
-    display: block;
-    position: fixed;
-    top: 4px;
-    right: 4px;
-    z-index: 201;
-    /* the same square as the fullscreen button */
-    padding: 1rem;
-    line-height: 0;
-  }
-
-  /* left of the menu button */
-  .fullscreen-toggle {
-    right: 52px;
-  }
 }
 
-/* the corner buttons sit over the table's top edge: keep the table below
-   them (short screens move them to the bottom instead) */
-@media (max-width: 1024px) and (min-height: 501px) {
-  .fit {
-    padding-top: 48px;
-  }
+/* the menu and fullscreen buttons, in the bottom-right corner on every
+   screen: the one corner the Okey table keeps free on phones too */
+.menu-toggle,
+.fullscreen-toggle {
+  position: fixed;
+  right: 4px;
+  bottom: 4px;
+  z-index: 201;
+  padding: 1rem;
+  line-height: 0;
 }
 
-@media (min-height: 501px) {
-  :fullscreen .fit {
-    padding-top: 48px;
-  }
+/* above the menu button */
+.fullscreen-toggle {
+  bottom: 52px;
 }
 
-/* short screens (phone layout): the bottom-right corner is the free one */
-@media (max-height: 500px) {
-  .menu-toggle {
-    top: auto;
-    bottom: 4px;
-  }
-
-  /* above the menu button */
-  .fullscreen-toggle {
-    top: auto;
-    bottom: 52px;
-    right: 4px;
-  }
-
-  :fullscreen .fullscreen-toggle {
-    bottom: 4px;
-  }
-}
-
-/* fullscreen keeps just the game, and the button to leave it */
+/* fullscreen gives the game the whole screen */
 :fullscreen #detail {
   padding: 0;
-}
-
-:fullscreen #sidebar {
-  width: 0;
-  overflow: hidden;
-  border: none;
-  box-shadow: none;
-}
-
-:fullscreen .menu-toggle {
-  display: none !important;
 }
 
 #sidebar > * {

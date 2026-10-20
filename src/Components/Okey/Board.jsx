@@ -173,7 +173,7 @@ function Board() {
   const two = rotatedPlayers.length === 2;
   const [fitRef, box] = useBoxSize();
   useMoves();
-  // same test as the CSS that moves the corner buttons (index.css)
+  // short screens: landscape phones
   const phone = window.innerHeight <= 500;
   // smallest sizes where no seats, names or discard piles overlap;
   // Americano needs extra height for the melds above the draw pile

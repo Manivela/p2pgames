@@ -50,6 +50,10 @@
 }
 
 /* lit felt with a faint cloth grain, out to the window's edges */
+#detail:has(.fit) {
+  padding: 0;
+}
+
 #detail:has(.fit),
 .fit::after {
   background:
@@ -512,19 +516,6 @@
   border-radius: 4px;
   background-color: #fff;
   font-size: 12px;
-}
-
-/* small screens and fullscreen put the corner buttons top right */
-@media (max-width: 1024px) {
-  .scores {
-    right: auto;
-    left: 8px;
-  }
-}
-
-:fullscreen .scores {
-  right: auto;
-  left: 8px;
 }
 
 .scores th,

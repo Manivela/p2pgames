@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Awareness from "../Components/Awareness";
@@ -6,9 +6,26 @@ import Credits from "../Components/Credits";
 import coffee from "../assets/coffee.svg";
 import { t } from "../i18n";
 
+// wide screens show the sidebar beside the game, small ones lay it over it
+// (index.css)
+const docked = () => matchMedia("(min-width: 1025px)").matches;
+
 export default function Root() {
-  // small screens hide the sidebar; this button lays it over the game
-  const [menuOpen, setMenuOpen] = useState(false);
+  // the button hides and shows it on any screen
+  const [menuOpen, setMenuOpen] = useState(docked);
+  // fullscreen is just the game (the button brings the sidebar back);
+  // leaving it, with the button or Esc, puts the sidebar back as it was
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const onChange = () =>
+      setMenuOpen((open) => {
+        if (!document.fullscreenElement) return wasOpen.current;
+        wasOpen.current = open;
+        return false;
+      });
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
   return (
     <>
       <button
@@ -53,7 +70,7 @@ export default function Root() {
         </button>
       )}
       <div id="sidebar" className={menuOpen ? "open" : ""}>
-        <nav onClick={() => setMenuOpen(false)}>
+        <nav onClick={() => !docked() && setMenuOpen(false)}>
           <ul>
             <li>
               <NavLink
