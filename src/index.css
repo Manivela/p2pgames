@@ -120,8 +120,8 @@ form[action$="destroy"] button {
   border: none;
 }
 
-/* small screens lay it over the game; visible overflow keeps the
-   full-page cursor overlay unclipped */
+/* small screens lay it over the game, under the corner buttons, and
+   scroll it when it doesn't fit */
 @media (max-width: 1024px) {
   #sidebar.open {
     position: fixed;
@@ -129,15 +129,20 @@ form[action$="destroy"] button {
     bottom: 0;
     left: 0;
     z-index: 200;
-    overflow: visible;
+    padding-top: 52px;
+    overflow-y: auto;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+
+  #sidebar.open nav {
+    flex: 1 0 auto;
   }
 }
 
 /* the menu and fullscreen buttons, top left on every screen, beside the
-   sidebar while it's open. The Okey table keeps the corner free for them
-   and sizes them like its own buttons (--t, rack.css); elsewhere they're
-   40px squares 4px from the edges */
+   sidebar while it's open beside the game. The Okey table keeps the corner
+   free for them and sizes them like its own buttons (--t, rack.css);
+   elsewhere they're 40px squares 4px from the edges */
 .corner {
   position: fixed;
   z-index: 201;
@@ -147,8 +152,10 @@ form[action$="destroy"] button {
   gap: calc(var(--t, 57px) * 0.14);
 }
 
-#sidebar.open + .corner {
-  left: calc(22rem + var(--t, 28.6px) * 0.14);
+@media (min-width: 1025px) {
+  #sidebar.open + .corner {
+    left: calc(22rem + var(--t, 28.6px) * 0.14);
+  }
 }
 
 .corner button {
