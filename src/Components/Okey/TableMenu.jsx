@@ -386,10 +386,21 @@ export default function TableMenu() {
       </button>
       {open && (
         <div className="menu">
-          {okeyState.gameState !== "start" && (
-            <Confirm label={t("New Game")} onConfirm={then(newGame)} />
+          {/* the most needed first; a long menu scrolls on a phone, and
+              the moves that end the game sit at the bottom */}
+          {window.Sentry && (
+            <button
+              onClick={then(() =>
+                report(okeyState, {
+                  room: roomId,
+                  player: okeyState.players.find((p) => p.id === me)?.user
+                    ?.name,
+                }),
+              )}
+            >
+              {t("Report a problem")}
+            </button>
           )}
-          <Confirm label={t("Reset Game")} onConfirm={then(resetGame)} />
           {me && (
             <Confirm label={t("Stand")} onConfirm={then(() => stand(me))} />
           )}
@@ -408,19 +419,10 @@ export default function TableMenu() {
           {(okeyState.gameState === "start" || okeyState.rules) && (
             <button onClick={() => show("setup")}>{t("Set up a game")}</button>
           )}
-          {window.Sentry && (
-            <button
-              onClick={then(() =>
-                report(okeyState, {
-                  room: roomId,
-                  player: okeyState.players.find((p) => p.id === me)?.user
-                    ?.name,
-                }),
-              )}
-            >
-              {t("Report a problem")}
-            </button>
+          {okeyState.gameState !== "start" && (
+            <Confirm label={t("New Game")} onConfirm={then(newGame)} />
           )}
+          <Confirm label={t("Reset Game")} onConfirm={then(resetGame)} />
         </div>
       )}
       {dialog === "load" && <LoadDialog onClose={() => setDialog(null)} />}
