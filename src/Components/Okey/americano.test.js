@@ -550,6 +550,66 @@ test("a table okey keeps its place: only the tile it stands for takes it", () =>
   assertAllTiles(s);
 });
 
+// a tile as it lies on the table or a pile
+const lying = (id, source) => ({
+  ...game.tiles.find((x) => x.id === id),
+  source,
+  hidden: false,
+});
+// the okey is blue1; on the table, one seri `meld`
+function seriOnTable(meld) {
+  const [s] = okeyOnTable(3);
+  const tiles = meld.map((id) => lying(id, "table"));
+  return { ...s, melds: [{ type: "seri", owner: 1, tiles }] };
+}
+
+test("a catch counts what could go on the table as it lies", () => {
+  // P1 has just thrown `id`; P2 tries to catch it
+  const catchOf = (meld, id) => {
+    const s = seriOnTable(meld);
+    const players = s.players.map((p) =>
+      p.id === 1 ? { ...p, discardPile: [lying(id, "discard-1")] } : p,
+    );
+    const next = americano.catchDiscard({ ...s, players, lastDiscard: id }, 2);
+    return typeof next === "string" ? next : player(next, 2).caught;
+  };
+  const no = "That tile doesn't fit a meld on the table";
+  const sixTo9 = ["black6-1", "black7-1", "black8-1", "blue1-1"];
+  // the 4 fits only with the okey moved from the 9 to the 5
+  assert.equal(catchOf(sixTo9, "black4-1"), no);
+  assert.deepEqual(catchOf(sixTo9, "black5-1"), ["black5-1"]);
+  assert.deepEqual(catchOf(sixTo9, "black10-1"), ["black10-1"]);
+  // the tile the okey stands for could take its place
+  assert.deepEqual(catchOf(sixTo9, "black9-1"), ["black9-1"]);
+
+  // a 1 after 13 doesn't count, though Americano lets you lay it there
+  assert.equal(
+    catchOf(["black11-1", "black12-1", "black13-1"], "black1-1"),
+    no,
+  );
+  assert.equal(catchOf(["black12-1", "black13-1", "blue1-1"], "black1-1"), no);
+  assert.deepEqual(catchOf(["black2-1", "black3-1", "black4-1"], "black1-1"), [
+    "black1-1",
+  ]);
+});
+
+test("a tile goes on either end of a seri with a table okey in it", () => {
+  let s = seriOnTable(["black6-1", "black7-1", "black8-1", "blue1-1"]);
+  s = {
+    ...s,
+    opened: { 2: true },
+    players: s.players.map((p) =>
+      p.id === 2
+        ? { ...p, hand: [lying("black5-1", "hand-2"), ...p.hand.slice(1)] }
+        : p,
+    ),
+  };
+  s = americano.playOnMeld(s, 2, "black5-1", 0);
+  assert.deepEqual(ids(s.melds[0].tiles), [
+    ...["black5-1", "black6-1", "black7-1", "black8-1", "blue1-1"],
+  ]);
+});
+
 test("opening with 4-5-okey off the rack lays the okey as the 6", () => {
   let [s] = okeyOnTable(2); // 3'lü seri
   s = { ...s, melds: [] };

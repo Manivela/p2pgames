@@ -256,27 +256,47 @@ export function addToMeld(state, player, tileId, meldIndex) {
   if (typeof taken === "string") return taken;
   const [s, [[tile]]] = taken;
 
-  const ordered = meldOrder(
-    [...meld.tiles, tile],
-    meld.type,
-    s.okeyTile,
-    wrap(s),
-  );
-  // a table okey keeps the rank it stands for; the tile it stands for
-  // swaps it out instead (swapOkey)
-  const okeyRanks = (tiles) =>
-    tiles.flatMap((t, i) =>
-      isOkey(t, s.okeyTile)
-        ? [okeyStandsFor({ ...meld, tiles }, i, s.okeyTile).rank]
-        : [],
-    );
-  const moved =
-    ordered &&
-    meld.type === "seri" &&
-    !okeyRanks(meld.tiles).every((r) => okeyRanks(ordered).includes(r));
-  if (!ordered || moved) return "That tile doesn't fit there";
+  const ordered = withTile(s, meld, tile);
+  if (!ordered) return "That tile doesn't fit there";
   s.melds[meldIndex] = { ...meld, tiles: ordered.map(tableTile) };
   return s;
+}
+
+// The meld with the tile added, in order, or null. A seri keeps its order,
+// so the tile goes on one end, and a table okey keeps the rank it stands
+// for; the tile it stands for swaps it out instead (swapOkey).
+function withTile(state, meld, tile, wrapRuns = wrap(state)) {
+  const ind = state.okeyTile;
+  const okeyRanks = (tiles) =>
+    tiles.flatMap((t, i) =>
+      isOkey(t, ind) ? [okeyStandsFor({ ...meld, tiles }, i, ind).rank] : [],
+    );
+  const ends =
+    meld.type === "seri"
+      ? [
+          [tile, ...meld.tiles],
+          [...meld.tiles, tile],
+        ]
+      : [[...meld.tiles, tile]];
+  for (const tiles of ends) {
+    const ordered = meldOrder(tiles, meld.type, ind, wrapRuns);
+    const moved =
+      ordered &&
+      meld.type === "seri" &&
+      !okeyRanks(meld.tiles).every((r) => okeyRanks(ordered).includes(r));
+    if (ordered && !moved) return ordered;
+  }
+  return null;
+}
+
+// where in the meld a table okey stands for this tile, or -1
+function okeyFor(meld, tile, ind) {
+  if (isOkey(tile, ind)) return -1;
+  return meld.tiles.findIndex((t, j) => {
+    if (!isOkey(t, ind)) return false;
+    const { rank, colors } = okeyStandsFor(meld, j, ind);
+    return rankOf(tile, ind) === rank && colors.includes(colorOf(tile, ind));
+  });
 }
 
 // Trades the real tile a table okey stands for (okeyStandsFor) for that
@@ -294,16 +314,7 @@ export function swapOkey(state, player, tileId, meldIndex) {
   const tile = seat(state, player).hand.find((t) => t?.id === tileId);
   if (!meld || !tile) return;
   if (!state.rules.swapOkeys) return NO_OKEY;
-  const ind = state.okeyTile;
-  const i = isOkey(tile, ind)
-    ? -1
-    : meld.tiles.findIndex((t, j) => {
-        if (!isOkey(t, ind)) return false;
-        const { rank, colors } = okeyStandsFor(meld, j, ind);
-        return (
-          rankOf(tile, ind) === rank && colors.includes(colorOf(tile, ind))
-        );
-      });
+  const i = okeyFor(meld, tile, state.okeyTile);
   if (i === -1) return NO_OKEY;
   if (meld.type === "kut" && meld.tiles.length < 4) {
     return "Complete all four of the küt to take its okey";
@@ -591,9 +602,14 @@ export function catchDiscard(state, player) {
   if (!tile || tile.id !== state.lastDiscard) return "Nothing to catch";
   if (from.id === player) return "That's your own tile";
   if (isCaught(state, tile.id)) return "Already caught";
-  const fits = state.melds.some((m) =>
-    meldOrder([...m.tiles, tile], m.type, state.okeyTile, wrap(state)),
-  );
+  // it could go on the table as it is: added without moving an okey, or in
+  // place of the okey that stands for it; a 1 after 13 doesn't count
+  const ind = state.okeyTile;
+  const fits = state.melds.some((m) => {
+    const j = okeyFor(m, tile, ind);
+    const after13 = m.type === "seri" && j > 0 && rankOf(tile, ind) === 1;
+    return withTile(state, m, tile, false) || (j >= 0 && !after13);
+  });
   if (!fits) return "That tile doesn't fit a meld on the table";
   const s = cloneDeep(state);
   const me = seat(s, player);
