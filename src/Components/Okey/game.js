@@ -397,7 +397,7 @@ export function finishGame(state, player, tile) {
 
   hand[discardIndex] = null;
 
-  if (!checkFinished(hand, state.okeyTile)) return;
+  if (!checkFinished(hand, state.okeyTile)) return "That hand doesn't finish";
 
   const newState = cloneDeep(state);
   seat(newState, player).hand = hand;

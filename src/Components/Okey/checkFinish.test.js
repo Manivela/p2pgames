@@ -502,3 +502,49 @@ test("a lone tile can't win", () => {
   assert.isFalse(checkFinished(makeHand(inMiddle), indicator));
   assert.isFalse(checkFinished(inLastSlot, indicator));
 });
+
+// a hand in short: r5 is red 5 (k black, b blue, y yellow), ok the okey
+// (black 1 here), fake a fake okey, | a gap; a tile written twice is its
+// second copy
+function hand(text) {
+  const seen = {};
+  const colors = { r: "red", k: "black", b: "blue", y: "yellow" };
+  const tiles = text.split(" ").map((x) => {
+    if (x === "|") return null;
+    if (x === "ok") return okey;
+    if (x === "fake") return createTile("yellow", "👌");
+    seen[x] = (seen[x] ?? -1) + 1;
+    return createTile(colors[x[0]], Number(x.slice(1)), seen[x]);
+  });
+  return makeHand(tiles);
+}
+
+// valid groups to make up 14 with the one under test
+const fill9 = "| y1 y2 y3 | b10 r10 y10 | b2 b3 b4";
+const fill10 = "| y1 y2 y3 | b10 r10 y10 | r2 r3 r4 r5";
+const fill11 = "| y1 y2 y3 y4 | b10 r10 y10 k10 | r2 r3 r4";
+
+test("a group is sets and runs side by side, never a mix of the two", () => {
+  const refused = [
+    `r5 r6 r7 b7 ${fill10}`, // a run turning into a set
+    `k6 b6 r6 r7 ${fill10}`, // a set turning into a run
+    `r5 r6 r7 b7 k7 ${fill9}`,
+    `r5 b5 r5 ${fill11}`, // a set with a colour twice
+    `r5 b5 k5 y5 r5 ${fill9}`,
+    `r5 r6 r5 ${fill11}`, // a run going back
+    `r2 r1 r13 ${fill11}`, // 13-1-2, backwards
+    `r5 ok b9 ${fill11}`, // the okey doesn't join anything to anything
+    `r5 fake b9 ${fill11}`, // a fake okey is the okey's face value, not wild
+    `r5 r6 ok k9 b9 ${fill9}`,
+    `r7 r5 r6 ${fill11}`, // a run as it lies on the rack
+  ];
+  for (const h of refused) assert.isFalse(checkFinished(hand(h), indicator), h);
+  const finished = [
+    "y1 y2 y3 y4 | b10 k10 y10 r10 | r11 r12 r13 r1 r2 r3", // two runs, no gap
+    "r12 r13 r1 r2 r3 r4 | y1 y2 y3 y4 | b10 k10 y10 r10",
+    "r5 r6 r7 b7 k7 y7 | y1 y2 y3 y4 | b2 b3 b4 b5", // a run, then a set
+    `r7 r6 r5 ${fill11}`, // a run downwards
+    `r5 ok r7 ${fill11}`, // the okey as the 6
+  ];
+  for (const h of finished) assert.isTrue(checkFinished(hand(h), indicator), h);
+});

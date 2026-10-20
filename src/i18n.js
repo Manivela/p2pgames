@@ -104,8 +104,7 @@ const TR = [
     /^not enough players to start the game$/,
     "Başlamak için yeterli oyuncu yok",
   ],
-  [/^Invalid sequence (.+)$/, "Geçersiz dizi $1"],
-  [/^Unfinished sequence (.+)$/, "Yarım dizi $1"],
+  [/^That hand doesn't finish$/, "Bu el bitmiyor"],
   [/^Duplicate tile detected$/, "Aynı taştan fazla var"],
   [
     /^(.+) wants? (.+)'s (red|black|blue|yellow) (\d+)$/,

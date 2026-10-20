@@ -81,7 +81,10 @@ test("scripted 2 player game: discard, take discard, draw, finish", () => {
   s = game.drawTile(s, 1, drawn, 25);
   assertAllTiles(s);
   // throwing a tile the winning layout needs doesn't finish
-  assert.isUndefined(game.finishGame(s, 1, tileIn(s, 1, "red1-0")));
+  assert.equal(
+    game.finishGame(s, 1, tileIn(s, 1, "red1-0")),
+    "That hand doesn't finish",
+  );
 
   s = game.finishGame(s, 1, tileIn(s, 1, drawn.id));
   assert.equal(s.gameState, "finish");
