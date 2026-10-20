@@ -516,13 +516,19 @@ function claimable(state, player) {
   );
 }
 
-export function discardTile(state, player, tile, now = Date.now()) {
+// seconds the others still have to take the discard on offer before the
+// player may discard: 0 once it's over, for their last tile, or when nobody
+// else could take it
+export function claimWait(state, player, now = Date.now()) {
   const last = seat(state, player)?.hand.filter(Boolean).length === 1;
   const wait =
     state.offer && state.rules.claimWaitSeconds - (now - state.offer.at) / 1000;
-  if (!last && wait > 0 && claimable(state, player)) {
-    return `Give the others ${Math.ceil(wait)}s to take the discard`;
-  }
+  return !last && wait > 0 && claimable(state, player) ? wait : 0;
+}
+
+export function discardTile(state, player, tile, now = Date.now()) {
+  const wait = claimWait(state, player, now);
+  if (wait) return `Give the others ${Math.ceil(wait)}s to take the discard`;
   if (state.tookOkey?.player === player && !state.opened[player]) {
     return "You took an okey: open your hand, or put the okey back";
   }

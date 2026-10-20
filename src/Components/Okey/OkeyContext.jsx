@@ -168,23 +168,66 @@ export function OkeyProvider({ children }) {
     [inHand],
   );
 
+  // A discard made while the others still have time to take the last one
+  // (local only, not shared): it waits as a ghost on my pile, out of my
+  // rack, and is thrown when the wait ends. Dragging it back cancels it.
+  const [held, setHeld] = React.useState(null);
+
   const swapTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
+      if (tile.id === held) setHeld(null);
       return selected.length > 1 && selected.includes(tile.id)
         ? act(game.moveTiles, player, selected, toIndex)
         : act(game.swapTile, player, tile, toIndex);
     },
-    [act, selected],
+    [act, selected, held],
   );
 
   const discardTile = useCallback(
     (player, tile) => {
       dragged.current = tile.id;
-      return act(moves.discardTile, player, tile);
+      if (!okeyState.rules || !americano.claimWait(okeyState, player)) {
+        return act(moves.discardTile, player, tile);
+      }
+      // anything else that would stop it is said now, not when it's thrown
+      const next =
+        player === me
+          ? americano.discardTile(okeyState, player, tile, Infinity)
+          : "Not your turn";
+      if (typeof next === "string") toast(t(next));
+      if (!next || typeof next === "string") return false;
+      setHeld(tile.id);
+      setSelected((ids) => ids.filter((id) => id !== tile.id));
+      return true;
     },
-    [act, moves],
+    [act, moves, okeyState, me],
   );
+
+  // the held discard is thrown once the rules allow it (asked again when the
+  // timer fires, so an early tick just waits on); a new turn or deal drops it
+  React.useEffect(() => setHeld(null), [okeyState.deal]);
+  React.useEffect(() => {
+    if (!held) return;
+    const tile = myHand(me).find((t) => t?.id === held);
+    if (!tile || !isMyTurn() || okeyState.gameState !== "play") {
+      setHeld(null);
+      return;
+    }
+    let timer;
+    const throwIt = () => {
+      const wait = americano.claimWait(okeyState, me);
+      if (wait) {
+        timer = setTimeout(throwIt, wait * 1000);
+        return;
+      }
+      setHeld(null);
+      dragged.current = tile.id;
+      act(americano.discardTile, me, tile);
+    };
+    throwIt();
+    return () => clearTimeout(timer);
+  }, [held, okeyState, me, act, myHand, isMyTurn]);
 
   const finishGame = useCallback(
     (tile) => {
@@ -415,6 +458,7 @@ export function OkeyProvider({ children }) {
       toggleHidden,
       selected,
       toggleSelected,
+      held,
       openHand,
       layMelds,
       playOnMeld,
@@ -447,6 +491,7 @@ export function OkeyProvider({ children }) {
       toggleHidden,
       selected,
       toggleSelected,
+      held,
       openHand,
       layMelds,
       playOnMeld,

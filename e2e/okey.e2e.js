@@ -208,6 +208,39 @@ test("another player's move flies across the table", async ({ page }) => {
   await expect.poll(flights).toBeGreaterThan(before);
 });
 
+test("a discard during the others' wait is held, then thrown", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  // Deniz's discard is on offer from now, for 2 s
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    window.okey.set({
+      ...s,
+      offer: { ...s.offer, at: Date.now() },
+      rules: { ...s.rules, claimWaitSeconds: 2 },
+    });
+  });
+  const id = (await handIds(page))[5];
+  const pile = page.locator('[data-pile="1"]');
+  await drag(page, slot(page, 5).locator(".tile"), pile.locator(".slot"));
+  // a ghost on my pile, gone from my rack, no "give the others" message
+  await expect(pile.locator(`.ghost [data-tile-id="${id}"]`)).toBeVisible();
+  await expect(slot(page, 5).locator(".tile")).toHaveCount(0);
+  await expect(page.getByText(/Give the others|Diğerlerine/)).toHaveCount(0);
+  // Bora takes Deniz's discard meanwhile
+  await table(page, "claim", 2);
+  await expect
+    .poll(async () => (await state(page)).players[0].discardPile.at(-1)?.id)
+    .toBe(id);
+  const s = await state(page);
+  expect(s.players[1].inbox).toHaveLength(2);
+  expect(s.currentPlayer).toBe(2);
+  await expect(pile.locator(".ghost")).toHaveCount(0);
+});
+
 test("between rounds a seat can be freed and taken", async ({
   page,
   context,

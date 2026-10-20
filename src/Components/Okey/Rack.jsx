@@ -56,7 +56,7 @@ function Name({ player }) {
 // Your rack (its tiles show only to you, and to everyone once the round
 // ends), with your name on its top edge
 function Rack({ player }) {
-  const { myHand, swapTile, drawTile, okeyState, me, claimDiscard } =
+  const { myHand, swapTile, drawTile, okeyState, me, claimDiscard, held } =
     useContext(OkeyContext);
   const offer = upForClaim(okeyState);
   function onDrop(tile, toIndex) {
@@ -83,10 +83,11 @@ function Rack({ player }) {
       slot: sittingPlayer.claim.slot,
       tile: { ...offered, source: `claim-${me}` },
     };
+  // a discard I made before the wait was over sits on my pile meanwhile
   const slotProps = (tile, index) =>
     !tile && ghost?.slot === index
       ? { tile: ghost.tile, className: "ghost" }
-      : { tile };
+      : { tile: tile?.id === held ? null : tile };
   // 13 slots a row, empty before a deal, and on someone else's rack
   // (watched from outside the game) until the round ends
   const hand = me === player || shownAtEnd(okeyState) ? myHand(player) : [];
@@ -197,6 +198,8 @@ export function DiscardPile({ player, small }) {
     claimDiscard,
     catchDiscard,
     returnDiscard,
+    held,
+    myHand,
   } = useContext(OkeyContext);
   function onDiscard(tile, index) {
     const took = okeyState.tookDiscard;
@@ -208,6 +211,8 @@ export function DiscardPile({ player, small }) {
   const pile = myDiscardPile(player);
   const top = pile.at(-1);
   const caught = okeyState.players.some((p) => p.caught?.includes(top?.id));
+  // my discard, waiting for the others' time to take the last one to end
+  const ghost = held && player === me && myHand(me).find((t) => t?.id === held);
   // whether it fits a meld is for them to see
   const canCatch =
     okeyState.rules &&
@@ -224,10 +229,16 @@ export function DiscardPile({ player, small }) {
         type="DISCARD"
         showBorder
         className={
-          caught ? "caught" : top?.id === okeyState.lastDiscard ? "latest" : ""
+          ghost
+            ? "ghost"
+            : caught
+              ? "caught"
+              : top?.id === okeyState.lastDiscard
+                ? "latest"
+                : ""
         }
         onDrop={onDiscard}
-        tile={top}
+        tile={ghost || top}
         canDiscard={() => isMyTurn(player)}
       />
       {canCatch && (

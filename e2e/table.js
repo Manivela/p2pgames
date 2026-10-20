@@ -76,6 +76,13 @@ export function toMyTurn() {
   window.okey.set(ok(americano.drawTile(s, 1, s.drawPile.at(-1), slot, 0)));
 }
 
+// seat id asks for the discard on offer, into its first free slot
+export function claim(id) {
+  const s = window.okey.get();
+  const slot = seat(s, id).hand.indexOf(null);
+  window.okey.set(ok(americano.claimDiscard(s, id, slot)));
+}
+
 export function openKut() {
   window.okey.set(ok(americano.openHand(window.okey.get(), 1, [KUT])));
 }
