@@ -16,14 +16,17 @@ const TR = [
   [/^The round is over$/, "El bitti"],
   [/^Select tiles from your rack$/, "Istakandan taş seç"],
   [/^Keep a tile to discard$/, "Atmak için bir taş bırak"],
-  [/^No laying down in the Elden round$/, "Elden elinde yere açılmaz"],
+  [
+    /^No laying down this round: finish from your hand$/,
+    "Elden elinde yere açılmaz",
+  ],
   [/^Open your hand first$/, "Önce elini aç"],
   [
     /^You can lay more from next turn$/,
     "Daha fazlasını sonraki turda açabilirsin",
   ],
   [
-    /^No opening in the Elden round: finish from your hand$/,
+    /^No opening this round: finish from your hand$/,
     "Elden elinde açma yok: elinden bitir",
   ],
   [/^You've already opened$/, "Zaten açtın"],
@@ -158,12 +161,14 @@ const TR = [
   [/^Go$/, "Gir"],
 ];
 
-// English keeps the game's own Turkish words out: küt is a set, seri a run
+// English keeps the game's own Turkish words out: küt is a set, seri a run,
+// Elden the last round, finished from the hand
 const EN = [
   [/(\d)'l[üi] küt/g, "set of $1"],
   [/(\d)'l[üi] seri/g, "run of $1"],
   [/\bküt\b/g, "set"],
   [/\bseri\b/g, "run"],
+  [/\bElden\b/g, "from hand"],
 ];
 
 export function t(text, tr = turkish) {

@@ -128,7 +128,7 @@ function takeFromHand(state, player, groups) {
 }
 
 function canBuild(state, player) {
-  if (isElden(state)) return "No laying down in the Elden round";
+  if (isElden(state)) return "No laying down this round: finish from your hand";
   if (!state.opened[player]) return "Open your hand first";
   if (state.justOpened === player && !state.rules.buildWhenOpening) {
     return "You can lay more from next turn";
@@ -180,7 +180,7 @@ export function openHand(state, player, groups) {
   const { rules } = state;
   const required = rules.rounds[state.round - 1].melds;
   if (required === null) {
-    return "No opening in the Elden round: finish from your hand";
+    return "No opening this round: finish from your hand";
   }
   if (state.opened[player]) return "You've already opened";
   const taken = takeFromHand(state, player, groups);
