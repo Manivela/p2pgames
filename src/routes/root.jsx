@@ -11,8 +11,8 @@ import { t } from "../i18n";
 const docked = () => matchMedia("(min-width: 1025px)").matches;
 
 export default function Root() {
-  // the button hides and shows it on any screen
-  const [menuOpen, setMenuOpen] = useState(docked);
+  // closed to start; the button hides and shows it on any screen
+  const [menuOpen, setMenuOpen] = useState(false);
   // fullscreen is just the game (the button brings the sidebar back);
   // leaving it, with the button or Esc, puts the sidebar back as it was
   const wasOpen = useRef(false);
