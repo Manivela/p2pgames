@@ -129,6 +129,23 @@ test("4 players can draw the whole pile without losing a tile", () => {
   }
   assert.equal(s.gameState, "play");
   assertAllTiles(s);
+
+  // the pile ran out on seat 2's turn: they shuffle the discards, or end it
+  assert.equal(s.currentPlayer, 2);
+  assert.isUndefined(game.shuffleDiscards(s, 3));
+  const shuffled = game.shuffleDiscards(s, 2);
+  assert.equal(shuffled.drawPile.length, 49);
+  assert.isTrue(shuffled.drawPile.every((t) => t.hidden));
+  assert.isTrue(shuffled.players.every((p) => !p.discardPile.length));
+  assertAllTiles(shuffled);
+  const top = shuffled.drawPile.at(-1);
+  assert.ok(tileIn(game.drawTile(shuffled, 2, top, 25), 2, top.id));
+  assert.isUndefined(game.endGame(shuffled, 2)); // there's a pile again
+
+  const over = game.endGame(s, 2);
+  assert.equal(over.gameState, "finish");
+  assert.equal(over.message, "No tiles left");
+  assert.isTrue(over.players.every((p) => p.hand.every((t) => !t?.hidden)));
 });
 
 test("a loaded game seats whoever sits there now", () => {

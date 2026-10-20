@@ -28,6 +28,7 @@ test("messages with names and numbers translate both ways", () => {
     t("Open with exactly: 3'lü küt + 3'lü seri", false),
     "Open with exactly: set of 3 + run of 3",
   );
+  assert.equal(t("No tiles left", true), "Taş kalmadı"); // not "(.+) left"
   assert.equal(t("Elden", false), "from hand");
   assert.equal(t("Elden", true), "Elden");
 });

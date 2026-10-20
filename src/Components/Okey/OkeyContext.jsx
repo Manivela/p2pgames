@@ -12,9 +12,6 @@ import { t } from "../../i18n";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
 import { signalingServers, peerOpts } from "../../constants";
-// TODO:
-// süre koyunca çektiyse çektiğini çekmediysede çekip atsın
-// taşlar bitince seçenek sun oyunu bitir yada karıştır devam et diye
 
 export const OkeyContext = createContext({});
 
@@ -326,6 +323,13 @@ export function OkeyProvider({ children }) {
     else if (next) replaceState(map, next);
   }, [map, okeyState]);
 
+  // classic, the pile ran out: a new one from the discards, or the end
+  const shuffleDiscards = useCallback(
+    () => act(game.shuffleDiscards, me),
+    [act, me],
+  );
+  const endGame = useCallback(() => act(game.endGame, me), [act, me]);
+
   // a saved or set-up game replaces the table whole
   const loadGame = useCallback((next) => replaceState(map, next), [map]);
 
@@ -480,6 +484,8 @@ export function OkeyProvider({ children }) {
       catchDiscard,
       returnDiscard,
       nextRound,
+      shuffleDiscards,
+      endGame,
       dragged,
     }),
     [
@@ -514,6 +520,8 @@ export function OkeyProvider({ children }) {
       catchDiscard,
       returnDiscard,
       nextRound,
+      shuffleDiscards,
+      endGame,
     ],
   );
 

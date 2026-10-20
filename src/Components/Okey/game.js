@@ -372,6 +372,35 @@ export function discardTile(state, player, tile) {
   return newState;
 }
 
+// The pile ran out (classic): before drawing, the player whose turn it is
+// shuffles every discard into a new pile and plays on, or ends the game
+// with nobody winning.
+export const pileOut = (state, player) =>
+  state.gameState === "play" &&
+  state.currentPlayer === player &&
+  !state.drawn &&
+  !state.drawPile.length;
+
+export function shuffleDiscards(state, player) {
+  if (!pileOut(state, player)) return;
+  const s = cloneDeep(state);
+  s.drawPile = _.shuffle(s.players.flatMap((p) => p.discardPile)).map((t) => ({
+    ...t,
+    source: "draw-pile",
+    hidden: true,
+  }));
+  for (const p of s.players) p.discardPile = [];
+  s.lastDiscard = null;
+  return s;
+}
+
+export function endGame(state, player) {
+  if (!pileOut(state, player)) return;
+  const s = cloneDeep(state);
+  showHands(s);
+  return { ...s, gameState: "finish", message: "No tiles left" };
+}
+
 // every hand shows face up once the round is over, tiles flipped in play too
 export function showHands(s) {
   for (const p of s.players) {

@@ -11,6 +11,7 @@ import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { AMERICANO, ONE_O_ONE } from "./rulesets";
 import { useMoves } from "./moves";
+import { pileOut } from "./game";
 
 function rotateArray(array, x) {
   // Normalize the rotation count
@@ -120,10 +121,12 @@ function DrawPile() {
   );
 }
 
-// the next step: a game to start, the next round, a new game once it's over
-// (Reset, and New Game mid-game, live in the table menu)
+// the next step: a game to start, a new pile once it runs out (classic),
+// the next round, a new game once it's over (Reset, New Game mid-game and
+// ending a game whose pile ran out live in the table menu)
 function NextStep() {
-  const { okeyState, startGame, newGame, nextRound } = useContext(OkeyContext);
+  const { okeyState, me, startGame, newGame, nextRound, shuffleDiscards } =
+    useContext(OkeyContext);
   switch (okeyState.gameState) {
     case "start":
       return (
@@ -134,6 +137,13 @@ function NextStep() {
           </button>
           <button onClick={() => startGame(ONE_O_ONE)}>{t("Start 101")}</button>
         </>
+      );
+    case "play":
+      return (
+        !okeyState.rules &&
+        pileOut(okeyState, me) && (
+          <button onClick={shuffleDiscards}>{t("Shuffle and play on")}</button>
+        )
       );
     case "roundEnd":
       return <button onClick={nextRound}>{t("Next Round")}</button>;

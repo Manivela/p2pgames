@@ -10,6 +10,9 @@ const CLOSE = /^(Close|Kapat)$/;
 const PASTE = /Paste a save code|Kayıt kodunu yapıştır/;
 const LOAD = /^(Load this game|Bu oyunu yükle)$/;
 const NEXT = /^(Next Round|Sonraki el)$/;
+const SHUFFLE = /^(Shuffle and play on|Karıştır, devam et)$/;
+const END = /^(End the game|Oyunu bitir)$/;
+const NEW_GAME = /^(New Game|Yeni oyun)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const SEAT_1 = /(Player|Oyuncu) 1(?!\d)/;
 
@@ -134,6 +137,26 @@ test("three at the table fit, in play and once the round is over", async ({
     overlaps: [],
     offscreen: [],
   });
+});
+
+// classic: once the pile runs out, whoever's turn it is shuffles the
+// discards into a new one, or ends the game from the menu
+test("classic: an empty pile is shuffled again, or ends the game", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4, "classic");
+  await table(page, "emptyPile");
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  await page.getByRole("button", { name: SHUFFLE }).click();
+  await expect(page.locator(".draw .count")).toHaveText("49");
+  await expect(page.getByRole("button", { name: SHUFFLE })).toHaveCount(0);
+
+  await table(page, "emptyPile");
+  await confirm(page, END);
+  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(4);
+  await expect(page.getByRole("button", { name: NEW_GAME })).toBeVisible();
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
 // the "Drag here" line shows only where it has room: on a phone it would

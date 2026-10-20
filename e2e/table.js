@@ -94,6 +94,13 @@ export function playToEnd() {
   window.okey.set(s);
 }
 
+// classic: everyone plays until the pile runs out, then it's seat 1's turn
+export function emptyPile() {
+  let s = window.okey.get();
+  while (s.drawPile.length) s = turn(s);
+  window.okey.set({ ...s, currentPlayer: 1 });
+}
+
 // n more runs on the table, for a crowded one (only shown: they don't come
 // out of anyone's hand)
 export function crowd(n = 8) {

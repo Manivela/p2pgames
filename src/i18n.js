@@ -92,6 +92,7 @@ const TR = [
   ],
   [/^(.+) wins with (-?\d+)$/, "$1 kazandı: $2"],
   [/^(.+) wins!$/, "$1 kazandı!"],
+  [/^No tiles left$/, "Taş kalmadı"], // before "(.+) left"
   [/^(.+) left$/, "$1 ayrıldı"],
   // how the round finished (LastTurn)
   [/^(.+) took the discard$/, "$1 yandan aldı"],
@@ -119,6 +120,8 @@ const TR = [
   [/^Reset Game$/, "Oyunu sıfırla"],
   [/^New Game$/, "Yeni oyun"],
   [/^Next Round$/, "Sonraki el"],
+  [/^Shuffle and play on$/, "Karıştır, devam et"],
+  [/^End the game$/, "Oyunu bitir"],
   [/^Scores$/, "Puanlar"],
   [/^Total$/, "Toplam"],
   [/^Sit$/, "Otur"],

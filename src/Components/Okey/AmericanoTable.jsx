@@ -108,7 +108,10 @@ export function RoundInfo() {
   const { okeyState } = useContext(OkeyContext);
   const { round, message, players, rules, gameState, opened } = okeyState;
   if (!rules) {
-    return message && <h3 className="round">{t(message)}</h3>;
+    const said =
+      message ||
+      (gameState === "play" && !okeyState.drawPile.length && "No tiles left");
+    return said && <h3 className="round">{t(said)}</h3>;
   }
   const { rounds } = rules;
   const offer = upForClaim(okeyState);
