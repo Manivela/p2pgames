@@ -15,9 +15,9 @@ function Tile({ tile, disabled, className, style }) {
     useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
   const canSee = tile.source.includes("hand-") ? myTile : true;
-  // an okey lies face down once it's thrown or laid on the table
+  // an okey laid on the table lies face down; a thrown one stays face up
   const okeyDown =
-    /^(discard-|claim-|table$)/.test(tile.source) &&
+    tile.source === "table" &&
     okeyState.okeyTile &&
     isOkey(tile, okeyState.okeyTile);
   // a face-down tile keeps its colour out of the page too, or inspecting the
