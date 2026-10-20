@@ -164,22 +164,24 @@ test("dragging picked tiles onto the table opens the hand", async ({
 });
 
 // right click flips your tile while the round is played; once it's over,
-// the hands stay as they ended
-test("a tile flips during play, not once the round is over", async ({
+// every hand shows face up (the rules turn them) and stays that way
+test("a tile flips during play, and shows once the round is over", async ({
   page,
 }) => {
   await sitDown(page);
   await table(page, "start", 4);
   const hidden = async () => (await state(page)).players[0].hand[0].hidden;
-  const flip = () => slot(page, 0).locator(".tile").click({ button: "right" });
+  const tile = slot(page, 0).locator(".tile");
+  const flip = () => tile.click({ button: "right" });
   await flip();
   await expect.poll(hidden).toBe(true);
-  await flip();
-  await expect.poll(hidden).toBe(false);
+  await expect(tile).toHaveClass(/\bback\b/);
   await table(page, "playToEnd");
+  await expect(tile).not.toHaveClass(/\bback\b/);
   await flip();
   await page.waitForTimeout(300);
   expect(await hidden()).toBe(false);
+  await expect(tile).not.toHaveClass(/\bback\b/);
 });
 
 // phones: a tile held still flips when the finger lets go (or the phone
