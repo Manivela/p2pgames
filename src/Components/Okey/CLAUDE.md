@@ -25,11 +25,11 @@ How each part works is in its code comments; this file holds the conventions, de
 ## Verify
 
 1. Rules: `npx vitest run` from the repo root (from this folder it skips test files). Deal a known position with `seated(n)` (`game.test.js`) and `game.startGame(state, { okeyTile, hands })`, or `americano.startGame(state, deal, rules)`. Americano's claim wait: `drawTile` / `discardTile` take an optional `now`; tests discard at `afterWait(s)`, scripts pass `Infinity`.
-2. Lint: ESLint 9 can't read the repo's `.eslintrc` as it stands, so run `ESLINT_USE_FLAT_CONFIG=false npx eslint --parser-options=sourceType:module --parser-options=ecmaVersion:latest <files>`.
+2. `npm run lint`: no errors (prettier runs inside it).
 3. End to end: `npm run test:e2e` runs `e2e/okey.e2e.js` in Playwright's Linux image (`e2e/docker.sh`; the first run pulls ~1 GB), so screenshots match on every machine; `npx playwright test` on the Mac runs the same tests in ~15 s without the screenshot comparisons. Positions come from `e2e/table.js`: the real rules on a fixed deal, written with `window.okey`. A new table stage gets the fit check (`check()`: nothing overlaps or falls off-screen) and a reference screenshot. After an intended visual change: `npm run test:e2e -- --update-snapshots`, look at each new PNG in `e2e/okey.e2e.js-snapshots/`, commit them (a change within the per-pixel tolerance keeps the old image; `=all` rewrites every one).
 4. A layout change, by eye: 1348×870, 1024×768, 820×1180, 844×390 and 667×320, each in the lobby, mid-game, at round end and watching without a seat, in English and Turkish.
 
-Done when vitest and the Docker e2e are green and every layout change has been seen at each size and stage, its strings in Turkish too.
+Done when vitest, lint and the Docker e2e are green and every layout change has been seen at each size and stage, its strings in Turkish too.
 
 Driving the table (Playwright MCP or a script, against the dev server):
 

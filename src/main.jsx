@@ -39,8 +39,8 @@ if (import.meta.env.PROD && location.hostname !== "localhost") {
 const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
 const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
 // const Chat = React.lazy(() => import("./Components/Chat"));
-const Backgammon = React.lazy(() =>
-  import("./Components/Backgammon/containers/App")
+const Backgammon = React.lazy(
+  () => import("./Components/Backgammon/containers/App"),
 );
 const Go = React.lazy(() => import("./Components/Go"));
 
@@ -110,14 +110,14 @@ const router = createBrowserRouter(
           />
         </Route>
       </Route>
-    </Route>
-  )
+    </Route>,
+  ),
 );
 ReactDOM.createRoot(document.getElementById("root")).render(
   // <React.StrictMode>
   <DocumentProvider>
     <Toaster />
     <RouterProvider router={router} />
-  </DocumentProvider>
+  </DocumentProvider>,
   // </React.StrictMode>
 );

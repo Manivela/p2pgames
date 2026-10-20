@@ -70,7 +70,7 @@ export function calculateAndRemoveCapturedPieces(board, lastMove) {
               i,
               j,
               color,
-              skipLastMove
+              skipLastMove,
             );
 
             if (liberties === 0) {
