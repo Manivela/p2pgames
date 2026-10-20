@@ -196,6 +196,11 @@ test("picked tiles move together", async ({ page }) => {
   await expect
     .poll(async () => (await handIds(page)).slice(20, 23))
     .toEqual([before[3], before[6], before[9]]);
+  // they stay picked; a tap on the rack off the tiles drops the pick
+  const picked = page.locator(".rack .tile.selected");
+  await expect(picked).toHaveCount(3);
+  await slot(page, 25).click();
+  await expect(picked).toHaveCount(0);
 });
 
 test("another player's move flies across the table", async ({ page }) => {

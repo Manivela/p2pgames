@@ -260,6 +260,7 @@ export function OkeyProvider({ children }) {
       ),
     [],
   );
+  const unselectAll = useCallback(() => setSelected([]), []);
 
   const picked = useCallback(
     () => [
@@ -458,6 +459,7 @@ export function OkeyProvider({ children }) {
       toggleHidden,
       selected,
       toggleSelected,
+      unselectAll,
       held,
       openHand,
       layMelds,
@@ -491,6 +493,7 @@ export function OkeyProvider({ children }) {
       toggleHidden,
       selected,
       toggleSelected,
+      unselectAll,
       held,
       openHand,
       layMelds,

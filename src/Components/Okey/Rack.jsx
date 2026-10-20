@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useRef } from "react";
 import Slot from "./Slot";
 import Tile from "./Tile";
 import "./rack.css";
@@ -56,8 +56,16 @@ function Name({ player }) {
 // Your rack (its tiles show only to you, and to everyone once the round
 // ends), with your name on its top edge
 function Rack({ player }) {
-  const { myHand, swapTile, drawTile, okeyState, me, claimDiscard, held } =
-    useContext(OkeyContext);
+  const {
+    myHand,
+    swapTile,
+    drawTile,
+    okeyState,
+    me,
+    claimDiscard,
+    held,
+    unselectAll,
+  } = useContext(OkeyContext);
   const offer = upForClaim(okeyState);
   function onDrop(tile, toIndex) {
     if (tile.source.startsWith("claim-")) {
@@ -103,9 +111,20 @@ function Rack({ player }) {
       ),
     );
 
+  // a tap on the rack off the tiles drops the pick; a mouse drag that ends
+  // elsewhere clicks what's under both ends, which isn't a tap
+  const pressed = useRef();
+  const tap = (e) =>
+    e.target === pressed.current && !e.target.closest(".tile") && unselectAll();
+
   const turn = turnOf(okeyState, player);
   return (
-    <div className={`rack ${turn ? "turn" : ""}`} data-seat={player}>
+    <div
+      className={`rack ${turn ? "turn" : ""}`}
+      data-seat={player}
+      onPointerDown={(e) => (pressed.current = e.target)}
+      onClick={tap}
+    >
       {turn && <Timer okeyState={okeyState} />}
       <div className="top">{row(0)}</div>
       <div className="bottom">{row(13)}</div>
