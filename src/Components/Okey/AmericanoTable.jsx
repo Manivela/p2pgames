@@ -62,6 +62,34 @@ function Meld({ meld, index }) {
   );
 }
 
+// a made-up opening under the round's rule, to show what it asks for: sets
+// of 7s and 10s, runs from 3 and 8, pairs of 2s, 5s, 8s and 11s
+const COLORS = ["red", "blue", "black", "yellow"];
+function Example({ melds }) {
+  return (
+    <span className="example">
+      {melds.map(([type, size], i) => (
+        <span key={i}>
+          {Array.from({ length: size }, (_, j) => {
+            const [color, rank] =
+              type === "kut"
+                ? [COLORS[j], 7 + 3 * i]
+                : type === "seri"
+                  ? [COLORS[i], 3 + 5 * i + j]
+                  : [COLORS[i], 2 + 3 * i];
+            return (
+              <span key={j} className={`tile c-${color}`}>
+                <span className="rank">{rank}</span>
+                <span className="sym">{symbols[color]}</span>
+              </span>
+            );
+          })}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 // where the round stands, on the table's right: which round and what opens
 // it (or how it ended), and who wants the last discard
 export function RoundInfo() {
@@ -81,6 +109,10 @@ export function RoundInfo() {
       {t(`Round ${round}/${rounds.length}`)}
       {/* 101 has the same opening every hand */}
       <small>{rules.opening ? rules.name : t(rounds[round - 1].name)}</small>
+      {/* Elden has no opening */}
+      {!rules.opening && rounds[round - 1].melds && (
+        <Example melds={rounds[round - 1].melds} />
+      )}
       {message && <small>{t(message)}</small>}
       {wanting.length > 0 && offered && (
         <small className="claims">
