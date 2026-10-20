@@ -199,9 +199,10 @@
   zoom: 0.8;
 }
 
+/* a pile's count stays on top, even of the tiles flying in and out */
 .count {
   position: absolute;
-  z-index: 1;
+  z-index: 21;
   top: calc(var(--t) * -0.12);
   left: calc(var(--t) * -0.18);
   padding: 0 0.45em;
@@ -909,11 +910,12 @@
   }
 }
 
-/* the copies that fly between places (moves.js), over the whole page */
+/* the copies that fly between places (moves.js), over the whole table but
+   under the piles' counts, its menus and dialogs, and the sidebar */
 .flights {
   position: fixed;
   inset: 0;
-  z-index: 250;
+  z-index: 20;
   pointer-events: none;
 }
 
