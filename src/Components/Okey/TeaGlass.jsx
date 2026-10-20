@@ -110,8 +110,8 @@ export default function TeaGlass() {
           ))}
         </g>
         <g fill="#c9a24a">
-          {dots.map(([x, y]) => (
-            <circle key={x} cx={x} cy={y} r="1" />
+          {dots.map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r="1" />
           ))}
         </g>
       </g>
