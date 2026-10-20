@@ -209,6 +209,7 @@ export function dealRound(state, drawPile, deal, starter = 0) {
     currentPlayer: players[starter].id,
     drawn: true,
     lastDiscard: null,
+    finishTile: null,
     message: "",
     drawPile: drawPile.filter((t) => !taken.has(t.id)),
   };
@@ -375,6 +376,9 @@ export function finishGame(state, player, tile) {
   if (!checkFinished(hand, state.okeyTile)) return;
 
   const newState = cloneDeep(state);
+  // the tile thrown to finish lies in the middle
+  newState.players.find((p) => p.id === player).hand = hand;
+  newState.finishTile = { ...tile, source: "finish", hidden: false };
   for (const p of newState.players) {
     if (p.hand) {
       p.hand = p.hand.map((h) => (h ? { ...h, hidden: false } : null));

@@ -85,6 +85,7 @@ function assertAllTiles(s) {
   const all = [
     ...s.drawPile,
     s.okeyTile,
+    s.finishTile,
     ...s.players.flatMap((p) => [
       ...p.hand,
       ...p.discardPile,
@@ -126,7 +127,7 @@ const deal = {
   ],
 };
 
-test("round 1: open exactly, lay and add later, finish by discarding the last tile", () => {
+test("round 1: open exactly, lay and add later, finish by throwing the last tile to the middle", () => {
   let s = americano.startGame(seated(2), deal);
   assert.equal(s.round, 1);
   assert.equal(s.currentPlayer, 1);
@@ -165,8 +166,15 @@ test("round 1: open exactly, lay and add later, finish by discarding the last ti
   );
   assertAllTiles(s);
 
-  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
+  assert.equal(
+    americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0")),
+    "Throw your last tile to the middle to finish",
+  );
+  s = americano.finishGame(s, 1, tileIn(s, 1, "yellow11-0"));
   assert.equal(s.gameState, "roundEnd");
+  assert.equal(s.finishTile.id, "yellow11-0");
+  assert.notInclude(ids(player(s, 1).discardPile), "yellow11-0");
+  assertAllTiles(s);
   assert.deepEqual(s.scores, {
     1: [AMERICANO.finishScore],
     2: [AMERICANO.notOpenedScore],
@@ -291,7 +299,7 @@ test("Elden: no opening, finish from hand, lowest total wins the game", () => {
   });
   assert.equal(
     americano.finishGame(s, 1, tileIn(s, 1, "yellow2-0")),
-    "Finish by laying down your tiles and discarding the last one",
+    "Lay down your tiles, then throw the last one to the middle",
   );
 
   s = {

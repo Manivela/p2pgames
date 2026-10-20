@@ -112,6 +112,10 @@ function DrawPile() {
       {okeyState.okeyTile && (
         <Tile className="indicator" tile={okeyState.okeyTile} disabled />
       )}
+      {/* the tile someone finished with */}
+      {okeyState.finishTile && (
+        <Tile className="thrown" tile={okeyState.finishTile} disabled />
+      )}
     </div>
   );
 }

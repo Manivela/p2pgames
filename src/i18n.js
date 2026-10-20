@@ -76,8 +76,12 @@ const TR = [
   ],
   [/^(.+) caught (.+)'s tile: \+(\d+)$/, "$1 yakaladı: $2 +$3"],
   [
-    /^Finish by laying down your tiles and discarding the last one$/,
-    "Taşlarını yere açıp sonuncuyu atarak bitir",
+    /^Lay down your tiles, then throw the last one to the middle$/,
+    "Taşlarını yere aç, sonra sonuncuyu ortaya at",
+  ],
+  [
+    /^Throw your last tile to the middle to finish$/,
+    "Bitirmek için son taşını ortaya at",
   ],
   [/^(.+) finished round (\d+)$/, "$1 $2. eli bitirdi"],
   [/^Round (\d+): no tiles left$/, "$1. el: taş kalmadı"],

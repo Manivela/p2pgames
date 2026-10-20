@@ -570,7 +570,18 @@ export function claimWait(state, player, now = Date.now()) {
   return !last && wait > 0 && claimable(state, player) ? wait : 0;
 }
 
+const LAST = "Throw your last tile to the middle to finish";
+const onlyTile = (state, player) =>
+  seat(state, player)?.hand.filter(Boolean).length === 1;
+
+// The last tile never goes on a pile: it's thrown to the middle to finish
+// (finishGame), as in Elden, so every round ends the same way
 export function discardTile(state, player, tile, now = Date.now()) {
+  if (state.currentPlayer === player && onlyTile(state, player)) return LAST;
+  return throwTile(state, player, tile, now);
+}
+
+function throwTile(state, player, tile, now = Date.now()) {
   const wait = claimWait(state, player, now);
   if (wait) return `Give the others ${Math.ceil(wait)}s to take the discard`;
   if (state.tookOkey?.player === player && !state.opened[player]) {
@@ -589,7 +600,13 @@ export function discardTile(state, player, tile, now = Date.now()) {
   s.tookOkey = null;
   s.tookDiscard = null;
   s.discards = (s.discards ?? 0) + 1;
-  if (!seat(s, player).hand.some(Boolean)) return endRound(s, player, tile);
+  if (!seat(s, player).hand.some(Boolean)) {
+    // the finishing tile lies in the middle, not on the pile
+    seat(s, player).discardPile.pop();
+    s.lastDiscard = null;
+    s.finishTile = { ...tile, source: "finish", hidden: false };
+    return endRound(s, player, tile);
+  }
   if (s.rules.okeyDiscardPenalty && isOkey(tile, s.okeyTile)) {
     s.penalties = {
       ...s.penalties,
@@ -651,10 +668,15 @@ export function catchDiscard(state, player) {
   return s;
 }
 
-// Elden: finish the whole hand at once, like the normal game
+// The tile thrown to the middle finishes: the last one, once the rest are
+// laid down, or in Elden the whole hand at once, like the normal game
 export function finishGame(state, player, tile) {
   if (!isElden(state)) {
-    return "Finish by laying down your tiles and discarding the last one";
+    if (state.currentPlayer !== player) return "Not your turn";
+    if (!onlyTile(state, player)) {
+      return "Lay down your tiles, then throw the last one to the middle";
+    }
+    return throwTile(state, player, tile);
   }
   const s = game.finishGame(state, player, tile);
   if (!s || typeof s === "string") return s;

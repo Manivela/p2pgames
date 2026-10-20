@@ -27,6 +27,7 @@ function assertAllTiles(s) {
   const ids = [
     ...s.drawPile,
     s.okeyTile,
+    s.finishTile,
     ...s.players.flatMap((p) => [...p.hand, ...p.discardPile]),
   ]
     .filter(Boolean)

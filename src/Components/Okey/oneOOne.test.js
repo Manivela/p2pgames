@@ -29,6 +29,7 @@ function assertAllTiles(s) {
   const all = [
     ...s.drawPile,
     s.okeyTile,
+    s.finishTile,
     ...s.players.flatMap((p) => [...p.hand, ...p.discardPile]),
     ...(s.melds ?? []).flatMap((m) => m.tiles),
   ]
@@ -262,7 +263,7 @@ function finish({ pairsWin = false, last = "yellow1-0" } = {}) {
     penalties: { 2: 101 },
     players: s.players.map((p) => ({ ...p, hand: hands[p.id] })),
   };
-  s = americano.discardTile(s, 1, player(s, 1).hand[0]);
+  s = americano.finishGame(s, 1, player(s, 1).hand[0]);
   return Object.fromEntries(s.players.map((p) => [p.id, s.scores[p.id][0]]));
 }
 

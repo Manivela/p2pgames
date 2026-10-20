@@ -191,6 +191,41 @@ test("holding a tile flips it, and nothing stays in the air", async ({
   await expect(page.locator(".dragPreview")).toHaveCount(0);
 });
 
+test("the last tile is thrown to the middle to finish", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  // everything else laid down: one tile left
+  const last = await page.evaluate(() => {
+    const s = window.okey.get();
+    const hand = s.players[0].hand;
+    const tile = hand.findLast(Boolean);
+    window.okey.set({
+      ...s,
+      justOpened: null,
+      players: s.players.map((p) =>
+        p.id === 1
+          ? { ...p, hand: hand.map((t) => (t === tile ? t : null)) }
+          : p,
+      ),
+    });
+    return { id: tile.id, at: hand.indexOf(tile) };
+  });
+  const tile = slot(page, last.at).locator(".tile");
+  await drag(page, tile, page.locator('[data-pile="1"] .slot'));
+  await expect(
+    page.getByText(/Throw your last tile|son taşını ortaya at/),
+  ).toBeVisible();
+  expect((await state(page)).gameState).toBe("play");
+
+  await drag(page, tile, page.locator(".draw .stack"));
+  await expect.poll(async () => (await state(page)).gameState).toBe("roundEnd");
+  await expect(
+    page.locator(`.draw .thrown[data-tile-id="${last.id}"]`),
+  ).toBeVisible();
+});
+
 test("picked tiles move together", async ({ page }) => {
   await sitDown(page);
   await table(page, "start", 4);

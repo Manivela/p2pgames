@@ -187,6 +187,17 @@
   rotate: 6deg;
 }
 
+/* the tile thrown to finish, on top of the pile */
+.draw .thrown {
+  position: absolute;
+  top: 0;
+  left: 0;
+  rotate: -8deg;
+  box-shadow:
+    0 calc(var(--t) * 0.055) 0 #cbb68a,
+    0 0 calc(var(--t) * 0.35) #ffd54f;
+}
+
 /* a discard pile; the others' are smaller */
 .discardPile {
   position: relative;

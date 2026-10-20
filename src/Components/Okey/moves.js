@@ -44,6 +44,8 @@ function places(s) {
   s.melds?.forEach((m, k) =>
     m.tiles.forEach((tile) => at.set(tile.id, { in: "meld", m: k, tile })),
   );
+  const last = s.finishTile;
+  if (last) at.set(last.id, { in: "finish", tile: last });
   return at;
 }
 
@@ -322,8 +324,11 @@ export function useMoves() {
         const up =
           upFrom && !(from.in === "meld" && isOkey(from.tile, next.okeyTile));
         fly(fromRect, target, { html: face(from.tile, up), into: true });
-      } else if (to.in === "discard") {
-        const el = q(`[data-pile="${to.p}"] [data-tile-id="${id}"]`);
+      } else if (to.in === "discard" || to.in === "finish") {
+        const el =
+          to.in === "finish"
+            ? q(".draw .thrown")
+            : q(`[data-pile="${to.p}"] [data-tile-id="${id}"]`);
         if (id === drop) el && land(el);
         else fly(fromRect, el, {});
       } else if (to.in === "meld") {
