@@ -81,6 +81,23 @@ export function OkeyProvider({ children }) {
     toast.error(t("Duplicate tile detected"));
     console.warn("duplicates:", duplicates);
   }
+  // a sync bug: Sentry (main.jsx) hears where each copy is, and again only
+  // when that changes
+  const dupes = duplicates.length
+    ? `${okeyState.rules?.id ?? "classic"}, deal ${okeyState.deal}, round ` +
+      `${okeyState.round}: ${duplicates
+        .flat()
+        .map((x) => `${x.id} in ${x.source}`)
+        .sort()
+        .join(", ")}`
+    : "";
+  React.useEffect(() => {
+    if (!dupes) return;
+    window.Sentry?.captureException(new Error("Duplicate tile detected"), {
+      level: "warning",
+      extra: { tiles: dupes },
+    });
+  }, [dupes]);
 
   const nextDrawTile = okeyState.drawPile[okeyState.drawPile.length - 1];
 
