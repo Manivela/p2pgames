@@ -104,6 +104,20 @@ for (const [stage, setUp] of Object.entries(stages)) {
   });
 }
 
+// what someone who follows an invite sees first, every seat still free, and
+// a table crowded with melds, which must stay clear of your name
+test("before you sit, everything fits", async ({ page }) => {
+  await sitDown(page, { sit: false });
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
+test("a crowded table fits", async ({ page }) => {
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "crowd");
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
 test("dragging picked tiles onto the table opens the hand", async ({
   page,
 }) => {

@@ -87,6 +87,32 @@ export function playToEnd() {
   window.okey.set(s);
 }
 
+// eight more runs on the table, for a crowded one (only shown: they don't
+// come out of anyone's hand)
+export function crowd() {
+  const s = window.okey.get();
+  const tile = (id) => ({
+    ...game.tiles.find((t) => t.id === id),
+    source: "table",
+    hidden: false,
+  });
+  const runs = [
+    ["red", 1],
+    ["blue", 5],
+    ["black", 9],
+    ["yellow", 2],
+    ["red", 8],
+    ["blue", 10],
+    ["yellow", 6],
+    ["black", 3],
+  ].map(([color, from], i) => ({
+    type: "seri",
+    owner: (i % 4) + 1,
+    tiles: [0, 1, 2, 3].map((k) => tile(`${color}${from + k}-1`)),
+  }));
+  window.okey.set({ ...s, melds: [...s.melds, ...runs] });
+}
+
 const SEL = [
   ".foot > .rack",
   ".seat",

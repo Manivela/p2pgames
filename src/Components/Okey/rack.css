@@ -98,7 +98,8 @@
   justify-content: center;
   align-items: start;
   gap: calc(var(--t) * 0.3);
-  padding-top: calc(var(--t) * 0.32);
+  /* room for the name tab rising out of your rack */
+  padding-top: calc(var(--t) * 0.5);
 }
 
 /* Your rack: wood with a ledge under each row and darker end caps standing
@@ -678,6 +679,15 @@
   background: #fff;
   color: #1b5e20;
   font-size: 0.9em;
+}
+
+/* a free seat's Sit hangs under its name, like the badges, so the row
+   neither runs off narrow screens nor shifts once you sit */
+.seat .playerName button {
+  position: absolute;
+  top: 100%;
+  left: calc(var(--t) * 0.92);
+  margin: calc(var(--t) * 0.06) 0 0;
 }
 
 /* Catch (Yakala) under the latest discard, in amber, nudging while it can
