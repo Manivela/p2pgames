@@ -54,12 +54,13 @@ function Tile({ tile, disabled, className, style }) {
     () => ({
       type: "TILE",
       item: { tile },
-      canDrag: !disabled,
+      // a finger that drifts after a hold flipped the tile doesn't drag it
+      canDrag: () => !disabled && !held.current,
       collect: (monitor) => ({
         opacity: monitor.isDragging() ? 0.5 : 1,
       }),
     }),
-    [tile],
+    [tile, disabled],
   );
   // the mouse drags our own lifted tile (index.jsx) instead of the
   // browser's picture of it

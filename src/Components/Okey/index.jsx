@@ -1,5 +1,5 @@
 import { useContext, useEffect } from "react";
-import { DndProvider, useDragLayer } from "react-dnd";
+import { DndProvider, useDragDropManager, useDragLayer } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import Board from "./Board";
@@ -15,6 +15,16 @@ function DragPreview() {
     item: monitor.isDragging() && monitor.getItem(),
     offset: monitor.getClientOffset(),
   }));
+  // the touch backend ends a drag on touchend only: a touch the phone
+  // cancels (its own long press, a system gesture) would leave the tile in
+  // the air
+  const manager = useDragDropManager();
+  useEffect(() => {
+    const cancel = () =>
+      manager.getMonitor().isDragging() && manager.getActions().endDrag();
+    addEventListener("touchcancel", cancel, true);
+    return () => removeEventListener("touchcancel", cancel, true);
+  }, [manager]);
   if (!item || !offset) return null;
   const group = selected.includes(item.tile.id) ? selected.length : 1;
   return (

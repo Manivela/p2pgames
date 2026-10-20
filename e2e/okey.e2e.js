@@ -145,6 +145,48 @@ test("dragging picked tiles onto the table opens the hand", async ({
   expect((await state(page)).opened[1]).toBeTruthy();
 });
 
+// phones: holding a tile flips it; a finger that drifts after, and a touch
+// the phone then cancels, leave nothing in the air
+test("holding a tile flips it, and nothing stays in the air", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === "desktop", "touch only");
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  const id = (await handIds(page))[0];
+  const touch = (type, dx = 0) =>
+    page.evaluate(
+      ([id, type, dx]) => {
+        const el = document.querySelector(`.rack [data-tile-id="${id}"]`);
+        const r = el.getBoundingClientRect();
+        const t = new Touch({
+          identifier: 1,
+          target: el,
+          clientX: r.left + r.width / 2 + dx,
+          clientY: r.top + r.height / 2,
+        });
+        const on = type === "touchstart" || type === "touchmove" ? [t] : [];
+        el.dispatchEvent(
+          new TouchEvent(type, {
+            touches: on,
+            targetTouches: on,
+            changedTouches: [t],
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      },
+      [id, type, dx],
+    );
+  await touch("touchstart");
+  await page.waitForTimeout(650);
+  await touch("touchmove", 20);
+  await touch("touchcancel", 20);
+  expect((await state(page)).players[0].hand[0].hidden).toBe(true);
+  await expect(page.locator(".dragPreview")).toHaveCount(0);
+});
+
 test("picked tiles move together", async ({ page }) => {
   await sitDown(page);
   await table(page, "start", 4);
