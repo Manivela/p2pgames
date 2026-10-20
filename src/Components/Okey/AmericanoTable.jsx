@@ -169,16 +169,16 @@ export function Melds() {
 
 // the score sheet, from its button at the table's top right
 export function Scores() {
-  const { okeyState, me } = useContext(OkeyContext);
-  const { scores, gameState, rules } = okeyState;
+  const { okeyState } = useContext(OkeyContext);
+  const { scores, rules } = okeyState;
   // a freed seat keeps its column: whoever sits there next carries it on
   const players = allSeats(okeyState.players).filter(
     (p) => p.user || scores?.[p.id],
   );
   return (
-    // open by itself once the game is over, for whoever played; a round's
-    // end shows its scores with the hands
-    <details className="scores" open={gameState === "finish" && !!me}>
+    // a tap away: a round's end shows its scores with the hands, the end
+    // of the game who won, and an open sheet would cover the next step
+    <details className="scores">
       <summary>{t("Scores")}</summary>
       <div className="sheet">
         <table>
