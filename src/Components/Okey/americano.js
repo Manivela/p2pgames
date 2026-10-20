@@ -10,7 +10,7 @@ import {
 } from "./melds";
 import { AMERICANO } from "./rulesets";
 
-// Americano: 12 rounds, each with its own opening (el açma) requirement;
+// Americano: 13 rounds, each with its own opening (el açma) requirement;
 // 101 Okey: open with 101 points or 5 pairs. Same shape as game.js:
 // (state, player, ...args) => new state | message. The numbers and
 // switches come from the game's ruleset (state.rules, rulesets.js).
