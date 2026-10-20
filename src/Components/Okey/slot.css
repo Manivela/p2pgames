@@ -1,6 +1,7 @@
 .slot {
-  width: 54px;
-  height: 75px;
+  width: var(--t);
+  height: calc(var(--t) * 1.39);
+  flex: none;
 }
 
 /* an empty pile's place on the felt; an outline, so a tile in it sits
@@ -8,5 +9,5 @@
 .border {
   outline: 2px dashed rgba(255, 255, 255, 0.3);
   outline-offset: -2px;
-  border-radius: 6px;
+  border-radius: calc(var(--t) * 0.11);
 }

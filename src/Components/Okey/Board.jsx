@@ -1,16 +1,11 @@
 import _ from "lodash";
-import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useContext, useLayoutEffect, useRef } from "react";
+import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
-import Rack, { DiscardPile, Seat } from "./Rack";
+import Rack, { DiscardPile, Hands, Seat } from "./Rack";
 import Slot from "./Slot";
 import Tile from "./Tile";
-import {
-  AmericanoActions,
-  AmericanoInfo,
-  AmericanoTable,
-  Scores,
-  place,
-} from "./AmericanoTable";
+import { Melds, RoundInfo, Scores } from "./AmericanoTable";
 import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
@@ -42,25 +37,35 @@ function rotateArray(array, x) {
   return _.concat(tail, head);
 }
 
-// Size of the box the table has to fit in.
-function useBoxSize() {
+// The table is laid out in tile widths: --t, the width of a tile in your
+// rack, is as big as the box allows for the rack and the piles beside it
+// (16.8 tiles across) and for the whole table (7.4 tiles down), up to 70px.
+// It's set on the page, so the tiles that fly or are dragged (outside the
+// table) and the site's corner buttons (index.css) match.
+function useTileSize() {
   const ref = useRef(null);
-  const [size, setSize] = useState({ width: Infinity, height: Infinity });
   useLayoutEffect(() => {
-    const observer = new ResizeObserver(([entry]) =>
-      setSize(entry.contentRect),
+    const page = document.documentElement.style;
+    const observer = new ResizeObserver(([{ contentRect: box }]) =>
+      page.setProperty(
+        "--t",
+        `${Math.min(box.width / 16.8, box.height / 7.4, 70)}px`,
+      ),
     );
     observer.observe(ref.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      page.removeProperty("--t");
+    };
   }, []);
-  return [ref, size];
+  return ref;
 }
 
 // the draw pile as a stack, its count, and the indicator beside it
-function DrawPile({ className = "" }) {
+function DrawPile() {
   const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
   return (
-    <div className={`draw ${className}`}>
+    <div className="draw">
       <Slot
         className="stack"
         showBorder
@@ -76,159 +81,110 @@ function DrawPile({ className = "" }) {
   );
 }
 
-function GameButtons({ phone }) {
-  const { okeyState, startGame, newGame } = useContext(OkeyContext);
-  // Reset, and New Game mid-game, live in the table menu; once a game is
-  // over, New Game is the obvious next step
-  if (!["start", "finish"].includes(okeyState.gameState)) return null;
-  return okeyState.gameState === "start" ? (
-    <>
-      <button
-        {...place(phone, { marginLeft: 150 })}
-        onClick={() => startGame()}
-      >
-        {t("Start Okey")}
-      </button>
-      {/* right under Start Okey, clear of your discard pile */}
-      <button
-        {...place(phone, { marginLeft: 150, marginTop: 15 })}
-        onClick={() => startGame(AMERICANO)}
-      >
-        {t("Start Americano")}
-      </button>
-      <button
-        {...place(phone, { marginLeft: 150, marginTop: 67 })}
-        onClick={() => startGame(ONE_O_ONE)}
-      >
-        {t("Start 101")}
-      </button>
-    </>
-  ) : (
-    <button
-      {...place(phone, { marginLeft: 150, marginTop: 0 })}
-      onClick={newGame}
-    >
-      {t("New Game")}
-    </button>
-  );
+// the next step: a game to start, the next round, a new game once it's over
+// (Reset, and New Game mid-game, live in the table menu)
+function NextStep() {
+  const { okeyState, startGame, newGame, nextRound } = useContext(OkeyContext);
+  switch (okeyState.gameState) {
+    case "start":
+      return (
+        <>
+          <button onClick={() => startGame()}>{t("Start Okey")}</button>
+          <button onClick={() => startGame(AMERICANO)}>
+            {t("Start Americano")}
+          </button>
+          <button onClick={() => startGame(ONE_O_ONE)}>{t("Start 101")}</button>
+        </>
+      );
+    case "roundEnd":
+      return <button onClick={nextRound}>{t("Next Round")}</button>;
+    case "finish":
+      return <button onClick={newGame}>{t("New Game")}</button>;
+    default:
+      return null;
+  }
 }
 
-// Short landscape screens (phones): your rack runs along the bottom and the
-// other players shrink to their seat and discard pile, left to right in
-// seat order from the one before you.
-function PhoneBoard({ players, style }) {
+// what's on the table: the melds, the others' hands once the round ends,
+// before a game a way to bring the others
+function OnTheTable({ others }) {
   const { okeyState } = useContext(OkeyContext);
-  const americano = !!okeyState.rules;
-  const [mine, ...others] = players;
-  return (
-    <div className="board phone" style={style}>
-      <div className="opponents">
-        {[...others].reverse().map((player) => (
-          <div key={player.id} className="opponent">
-            <DiscardPile player={player.id} />
-            <Seat player={player.id} />
-          </div>
-        ))}
-      </div>
-      <div className="pile">
-        <DrawPile />
-      </div>
-      <div className="table">
-        {americano ? (
-          <AmericanoInfo />
-        ) : (
-          <>
-            {okeyState.message && (
-              <h3 className="round">{t(okeyState.message)}</h3>
-            )}
-            {/* in a row on the empty table: the column has no room */}
-            <div className="buttons">
-              <GameButtons phone />
-            </div>
-          </>
-        )}
-      </div>
-      <div className="actions">
-        <TableMenu />
-        {americano && <AmericanoActions phone />}
-        {americano && (
-          <Scores>
-            <GameButtons phone />
-          </Scores>
-        )}
-      </div>
-      <Rack player={mine.id} />
-      <DiscardPile player={mine.id} />
-    </div>
-  );
+  if (okeyState.gameState === "start") {
+    return (
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(window.location.href);
+          toast.success(t("Copied!"));
+        }}
+      >
+        {t("Copy invite link")}
+      </button>
+    );
+  }
+  if (["roundEnd", "finish"].includes(okeyState.gameState)) {
+    return <Hands players={others.map((p) => p.id)} />;
+  }
+  return okeyState.rules && <Melds />;
 }
 
+// One layout for every screen, only the size changes. Across the top: the
+// site's buttons (index.css) and the game's at the two ends, the other
+// players in seat order between them, each pile between the player who
+// throws to it and the one who takes from it. The table: the draw pile on
+// the left, where the round stands and the next step on the right. Along
+// the bottom: the pile you take from, your rack, the pile you throw to.
 function Board() {
-  const { okeyState, myIndex, me } = useContext(OkeyContext);
-  const rotatedPlayers =
+  const { okeyState, myIndex } = useContext(OkeyContext);
+  // you first, then round the table: right, across, left
+  const [mine, ...rest] =
     myIndex !== -1
       ? rotateArray(okeyState.players, myIndex)
       : okeyState.players;
-  const americano = !!okeyState.rules;
-  const two = rotatedPlayers.length === 2;
-  const [fitRef, box] = useBoxSize();
+  // left to right: the one before you first
+  const others = rest.reverse();
+  const fit = useTileSize();
   useMoves();
-  // short screens: landscape phones
-  const phone = window.innerHeight <= 500;
-  // smallest sizes where no seats, names or discard piles overlap;
-  // Americano needs extra height for the melds above the draw pile
-  const width = phone ? 898 : 1160;
-  const height = phone ? (americano ? 400 : 330) : americano ? 900 : 740;
-  // shrink the fixed-size table to fit, never grow it
-  const zoom = Math.min(1, box.width / width, box.height / height);
   return (
     <div
       className="fit"
-      ref={fitRef}
+      ref={fit}
       data-rotate={t("Turn your phone sideways to play")}
     >
-      {!phone && <TableMenu />}
-      {americano && !phone && <Scores />}
-      {phone ? (
-        <PhoneBoard players={rotatedPlayers} style={{ width, height, zoom }} />
-      ) : (
-        <div className="board" style={{ width, height, zoom }}>
-          {americano && <AmericanoTable />}
-          <DrawPile className="drawPile" />
-          {okeyState.message && !americano && (
-            // left of the draw pile: above it, 2 players' names leave no room
-            <h1
-              className="drawPile"
-              style={{
-                marginTop: -20,
-                marginLeft: -40,
-                transform: "translateX(-100%)",
-                width: "max-content",
-                maxWidth: 320,
-                textAlign: "right",
-              }}
-            >
-              {t(okeyState.message)}
-            </h1>
-          )}
-          <GameButtons />
-          {/* you at the bottom, then the others around the table; with two
-              players the other one sits across */}
-          {rotatedPlayers.map((player, index) => {
-            const pos = two ? index * 2 : index;
-            return (
+      <div className="board">
+        <div className="head">
+          <div className="end" />
+          <div className="others">
+            {others.map((player, i) => (
               <Fragment key={player.id}>
-                {player.id === me ? (
-                  <Rack player={me} />
-                ) : (
-                  <Seat player={player.id} pos={pos} />
+                <Seat player={player.id} />
+                {/* the next one along throws to this one */}
+                {others[i + 1] && (
+                  <DiscardPile player={others[i + 1].id} small />
                 )}
-                <DiscardPile player={player.id} pos={pos} />
               </Fragment>
-            );
-          })}
+            ))}
+          </div>
+          <div className="end">
+            {okeyState.rules && <Scores />}
+            <TableMenu />
+          </div>
         </div>
-      )}
+        <div className="middle">
+          <DrawPile />
+          <div className="center">
+            <OnTheTable others={others} />
+          </div>
+          <div className="side">
+            <RoundInfo />
+            <NextStep />
+          </div>
+        </div>
+        <div className="foot">
+          {others[0] && <DiscardPile player={others[0].id} />}
+          <Rack player={mine.id} />
+          <DiscardPile player={mine.id} />
+        </div>
+      </div>
     </div>
   );
 }

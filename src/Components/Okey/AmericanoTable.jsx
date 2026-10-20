@@ -62,22 +62,49 @@ function Meld({ meld, index }) {
   );
 }
 
-// Desktop pins table buttons around the draw pile; the phone layout stacks
-// them in its own column
-export const place = (phone, style) =>
-  phone ? {} : { className: "drawPile", style };
-
-// round, the claims on the last discard and the melds on the table
-export function AmericanoInfo() {
-  const { okeyState, me, selected, openHand, layMelds } =
-    useContext(OkeyContext);
-  const { round, melds, message, players, opened, rules } = okeyState;
+// where the round stands, on the table's right: which round and what opens
+// it (or how it ended), and who wants the last discard
+export function RoundInfo() {
+  const { okeyState } = useContext(OkeyContext);
+  const { round, message, players, rules } = okeyState;
+  if (!rules) {
+    return message && <h3 className="round">{t(message)}</h3>;
+  }
   const { rounds } = rules;
   const offer = upForClaim(okeyState);
   // everyone sees who wants the discard, so others can claim it too
   const wanting = claimants(okeyState);
   const from = offer && players.find((p) => p.id === offer.from);
   const offered = from?.discardPile.at(-1);
+  return (
+    <h3 className="round">
+      {t(`Round ${round}/${rounds.length}`)}
+      {/* 101 has the same opening every hand */}
+      <small>{rules.opening ? rules.name : t(rounds[round - 1].name)}</small>
+      {message && <small>{t(message)}</small>}
+      {wanting.length > 0 && offered && (
+        <small className="claims">
+          {t(
+            `${wanting.map((p) => p.user.name).join(", ")} ${
+              wanting.length > 1 ? "want" : "wants"
+            } ${from.user?.name}'s ${
+              offered.rank === "👌"
+                ? "fake okey"
+                : offered.name.replace(/^([a-z]+)/, "$1 ")
+            }`,
+          )}
+        </small>
+      )}
+    </h3>
+  );
+}
+
+// the melds on the table
+export function Melds() {
+  const { okeyState, me, selected, openHand, layMelds } =
+    useContext(OkeyContext);
+  const { round, melds, opened, rules } = okeyState;
+  const { rounds } = rules;
 
   // Picked tiles open (or, once opened, lay down) when one of them is
   // dragged onto the table; a drop on a meld adds to that meld instead.
@@ -121,78 +148,27 @@ export function AmericanoInfo() {
   }, [layout]);
 
   return (
-    <>
-      <h3 className="round">
-        {/* 101 has the same opening every hand */}
-        {rules.opening
-          ? `${rules.name} · ${t(`Round ${round}/${rounds.length}`)}`
-          : `${t(`Round ${round}/${rounds.length}`)} · ${t(rounds[round - 1].name)}`}
-        {message && ` — ${t(message)}`}
-        {wanting.length > 0 && offered && (
-          <span className="claims">
-            {t(
-              `${wanting.map((p) => p.user.name).join(", ")} ${
-                wanting.length > 1 ? "want" : "wants"
-              } ${from.user?.name}'s ${
-                offered.rank === "👌"
-                  ? "fake okey"
-                  : offered.name.replace(/^([a-z]+)/, "$1 ")
-              }`,
-            )}
-          </span>
-        )}
-      </h3>
-      <div
-        ref={(el) => {
-          band.current = el;
-          drop(el);
-        }}
-        className={`melds ${canLay ? "droppable" : ""} ${over ? "over" : ""}`}
-      >
-        {canLay && (
-          <span className="hint">
-            {t(opened[me] ? "Drag here to lay down" : "Drag here to open")}
-          </span>
-        )}
-        {melds.map((meld, i) => (
-          <Meld key={meld.tiles[0].id} meld={meld} index={i} />
-        ))}
-      </div>
-    </>
+    <div
+      ref={(el) => {
+        band.current = el;
+        drop(el);
+      }}
+      className={`melds ${canLay ? "droppable" : ""} ${over ? "over" : ""}`}
+    >
+      {canLay && (
+        <span className="hint">
+          {t(opened[me] ? "Drag here to lay down" : "Drag here to open")}
+        </span>
+      )}
+      {melds.map((meld, i) => (
+        <Meld key={meld.tiles[0].id} meld={meld} index={i} />
+      ))}
+    </div>
   );
 }
 
-// next round, once one ends (opening and catching happen at the tiles)
-export function AmericanoActions({ phone }) {
-  const { okeyState, nextRound } = useContext(OkeyContext);
-  return (
-    okeyState.gameState === "roundEnd" && (
-      <button
-        // under the draw pile, clear of the hands shown by the seats
-        {...place(phone, {
-          marginLeft: 0,
-          marginTop: 60,
-          translate: "-50% 0",
-        })}
-        onClick={nextRound}
-      >
-        {t("Next Round")}
-      </button>
-    )
-  );
-}
-
-export function AmericanoTable() {
-  return (
-    <>
-      <AmericanoInfo />
-      <AmericanoActions />
-    </>
-  );
-}
-
-// children: extra controls under the sheet (the phone puts Reset / New Game here)
-export function Scores({ children }) {
+// the score sheet, from its button at the table's top right
+export function Scores() {
   const { okeyState, me } = useContext(OkeyContext);
   const { scores, gameState, rules } = okeyState;
   // a freed seat keeps its column: whoever sits there next carries it on
@@ -200,8 +176,9 @@ export function Scores({ children }) {
     (p) => p.user || scores?.[p.id],
   );
   return (
-    // closed for someone not seated: on phones it would cover the free seats
-    <details className="scores" open={gameState !== "play" && !!me}>
+    // open by itself once the game is over, for whoever played; a round's
+    // end shows its scores with the hands
+    <details className="scores" open={gameState === "finish" && !!me}>
       <summary>{t("Scores")}</summary>
       <div className="sheet">
         <table>
@@ -236,7 +213,6 @@ export function Scores({ children }) {
             </tr>
           </tbody>
         </table>
-        {children}
       </div>
     </details>
   );

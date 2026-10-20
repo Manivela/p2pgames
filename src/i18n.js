@@ -150,6 +150,7 @@ const TR = [
   [/^Fullscreen$/, "Tam ekran"],
   [/^Menu$/, "Menü"],
   [/^Share Link$/, "Bağlantıyı paylaş"],
+  [/^Copy invite link$/, "Davet bağlantısını kopyala"],
   [/^Copied!$/, "Kopyalandı!"],
   [/^Connected:$/, "Bağlı:"],
   [/^Sound Effects from$/, "Ses efektleri:"],

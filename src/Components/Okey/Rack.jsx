@@ -39,19 +39,22 @@ function Name({ player }) {
   return (
     <h1 className={`playerName ${turn && playing ? "active" : ""}`}>
       <span className="name">{seat.user.name}</span>
-      {playing && turn && okeyState.drawn && (
-        <span className="badge drew">{t("drew")}</span>
-      )}
-      {playing && okeyState.rules && okeyState.opened[player] && (
-        <span className="badge">{t("opened")}</span>
-      )}
+      {/* under a seat's name, so the row doesn't shift each turn */}
+      <span className="badges">
+        {playing && turn && okeyState.drawn && (
+          <span className="badge drew">{t("drew")}</span>
+        )}
+        {playing && okeyState.rules && okeyState.opened[player] && (
+          <span className="badge">{t("opened")}</span>
+        )}
+      </span>
       {playing && turn && <TeaGlass />}
     </h1>
   );
 }
 
-// Your rack (the hand rows show only for you, and for everyone once the
-// round ends), with your name over it
+// Your rack (its tiles show only to you, and to everyone once the round
+// ends), with your name on its top edge
 function Rack({ player }) {
   const { myHand, swapTile, drawTile, okeyState, me, claimDiscard } =
     useContext(OkeyContext);
@@ -84,43 +87,41 @@ function Rack({ player }) {
     !tile && ghost?.slot === index
       ? { tile: ghost.tile, className: "ghost" }
       : { tile };
+  // 13 slots a row, empty before a deal, and on someone else's rack
+  // (watched from outside the game) until the round ends
+  const hand = me === player || shownAtEnd(okeyState) ? myHand(player) : [];
   const row = (from) =>
-    myHand(player)
-      .slice(from, from + 13)
-      .map((tile, i) => (
+    Array.from({ length: 13 }, (_, i) => hand[from + i] ?? null).map(
+      (tile, i) => (
         <Slot
           key={from + i}
           index={from + i}
           onDrop={onDrop}
           {...slotProps(tile, from + i)}
         />
-      ));
+      ),
+    );
 
   const turn = turnOf(okeyState, player);
   return (
     <div className={`rack ${turn ? "turn" : ""}`} data-seat={player}>
       {turn && <Timer okeyState={okeyState} />}
-      {(me === player || shownAtEnd(okeyState)) && (
-        <>
-          <div className="top">{row(0)}</div>
-          <div className="bottom">{row(13)}</div>
-        </>
-      )}
+      <div className="top">{row(0)}</div>
+      <div className="bottom">{row(13)}</div>
       <Name player={player} />
     </div>
   );
 }
 
 // Someone else at the table: a round avatar in their seat's colour with
-// how many tiles they hold, their name, and their hand once the round ends
-export function Seat({ player, pos }) {
+// how many tiles they hold, and their name
+export function Seat({ player }) {
   const { okeyState, myHand } = useContext(OkeyContext);
   const name = okeyState.players.find((p) => p.id === player).user?.name;
-  const hand = myHand(player);
-  const left = hand.filter(Boolean).length;
+  const left = myHand(player).filter(Boolean).length;
   const turn = turnOf(okeyState, player);
   return (
-    <div className={`seat pos-${pos} ${turn ? "turn" : ""}`} data-seat={player}>
+    <div className={`seat ${turn ? "turn" : ""}`} data-seat={player}>
       <div
         className={`avatar ${name ? "" : "empty"}`}
         style={{ "--c": seatColors[player] }}
@@ -134,34 +135,59 @@ export function Seat({ player, pos }) {
         )}
       </div>
       <Name player={player} />
-      {shownAtEnd(okeyState) && left > 0 && (
-        // the two rows as they were laid out, up to their last tile
-        <div className="shown">
-          {[0, 13].map((from) => {
-            const row = hand.slice(from, from + 13);
-            return (
-              <div key={from}>
-                {row
-                  .slice(0, row.findLastIndex(Boolean) + 1)
-                  .map((tile, i) =>
-                    tile ? (
-                      <Tile key={tile.id} tile={tile} disabled />
-                    ) : (
-                      <div key={i} className="slot" />
-                    ),
-                  )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+    </div>
+  );
+}
+
+// The others' hands once the round ends, in the middle of the table, with
+// what each scored: the two rows as they were laid out, up to their last
+// tile, gaps and all
+export function Hands({ players }) {
+  const { okeyState, myHand } = useContext(OkeyContext);
+  const round = okeyState.round - 1;
+  return (
+    <div className="hands">
+      {players.map((player) => {
+        const hand = myHand(player);
+        if (!hand.some(Boolean)) return null;
+        const name = okeyState.players.find((p) => p.id === player).user?.name;
+        const score = okeyState.scores?.[player]?.[round];
+        return (
+          <div key={player} className="hand" data-hand={player}>
+            <span className="avatar" style={{ "--c": seatColors[player] }}>
+              {name && [...name][0].toLocaleUpperCase()}
+            </span>
+            {okeyState.rules && (
+              <b className="score">{score > 0 ? `+${score}` : score}</b>
+            )}
+            <div className="tiles">
+              {[0, 13].map((from) => {
+                const row = hand.slice(from, from + 13);
+                return (
+                  <span key={from} className="row">
+                    {row
+                      .slice(0, row.findLastIndex(Boolean) + 1)
+                      .map((tile, i) =>
+                        tile ? (
+                          <Tile key={tile.id} tile={tile} disabled />
+                        ) : (
+                          <i key={i} className="gap" />
+                        ),
+                      )}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 // A player's discard pile, between them and the next player, who may take
 // its top tile; anyone else can catch the latest discard
-export function DiscardPile({ player, pos }) {
+export function DiscardPile({ player, small }) {
   const {
     okeyState,
     me,
@@ -192,11 +218,8 @@ export function DiscardPile({ player, pos }) {
     top?.id === okeyState.lastDiscard &&
     !caught;
   return (
-    <div
-      className={`discardPile ${pos === undefined ? "" : `pos-${pos}`}`}
-      data-pile={player}
-    >
-      <h4>{pile.length}</h4>
+    <div className={`discardPile ${small ? "small" : ""}`} data-pile={player}>
+      <span className="count">{pile.length}</span>
       <Slot
         type="DISCARD"
         showBorder

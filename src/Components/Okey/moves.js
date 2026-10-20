@@ -59,7 +59,7 @@ function face(tile, up) {
   return `<div class="tile c-${color}"><div class="rank">${tile.rank}</div>${sym}</div>`;
 }
 
-// the copies fly in a layer outside the zoomed board, in screen pixels
+// the copies fly in a layer over the page, in screen pixels
 let layer;
 function overlay() {
   if (!layer?.isConnected) {
@@ -99,7 +99,7 @@ function fly(from, to, { html, delay = 0, duration = 360, into = false }) {
   const b = to.getBoundingClientRect();
   const el = copy(html ?? to.outerHTML);
   if (import.meta.env.DEV) window.okeyFlights = (window.okeyFlights ?? 0) + 1;
-  // its own size, unzoomed (an svg has no offsetWidth)
+  // its own size, before scaling (an svg has no offsetWidth)
   const { width: w, height: h } = el.getBoundingClientRect();
   const s = from.width / w;
   const end = into
@@ -169,16 +169,17 @@ function drift(from, to, text) {
   ).finished.then(() => el.remove());
 }
 
-// a round score counting up next to a seat, then fading
+// a round score counting up by a seat, then fading
 function countUp(at, value) {
   if (!at) return;
   const r = at.getBoundingClientRect();
   const el = copy(`<div class="score"></div>`);
   el.textContent = `${value}`;
-  // towards the table's middle, clear of the hand shown beside a seat
-  const x =
-    r.right < innerWidth / 2 ? r.right + 6 : r.left - 6 - el.offsetWidth;
-  el.style.transform = `translate(${x}px, ${r.top}px)`;
+  // towards the table: under a seat along the top, over your name
+  const x = r.left + r.width / 2 - el.offsetWidth / 2;
+  const y =
+    r.top < innerHeight / 2 ? r.bottom + 6 : r.top - 6 - el.offsetHeight;
+  el.style.transform = `translate(${x}px, ${y}px)`;
   const start = performance.now();
   const step = (now) => {
     const k = Math.min(1, (now - start) / 700);
@@ -306,12 +307,9 @@ export function useMoves() {
           const a = slotEl(from.i)?.getBoundingClientRect();
           const b = slotEl(to.i).getBoundingClientRect();
           if (!a) continue;
-          const k = b.width / 54;
           el.animate(
             [
-              {
-                translate: `${(a.left - b.left) / k}px ${(a.top - b.top) / k}px`,
-              },
+              { translate: `${a.left - b.left}px ${a.top - b.top}px` },
               { translate: "0 0" },
             ],
             { duration: 220, easing: EASE },
@@ -391,9 +389,7 @@ export function useMoves() {
           : [
               ...(finisher === me
                 ? document.querySelectorAll(".rack .tile")
-                : document.querySelectorAll(
-                    `[data-seat="${finisher}"] .shown .tile`,
-                  )),
+                : document.querySelectorAll(`[data-hand="${finisher}"] .tile`)),
               ...(next.melds ?? []).flatMap((m, k) =>
                 m.owner === finisher
                   ? [...document.querySelectorAll(`[data-meld="${k}"] .tile`)]
