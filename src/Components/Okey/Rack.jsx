@@ -7,8 +7,8 @@ import { t } from "../../i18n";
 import { upForClaim } from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
+import { ended } from "./game";
 
-const shownAtEnd = (s) => ["finish", "roundEnd"].includes(s.gameState);
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
 
@@ -98,7 +98,7 @@ function Rack({ player }) {
       : { tile: tile?.id === held ? null : tile };
   // 13 slots a row, empty before a deal, and on someone else's rack
   // (watched from outside the game) until the round ends
-  const hand = me === player || shownAtEnd(okeyState) ? myHand(player) : [];
+  const hand = me === player || ended(okeyState) ? myHand(player) : [];
   const row = (from) =>
     Array.from({ length: 13 }, (_, i) => hand[from + i] ?? null).map(
       (tile, i) => (

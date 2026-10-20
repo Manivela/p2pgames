@@ -15,7 +15,7 @@ import { AMERICANO } from "./rulesets";
 // (state, player, ...args) => new state | message. The numbers and
 // switches come from the game's ruleset (state.rules, rulesets.js).
 
-const seat = (state, player) => state.players.find((p) => p.id === player);
+const { seat, roundOver } = game;
 const tableTile = (tile) => ({ ...tile, source: "table", hidden: false });
 const isElden = (state) => state.rules.rounds[state.round - 1].melds === null;
 const wrap = (state) => state.rules.wrapRuns;
@@ -111,7 +111,7 @@ const KEEP = "Keep a tile to discard";
 // Takes the groups (arrays of tile ids) out of the player's hand on their
 // turn. Returns [newState, groups of tiles] or a message.
 function takeFromHand(state, player, groups) {
-  if (state.gameState !== "play") return "The round is over";
+  if (roundOver(state)) return roundOver(state);
   if (state.currentPlayer !== player) return "Not your turn";
   if (!state.drawn) return "Draw a tile first";
   const ids = groups.flat();
@@ -347,7 +347,7 @@ function okeyFor(meld, tile, ind) {
 const NO_OKEY = "No okey there that tile can replace";
 
 export function swapOkey(state, player, tileId, meldIndex) {
-  if (state.gameState !== "play") return "The round is over";
+  if (roundOver(state)) return roundOver(state);
   if (state.currentPlayer !== player) return "Not your turn";
   if (!state.drawn) return "Draw a tile first";
   const meld = state.melds[meldIndex];
@@ -430,8 +430,7 @@ export function drawTile(state, player, tile, toIndex, now = Date.now()) {
     };
   }
   if (!state.rules.outOfTurnTakes) return s;
-  const i = s.players.findIndex((p) => p.id === player);
-  const from = s.players[(i + s.players.length - 1) % s.players.length];
+  const from = game.previous(s.players, player);
   const top = from.discardPile.at(-1);
   s.offer =
     tile.source === "draw-pile" && top && !isCaught(s, top.id)
@@ -450,9 +449,7 @@ export function upForClaim(state) {
   if (!state.rules?.outOfTurnTakes) return null;
   if (state.offer) return state.offer;
   if (state.gameState !== "play" || state.drawn) return null;
-  const n = state.players.length;
-  const i = state.players.findIndex((p) => p.id === state.currentPlayer);
-  const from = state.players[(i + n - 1) % n];
+  const from = game.previous(state.players, state.currentPlayer);
   const top = from.discardPile.at(-1);
   return top && top.id === state.lastDiscard && !isCaught(state, top.id)
     ? { id: offerId(state), from: from.id, tileId: top.id }
@@ -611,7 +608,7 @@ function throwTile(state, player, tile, now = Date.now()) {
     // the finishing tile lies in the middle, not on the pile
     seat(s, player).discardPile.pop();
     s.lastDiscard = null;
-    s.finishTile = { ...tile, source: "finish", hidden: false };
+    game.finish(s, tile);
     return endRound(s, player, tile);
   }
   if (s.rules.okeyDiscardPenalty && isOkey(tile, s.okeyTile)) {
@@ -638,10 +635,7 @@ export function returnDiscard(state, player) {
   const me = seat(s, player);
   me.hand = me.hand.map((t) => (t?.id === tile.id ? null : t));
   const from = seat(s, took.from);
-  from.discardPile = [
-    ...from.discardPile,
-    { ...tile, source: `discard-${from.id}`, hidden: false },
-  ];
+  from.discardPile = [...from.discardPile, game.onPile(tile, from.id)];
   s.lastDiscard = tile.id;
   s.drawn = false;
   s.tookDiscard = null;
@@ -651,7 +645,7 @@ export function returnDiscard(state, player) {
 // The latest discard, while it's still on top of its pile, can be caught by
 // anyone else if it fits a meld on the table.
 export function catchDiscard(state, player) {
-  if (state.gameState !== "play") return "The round is over";
+  if (roundOver(state)) return roundOver(state);
   const from = state.players.find((p) =>
     p.discardPile.some((t) => t.id === state.lastDiscard),
   );
@@ -733,8 +727,8 @@ function endRound(state, finisher, last) {
     // a hand dealt again adds to the same line
     s.scores[p.id] = s.scores[p.id] ?? [];
     s.scores[p.id][i] = (s.scores[p.id][i] ?? 0) + score;
-    p.hand = p.hand.map((t) => t && { ...t, hidden: false });
   }
+  game.showHands(s);
   const name = (id) => seat(s, id)?.user?.name ?? "Player";
 
   if (s.round < rules.rounds.length || voided) {

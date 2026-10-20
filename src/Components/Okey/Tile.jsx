@@ -5,12 +5,39 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { OkeyContext } from "./OkeyContext";
 import { isOkey } from "./melds";
 import { symbols } from "./constants";
+import { ended } from "./game";
 
 // HTML5 drag and drop only follows a mouse; touch screens get the touch
 // backend (index.jsx), which also takes the mouse on touch laptops
 export const touch = navigator.maxTouchPoints > 0;
 // how far a finger can wander and still be holding a tile; past it, a drag
 export const SLOP = 8;
+
+// the colour comes from the id (red7-0), as a class: the hex in the tile
+// is part of the game state and stays as it is
+const colorOf = (tile) => tile.id.match(/^[a-z]+/)[0];
+
+// a tile's face: its number, and its colour's symbol under it
+function Face({ tile }) {
+  return (
+    <>
+      <span className="rank">{tile.rank}</span>
+      {tile.rank !== "👌" && (
+        <span className="sym">{symbols[colorOf(tile)]}</span>
+      )}
+    </>
+  );
+}
+
+// a picture of a tile, face up: nothing to drag or flip, and no id for the
+// animations (moves.js) to fly to
+export function TileFace({ tile }) {
+  return (
+    <span className={`tile c-${colorOf(tile)}`}>
+      <Face tile={tile} />
+    </span>
+  );
+}
 
 function Tile({ tile, disabled, className, style }) {
   const { me, toggleHidden, okeyState, selected, toggleSelected } =
@@ -24,10 +51,7 @@ function Tile({ tile, disabled, className, style }) {
     isOkey(tile, okeyState.okeyTile);
   // a face-down tile keeps its colour out of the page too, or inspecting the
   // draw pile would show the next tile's
-  const faceUp =
-    (canSee || ["finish", "roundEnd"].includes(okeyState.gameState)) &&
-    !tile.hidden &&
-    !okeyDown;
+  const faceUp = (canSee || ended(okeyState)) && !tile.hidden && !okeyDown;
   // your tiles flip only while the round is played: once it's over, the
   // hands are shown as they ended
   const canFlip = myTile && okeyState.gameState === "play";
@@ -90,12 +114,9 @@ function Tile({ tile, disabled, className, style }) {
   useEffect(() => {
     if (!touch) preview(getEmptyImage());
   }, [preview]);
-  // the colour comes from the id (red7-0), as a class: the hex in the tile
-  // is part of the game state and stays as it is
-  const color = tile.id.match(/^[a-z]+/)[0];
   const classes = [
     "tile",
-    faceUp ? `c-${color}` : "back",
+    faceUp ? `c-${colorOf(tile)}` : "back",
     className,
     myTile && selected.includes(tile.id) && "selected",
     armed && "armed",
@@ -117,12 +138,7 @@ function Tile({ tile, disabled, className, style }) {
       onTouchEnd={endHold}
       onTouchCancel={endHold}
     >
-      {faceUp && (
-        <>
-          <div className="rank">{tile.rank}</div>
-          {tile.rank !== "👌" && <div className="sym">{symbols[color]}</div>}
-        </>
-      )}
+      {faceUp && <Face tile={tile} />}
     </div>
   );
 }

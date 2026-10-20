@@ -157,30 +157,24 @@ export const allSeats = (players) =>
     (empty) => players.find((p) => p.id === empty.id) ?? empty,
   );
 
-function getNextPlayer(players, currentPlayer) {
-  const previousIndex = players.findIndex((p) => p.id === currentPlayer);
-  const nextIndex = (previousIndex + 1) % players.length;
+// the player `step` places round the table from `player` (1 next, -1 before)
+const along = (players, player, step) =>
+  players[
+    (players.findIndex((p) => p.id === player) + step + players.length) %
+      players.length
+  ];
+const next = (players, player) => along(players, player, 1);
+export const previous = (players, player) => along(players, player, -1);
 
-  // Find the next element greater than 5 after the previous element
-  return players[nextIndex];
-}
+export const seat = (state, player) =>
+  state.players.find((p) => p.id === player);
 
-function getPreviousPlayer(players, currentPlayer) {
-  const previousIndex = players.findIndex((p) => p.id === currentPlayer);
-  const numPlayers = players.length;
-  let previousPlayerIndex;
-
-  if (previousIndex === 0) {
-    previousPlayerIndex = numPlayers - 1; // Wrap around to the last player
-  } else {
-    previousPlayerIndex = (previousIndex - 1) % numPlayers;
-  }
-
-  return players[previousPlayerIndex];
-}
-
-const handOf = (state, player) =>
-  state.players.find((p) => p.id === player)?.hand || [];
+// a tile on a player's discard pile
+export const onPile = (tile, player) => ({
+  ...tile,
+  source: `discard-${player}`,
+  hidden: false,
+});
 
 // Deals every seat from drawPile: the ruleset's hand size (14 without one),
 // one more for the starter, who moves first.
@@ -223,7 +217,11 @@ export function startGame(state, deal) {
   return dealRound({ ...cloneDeep(state), players }, state.drawPile, deal);
 }
 
-const roundOver = (state) => state.gameState !== "play" && "The round is over";
+export const roundOver = (state) =>
+  state.gameState !== "play" && "The round is over";
+// the round has ended (not one that hasn't started yet)
+export const ended = (state) =>
+  ["finish", "roundEnd"].includes(state.gameState);
 
 export function drawTile(state, player, tile, toIndex) {
   if (roundOver(state)) return roundOver(state);
@@ -231,12 +229,12 @@ export function drawTile(state, player, tile, toIndex) {
   if (state.drawn) return "Can't draw more tiles";
   if (
     tile.source.includes("discard") &&
-    tile.source !== `discard-${getPreviousPlayer(state.players, player).id}`
+    tile.source !== `discard-${previous(state.players, player).id}`
   ) {
     return "Can't draw this tile";
   }
   const newState = cloneDeep(state);
-  const myPlayer = newState.players.find((p) => p.id === player);
+  const myPlayer = seat(newState, player);
   if (!myPlayer) return;
 
   myPlayer.hand = insertItem(myPlayer.hand, toIndex, handTile(tile, player));
@@ -245,9 +243,7 @@ export function drawTile(state, player, tile, toIndex) {
   if (tile.source === "draw-pile") {
     newState.drawPile = newState.drawPile.filter((t) => t.id !== tile.id);
   } else {
-    const sourcePlayer = newState.players.find(
-      (p) => p.id === Number(tile.source.split("-")[1]),
-    );
+    const sourcePlayer = seat(newState, Number(tile.source.split("-")[1]));
     if (sourcePlayer) {
       sourcePlayer.discardPile = sourcePlayer.discardPile.filter(
         (t) => t.id !== tile.id,
@@ -261,7 +257,7 @@ export function swapTile(state, player, tile, toIndex) {
   if (roundOver(state)) return roundOver(state);
   if (tile.source !== `hand-${player}`) return "Can't move other players tiles";
   const newState = cloneDeep(state);
-  const myPlayer = newState.players.find((p) => p.id === player);
+  const myPlayer = seat(newState, player);
   if (!myPlayer) return;
 
   const oldIndex = myPlayer.hand.findIndex((t) => t?.id === tile.id);
@@ -317,7 +313,7 @@ export async function decodeSave(code) {
 export function moveTiles(state, player, ids, toIndex) {
   if (roundOver(state)) return roundOver(state);
   const newState = cloneDeep(state);
-  const myPlayer = newState.players.find((p) => p.id === player);
+  const myPlayer = seat(newState, player);
   if (!myPlayer) return;
   const hand = [...myPlayer.hand];
   const from = hand.flatMap((t, i) => (t && ids.includes(t.id) ? [i] : []));
@@ -345,21 +341,28 @@ export function discardTile(state, player, tile) {
   if (!state.drawn) return "Can't discard before drawing";
   if (tile.source !== `hand-${player}`) return "Invalid discard source";
   const newState = cloneDeep(state);
-  const myPlayer = newState.players.find((p) => p.id === player);
+  const myPlayer = seat(newState, player);
   if (!myPlayer) return;
 
   myPlayer.hand = removeItem(myPlayer.hand, tile);
-  myPlayer.discardPile = [
-    ...myPlayer.discardPile,
-    { ...tile, source: `discard-${player}`, hidden: false },
-  ];
-  newState.currentPlayer = getNextPlayer(
-    newState.players,
-    newState.currentPlayer,
-  ).id;
+  myPlayer.discardPile = [...myPlayer.discardPile, onPile(tile, player)];
+  newState.currentPlayer = next(newState.players, newState.currentPlayer).id;
   newState.drawn = false;
   newState.lastDiscard = tile.id; // shown apart from the rest of the pile
   return newState;
+}
+
+// every hand shows face up once the round is over, tiles flipped in play too
+export function showHands(s) {
+  for (const p of s.players) {
+    p.hand = p.hand?.map((t) => t && { ...t, hidden: false });
+  }
+}
+
+// the tile thrown to finish lies in the middle, and the hands show
+export function finish(s, tile) {
+  s.finishTile = { ...tile, source: "finish", hidden: false };
+  showHands(s);
 }
 
 export function finishGame(state, player, tile) {
@@ -367,7 +370,7 @@ export function finishGame(state, player, tile) {
   if (state.currentPlayer !== player) return "Not your turn";
   if (!state.drawn) return "Can't discard before drawing";
   if (tile.source !== `hand-${player}`) return "Can't move other players tiles";
-  const hand = cloneDeep(handOf(state, player));
+  const hand = cloneDeep(seat(state, player)?.hand ?? []);
   const discardIndex = hand.findIndex((h) => h?.id === tile.id);
   if (discardIndex === -1) return;
 
@@ -376,16 +379,10 @@ export function finishGame(state, player, tile) {
   if (!checkFinished(hand, state.okeyTile)) return;
 
   const newState = cloneDeep(state);
-  // the tile thrown to finish lies in the middle
-  newState.players.find((p) => p.id === player).hand = hand;
-  newState.finishTile = { ...tile, source: "finish", hidden: false };
-  for (const p of newState.players) {
-    if (p.hand) {
-      p.hand = p.hand.map((h) => (h ? { ...h, hidden: false } : null));
-    }
-  }
+  seat(newState, player).hand = hand;
+  finish(newState, tile);
 
-  const winner = newState.players.find((p) => p.id === newState.currentPlayer);
+  const winner = seat(newState, newState.currentPlayer);
   const winnerName = winner?.user?.name || "Player";
 
   return {

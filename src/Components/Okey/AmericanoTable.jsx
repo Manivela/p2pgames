@@ -6,7 +6,7 @@ import { claimants, upForClaim } from "./americano";
 import { allSeats } from "./game";
 import { colorOf, isOkey, rankOf } from "./melds";
 import { colorMap, symbols } from "./constants";
-import Tile from "./Tile";
+import Tile, { TileFace } from "./Tile";
 import { t } from "../../i18n";
 
 function Meld({ meld, index }) {
@@ -77,12 +77,7 @@ function Example({ melds }) {
                 : type === "seri"
                   ? [COLORS[i], 3 + 5 * i + j]
                   : [COLORS[i], 2 + 3 * i];
-            return (
-              <span key={j} className={`tile c-${color}`}>
-                <span className="rank">{rank}</span>
-                <span className="sym">{symbols[color]}</span>
-              </span>
-            );
+            return <TileFace key={j} tile={{ id: `${color}${rank}`, rank }} />;
           })}
         </span>
       ))}
