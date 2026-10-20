@@ -163,6 +163,25 @@ test("dragging picked tiles onto the table opens the hand", async ({
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
+// right click flips your tile while the round is played; once it's over,
+// the hands stay as they ended
+test("a tile flips during play, not once the round is over", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  const hidden = async () => (await state(page)).players[0].hand[0].hidden;
+  const flip = () => slot(page, 0).locator(".tile").click({ button: "right" });
+  await flip();
+  await expect.poll(hidden).toBe(true);
+  await flip();
+  await expect.poll(hidden).toBe(false);
+  await table(page, "playToEnd");
+  await flip();
+  await page.waitForTimeout(300);
+  expect(await hidden()).toBe(false);
+});
+
 // phones: a tile held still flips when the finger lets go (or the phone
 // cancels the touch); a finger that moves drags it instead, and nothing
 // stays in the air

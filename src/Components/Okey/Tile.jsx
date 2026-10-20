@@ -28,6 +28,9 @@ function Tile({ tile, disabled, className, style }) {
     (canSee || ["finish", "roundEnd"].includes(okeyState.gameState)) &&
     !tile.hidden &&
     !okeyDown;
+  // your tiles flip only while the round is played: once it's over, the
+  // hands are shown as they ended
+  const canFlip = myTile && okeyState.gameState === "play";
   function handleClick(e) {
     e.preventDefault();
     // Android long-presses fire contextmenu too; touch has its own hold below
@@ -35,7 +38,7 @@ function Tile({ tile, disabled, className, style }) {
     const touch = pointerType
       ? pointerType === "touch"
       : navigator.maxTouchPoints > 0;
-    if (!myTile || touch) return;
+    if (!canFlip || touch) return;
     toggleHidden(tile);
   }
   // phones have no right click: hold your tile still and let go to flip it.
@@ -45,7 +48,7 @@ function Tile({ tile, disabled, className, style }) {
   const held = useRef(false);
   const [armed, setArmed] = useState(false);
   function startHold(e) {
-    if (!myTile) return;
+    if (!canFlip) return;
     held.current = false;
     const { clientX, clientY } = e.touches[0];
     from.current = { x: clientX, y: clientY };
