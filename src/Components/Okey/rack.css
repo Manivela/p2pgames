@@ -105,17 +105,16 @@
    a little proud */
 .rack {
   position: relative;
+  --grain: repeating-linear-gradient(
+    92deg,
+    rgba(255, 255, 255, 0.05) 0 2px,
+    transparent 2px 11px,
+    rgba(0, 0, 0, 0.04) 11px 13px,
+    transparent 13px 23px
+  );
   padding: 0 calc(var(--t) * 0.33);
   border-radius: calc(var(--t) * 0.18);
-  background:
-    repeating-linear-gradient(
-      92deg,
-      rgba(255, 255, 255, 0.05) 0 2px,
-      transparent 2px 11px,
-      rgba(0, 0, 0, 0.04) 11px 13px,
-      transparent 13px 23px
-    ),
-    linear-gradient(#c99560, #9b6536);
+  background: var(--grain), linear-gradient(#c99560, #9b6536);
   box-shadow:
     0 10px 22px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
@@ -195,7 +194,7 @@
   line-height: 1.5;
 }
 
-/* a name on a pill; yours on the top edge of your rack */
+/* a name on a pill; yours on a tab rising out of your rack */
 .playerName {
   margin: 0;
   padding: calc(var(--t) * 0.04) calc(var(--t) * 0.2);
@@ -217,19 +216,82 @@
   vertical-align: bottom;
 }
 
-.rack > .playerName {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  top: 0;
-  translate: -50% -62%;
-  font-size: calc(var(--t) * 0.34);
-}
-
 /* whose turn it is: their name on amber */
 .playerName.active {
   background: #ffd54f;
   color: #2b2100;
+}
+
+/* the tab is the rack's own wood, its bottom corners curving out into the
+   rack's top edge; on your turn the rack's glow takes it in, cut off at the
+   rack, and its tags turn amber */
+.rack > .playerName,
+.rack > .playerName.active {
+  --r: calc(var(--t) * 0.18);
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(100% - 2px);
+  translate: -50% 0;
+  padding: calc(var(--t) * 0.07) calc(var(--t) * 0.3) calc(var(--t) * 0.05);
+  border-radius: var(--r) var(--r) 0 0;
+  background: var(--grain), linear-gradient(#d8a76f, #c99560);
+  color: #4a2810;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  font-size: calc(var(--t) * 0.34);
+}
+
+.rack > .playerName::before,
+.rack > .playerName::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: var(--r);
+  height: var(--r);
+}
+
+.rack > .playerName::before {
+  right: 100%;
+  background: radial-gradient(
+    circle at 0 0,
+    transparent calc(var(--r) - 0.5px),
+    #c99560 var(--r)
+  );
+}
+
+.rack > .playerName::after {
+  left: 100%;
+  background: radial-gradient(
+    circle at 100% 0,
+    transparent calc(var(--r) - 0.5px),
+    #c99560 var(--r)
+  );
+}
+
+.rack.turn > .playerName {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 22px 4px rgba(255, 213, 79, 0.55);
+  clip-path: inset(-2em -3em 0 -3em);
+}
+
+.rack > .playerName .badge {
+  margin-left: 0.45em;
+  padding: 0.12em 0.55em;
+  border-radius: 999px;
+  font-size: 0.6em;
+  font-weight: 700;
+  line-height: 1.25;
+  vertical-align: 0.18em;
+  text-shadow: none;
+  background: rgba(74, 40, 16, 0.78);
+  color: #f6e3c4;
+}
+
+.rack.turn > .playerName .badge {
+  background: #ffd54f;
+  color: #3a2600;
 }
 
 /* next to a name: has opened, has drawn; under a seat's name, so the row
@@ -412,8 +474,8 @@
 }
 
 .rack > .playerName .glass {
-  top: calc(var(--t) * -0.2);
-  left: calc(100% + var(--t) * 0.1);
+  top: calc(var(--t) * -0.22);
+  left: calc(100% + var(--r) + var(--t) * 0.08);
 }
 
 /* a picked tile lifts */
