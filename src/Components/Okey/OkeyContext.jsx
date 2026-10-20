@@ -13,10 +13,6 @@ import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
 import { signalingServers, peerOpts } from "../../constants";
 // TODO:
-// bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez (resim var)
-// biterken attığı taş ortada kalsın gerçekten bittiyse
-// 3 kişi olunca yazılar yamuk kalıyor
-// diğer milletin attığı taşı alabilioz
 // süre koyunca çektiyse çektiğini çekmediysede çekip atsın
 // taşlar bitince seçenek sun oyunu bitir yada karıştır devam et diye
 

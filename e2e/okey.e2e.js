@@ -118,6 +118,24 @@ test("a crowded table fits", async ({ page }) => {
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
+// three at the table: the seats and piles along the top, the hands on the
+// rack at round end
+test("three at the table fit, in play and once the round is over", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 3);
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  await table(page, "playToEnd");
+  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(3);
+  expect(await table(page, "check", [".scores"])).toEqual({
+    overlaps: [],
+    offscreen: [],
+  });
+});
+
 // the "Drag here" line shows only where it has room: on a phone it would
 // shrink every meld each time you pick a tile
 test("picking a tile keeps the melds' size", async ({ page }) => {
