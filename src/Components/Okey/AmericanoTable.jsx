@@ -94,7 +94,7 @@ function Example({ melds }) {
 // it (or how it ended), and who wants the last discard
 export function RoundInfo() {
   const { okeyState } = useContext(OkeyContext);
-  const { round, message, players, rules } = okeyState;
+  const { round, message, players, rules, gameState, opened } = okeyState;
   if (!rules) {
     return message && <h3 className="round">{t(message)}</h3>;
   }
@@ -109,10 +109,13 @@ export function RoundInfo() {
       {t(`Round ${round}/${rounds.length}`)}
       {/* 101 has the same opening every hand */}
       <small>{rules.opening ? rules.name : t(rounds[round - 1].name)}</small>
-      {/* Elden has no opening */}
-      {!rules.opening && rounds[round - 1].melds && (
-        <Example melds={rounds[round - 1].melds} />
-      )}
+      {/* what opens the round, until everyone has (Elden has no opening) */}
+      {!rules.opening &&
+        rounds[round - 1].melds &&
+        gameState === "play" &&
+        !players.every((p) => opened?.[p.id]) && (
+          <Example melds={rounds[round - 1].melds} />
+        )}
       {message && <small>{t(message)}</small>}
       {wanting.length > 0 && offered && (
         <small className="claims">
