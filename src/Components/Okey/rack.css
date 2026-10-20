@@ -804,6 +804,13 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px;
+  /* a long menu (between rounds, with seats to free) scrolls on a phone */
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
+}
+
+.table-menu .menu > * {
+  flex: none;
 }
 
 /* a second tap confirms */
