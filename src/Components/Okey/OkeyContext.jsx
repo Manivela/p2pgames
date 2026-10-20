@@ -123,6 +123,9 @@ export function OkeyProvider({ children }) {
 
   const moves = okeyState.rules ? americano : game;
 
+  // the tile you last dragged has already landed: moves.js doesn't fly it
+  const dragged = React.useRef(null);
+
   // Racks only take drops for the local player; game.* enforces the rules.
   // Returns true when the move went through.
   const act = useCallback(
@@ -131,13 +134,12 @@ export function OkeyProvider({ children }) {
         player === me ? fn(okeyState, player, ...args) : "Not your turn";
       if (typeof result === "string") toast(t(result));
       else if (result) setOkeyState(result);
-      return !!result && typeof result !== "string";
+      const ok = !!result && typeof result !== "string";
+      if (!ok) dragged.current = null;
+      return ok;
     },
     [okeyState, me, setOkeyState],
   );
-
-  // the tile you last dragged has already landed: moves.js doesn't fly it
-  const dragged = React.useRef(null);
   const drawTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
@@ -186,8 +188,9 @@ export function OkeyProvider({ children }) {
 
   const finishGame = useCallback(
     (tile) => {
+      if (ghost(tile)) return false;
       dragged.current = tile.id;
-      return !ghost(tile) && act(moves.finishGame, me, tile);
+      return act(moves.finishGame, me, tile);
     },
     [act, moves, me],
   );
@@ -263,7 +266,8 @@ export function OkeyProvider({ children }) {
 
   const nextRound = useCallback(() => {
     const next = americano.nextRound(okeyState);
-    if (next) replaceState(map, next);
+    if (typeof next === "string") toast(t(next));
+    else if (next) replaceState(map, next);
   }, [map, okeyState]);
 
   // a saved or set-up game replaces the table whole

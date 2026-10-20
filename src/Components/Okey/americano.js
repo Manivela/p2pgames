@@ -30,8 +30,14 @@ export function startGame(state, deal, rules = AMERICANO) {
     scores: {},
     melds: [],
     opened: {},
+    openedWithPairs: {},
     justOpened: null,
+    offer: null,
     takes: {},
+    penalties: {},
+    replay: false,
+    tookDiscard: null,
+    tookOkey: null,
   };
 }
 
@@ -44,11 +50,11 @@ export function nextRound(state, deal) {
   const players = state.players.filter(
     (p) => p.user || (state.scores[p.id] && !p.left),
   );
-  const worst = Math.max(
-    ...players
-      .filter((p) => state.scores[p.id])
-      .map((p) => sum(state.scores[p.id])),
-  );
+  if (players.length < 2) return "not enough players to start the game";
+  const totals = players
+    .filter((p) => state.scores[p.id])
+    .map((p) => sum(state.scores[p.id]));
+  const worst = totals.length ? Math.max(...totals) : 0;
   const scores = { ...state.scores };
   for (const p of players) {
     if (!scores[p.id])

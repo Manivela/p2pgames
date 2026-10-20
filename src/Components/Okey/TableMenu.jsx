@@ -6,9 +6,9 @@ import { OkeyContext } from "./OkeyContext";
 import * as americano from "./americano";
 import * as game from "./game";
 import { AMERICANO, ONE_O_ONE } from "./rulesets";
+import { t } from "../../i18n";
 
 const PRESETS = [AMERICANO, ONE_O_ONE];
-import { t } from "../../i18n";
 
 // Every device keeps the latest game it saw, in any room, so it can be
 // picked up again after a reset, a closed tab or another night. One is

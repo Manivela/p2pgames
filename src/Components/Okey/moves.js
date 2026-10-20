@@ -242,7 +242,7 @@ export function useMoves() {
   const glass = useRef(null);
   useEffect(() => () => layer?.remove(), []);
 
-  // after AmericanoInfo's layout effect, which rescales the melds
+  // after Melds' layout effect (AmericanoTable.jsx), which rescales them
   useLayoutEffect(() => {
     const next = okeyState;
     const prev = last.current;
@@ -373,14 +373,16 @@ export function useMoves() {
     // round over: the finisher's tiles wave, the others' scores count up
     if (prev.gameState === "play" && next.gameState !== "play") {
       const i = next.round - 1;
-      // 101's finish score varies (doubled for pairs or the okey), but the
-      // finisher's dealt hand is empty; Americano's Elden finish keeps it
+      // the finisher's dealt hand is empty (their score can carry doubles
+      // and catches); Americano's Elden finish keeps it, but scores exactly
+      // the finish score, as nothing is laid there to catch
       const finisher = !next.rules
         ? next.currentPlayer
-        : next.players.find((p) =>
-            next.rules.opening
-              ? p.hand.length && !p.hand.some(Boolean)
-              : next.scores?.[p.id]?.[i] === next.rules.finishScore,
+        : (
+            next.players.find((p) => p.hand.length && !p.hand.some(Boolean)) ??
+            next.players.find(
+              (p) => next.scores?.[p.id]?.[i] === next.rules.finishScore,
+            )
           )?.id;
       // nobody finishes when the pile runs out
       const tiles =

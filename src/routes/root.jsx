@@ -94,10 +94,12 @@ export default function Root() {
           </ul>
         </nav>
         <button
-          onClick={() => {
-            navigator.clipboard.writeText(window.location.href);
-            toast.success(t("Copied!"));
-          }}
+          onClick={() =>
+            navigator.clipboard
+              ?.writeText(window.location.href)
+              .then(() => toast.success(t("Copied!")))
+              .catch(() => toast(t("Couldn't copy")))
+          }
         >
           {t("Share Link")}
         </button>

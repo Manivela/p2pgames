@@ -293,3 +293,26 @@ test("101: a hand nobody finishes counts only okeys held, and is dealt again", (
   assert.equal(s.currentPlayer, starter);
   assert.equal(sum(s.players.map((p) => s.scores[p.id][0])), before);
 });
+
+test("101: a game set up mid-hand starts clean", () => {
+  const s = americano.setUp(
+    {
+      ...start(),
+      openedWithPairs: { 1: true },
+      penalties: { 2: 101 },
+      replay: true,
+      tookDiscard: { player: 1, from: 2, tileId: "red5-0" },
+      tookOkey: { player: 1, meld: 0, tileId: "blue1-0" },
+    },
+    3,
+    { 1: 50, 2: 120 },
+    2,
+    ONE_O_ONE,
+  );
+  assert.equal(s.round, 3);
+  assert.deepEqual(s.openedWithPairs, {});
+  assert.deepEqual(s.penalties, {});
+  assert.isFalse(s.replay);
+  assert.isNull(s.tookDiscard);
+  assert.isNull(s.tookOkey);
+});

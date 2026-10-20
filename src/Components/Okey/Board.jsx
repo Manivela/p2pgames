@@ -112,10 +112,12 @@ function OnTheTable({ others }) {
   if (okeyState.gameState === "start") {
     return (
       <button
-        onClick={() => {
-          navigator.clipboard.writeText(window.location.href);
-          toast.success(t("Copied!"));
-        }}
+        onClick={() =>
+          navigator.clipboard
+            ?.writeText(window.location.href)
+            .then(() => toast.success(t("Copied!")))
+            .catch(() => toast(t("Couldn't copy")))
+        }
       >
         {t("Copy invite link")}
       </button>

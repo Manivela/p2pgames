@@ -228,6 +228,20 @@ test("between rounds seats can be freed and taken", () => {
   assert.equal(s.scores[3].length, 3);
 });
 
+test("a round isn't dealt to a table of one", () => {
+  const s = {
+    ...americano.startGame(seated(2)),
+    gameState: "roundEnd",
+    round: 2,
+    scores: { 1: [10, 5], 2: [30, 12] },
+  };
+  // P2 was freed from the menu
+  s.players = s.players.map((p) =>
+    p.id === 2 ? { ...p, user: null, left: true } : p,
+  );
+  assert.equal(americano.nextRound(s), "not enough players to start the game");
+});
+
 test("two-meld openings match in either order, okey included", () => {
   let s = americano.startGame(seated(2), deal);
   s = { ...s, round: 3 }; // 3'lü küt + 3'lü seri
