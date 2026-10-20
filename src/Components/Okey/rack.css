@@ -667,11 +667,11 @@
   zoom: 0.36;
 }
 
-.hand .row {
+.hand .half {
   display: flex;
 }
 
-.hand .row:empty {
+.hand .half:empty {
   display: none;
 }
 

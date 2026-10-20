@@ -184,7 +184,7 @@ export function Hands({ players }) {
               {[0, 13].map((from) => {
                 const row = hand.slice(from, from + 13);
                 return (
-                  <span key={from} className="row">
+                  <span key={from} className="half">
                     {row
                       .slice(0, row.findLastIndex(Boolean) + 1)
                       .map((tile, i) =>
