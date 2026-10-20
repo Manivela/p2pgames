@@ -25,6 +25,17 @@ fetch("/api/turn")
   )
   .catch(() => {}); // the dev server has no /api: STUN only
 
+// errors on the deployed site go to Sentry (manivela/p2pgames); its loader
+// fetches the SDK only once something goes wrong
+if (import.meta.env.PROD && location.hostname !== "localhost") {
+  document.head.append(
+    Object.assign(document.createElement("script"), {
+      src: "https://js.sentry-cdn.com/5265340ee468b6a55143d3db1ac2cf4a.min.js",
+      crossOrigin: "anonymous",
+    }),
+  );
+}
+
 const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
 const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
 // const Chat = React.lazy(() => import("./Components/Chat"));
