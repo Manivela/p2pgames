@@ -161,6 +161,25 @@ const TR = [
   [/^Sound Effects from$/, "Ses efektleri:"],
   [/^User:$/, "Kullanıcı:"],
   [/^Go$/, "Gir"],
+  // the report form (Sentry's)
+  [/^Report a problem$/, "Sorun bildir"],
+  [/^What happened\?$/, "Ne oldu?"],
+  [
+    /^What did you see, and what did you expect\?$/,
+    "Ne gördün, ne bekliyordun?",
+  ],
+  [/^\(required\)$/, "(zorunlu)"],
+  [/^Send$/, "Gönder"],
+  [/^Cancel$/, "Vazgeç"],
+  [/^Done$/, "Tamam"],
+  [/^Add a screenshot$/, "Ekran görüntüsü ekle"],
+  [/^Remove screenshot$/, "Ekran görüntüsünü kaldır"],
+  [/^Highlight$/, "Vurgula"],
+  [/^Hide$/, "Gizle"],
+  [/^Remove$/, "Kaldır"],
+  [/^Thanks! Your report is on its way$/, "Teşekkürler! Bildirimin gönderildi"],
+  [/^Couldn't send the report$/, "Bildirim gönderilemedi"],
+  [/^Couldn't open the report form$/, "Bildirim formu açılamadı"],
 ];
 
 // English keeps the game's own Turkish words out: küt is a set, seri a run,

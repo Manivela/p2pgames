@@ -291,10 +291,77 @@ function SetUpDialog({ onClose }) {
   );
 }
 
+// Report a problem: Sentry's feedback form (the deployed site only), fetched
+// on the first tap. A report carries the game's save code, to load the table
+// as it was, and the room and player as tags.
+let feedback, form, saveCode;
+async function report(okeyState, tags) {
+  const { Sentry } = window;
+  saveCode = await game.encodeSave(okeyState);
+  try {
+    feedback ??= new Promise((loaded) => {
+      Sentry.onLoad(loaded);
+      Sentry.forceLoad();
+    }).then(async () => {
+      Sentry.addEventProcessor((event, hint) => {
+        if (event.type === "feedback") {
+          hint.attachments = [
+            ...(hint.attachments ?? []),
+            { filename: "save-code.txt", data: saveCode },
+          ];
+        }
+        return event;
+      });
+      const integration = await Sentry.lazyLoadIntegration(
+        "feedbackIntegration",
+      );
+      const it = integration({
+        autoInject: false,
+        showName: false,
+        showEmail: false,
+        showBranding: false,
+        formTitle: t("Report a problem"),
+        messageLabel: t("What happened?"),
+        messagePlaceholder: t("What did you see, and what did you expect?"),
+        isRequiredLabel: t("(required)"),
+        submitButtonLabel: t("Send"),
+        cancelButtonLabel: t("Cancel"),
+        confirmButtonLabel: t("Done"),
+        addScreenshotButtonLabel: t("Add a screenshot"),
+        removeScreenshotButtonLabel: t("Remove screenshot"),
+        highlightToolText: t("Highlight"),
+        hideToolText: t("Hide"),
+        removeHighlightText: t("Remove"),
+        successMessageText: t("Thanks! Your report is on its way"),
+        errorGenericText: t("Couldn't send the report"),
+      });
+      Sentry.addIntegration(it);
+      return it;
+    });
+    // as Sentry's own attachTo does: one form, dropped once it's sent
+    form ??= await (
+      await feedback
+    ).createForm({
+      tags,
+      onFormSubmitted: () => {
+        form.removeFromDom();
+        form = null;
+      },
+    });
+    form.appendToDom();
+    form.open();
+  } catch {
+    // an ad blocker, or no network: try again next tap
+    feedback = form = null;
+    toast(t("Couldn't open the report form"));
+  }
+}
+
 // ⋯ in a corner of the table: the moves that end or replace the game live
 // here, a tap away instead of in reach of a stray finger
 export default function TableMenu() {
   const { okeyState, me, stand, resetGame, newGame } = useContext(OkeyContext);
+  const { roomId } = useParams();
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState(null);
   useAutoSave();
@@ -340,6 +407,19 @@ export default function TableMenu() {
           <button onClick={() => show("load")}>{t("Saved games")}</button>
           {(okeyState.gameState === "start" || okeyState.rules) && (
             <button onClick={() => show("setup")}>{t("Set up a game")}</button>
+          )}
+          {window.Sentry && (
+            <button
+              onClick={then(() =>
+                report(okeyState, {
+                  room: roomId,
+                  player: okeyState.players.find((p) => p.id === me)?.user
+                    ?.name,
+                }),
+              )}
+            >
+              {t("Report a problem")}
+            </button>
           )}
         </div>
       )}
