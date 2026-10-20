@@ -302,10 +302,11 @@ test("Elden: no opening, finish from hand, lowest total wins the game", () => {
     "Lay down your tiles, then throw the last one to the middle",
   );
 
+  const elden = AMERICANO.rounds.length; // the last round
   s = {
     ...s,
-    round: 12,
-    scores: { 1: Array(11).fill(20), 2: Array(11).fill(0) },
+    round: elden,
+    scores: { 1: Array(elden - 1).fill(20), 2: Array(elden - 1).fill(0) },
   };
   assert.match(americano.openHand(s, 1, [kut5]), /No opening/);
   s = americano.finishGame(s, 1, tileIn(s, 1, "yellow2-0"));
@@ -316,9 +317,9 @@ test("Elden: no opening, finish from hand, lowest total wins the game", () => {
       .map((x) => x.rank),
   );
   assert.equal(s.gameState, "finish");
-  assert.equal(s.scores[1][11], AMERICANO.finishScore);
-  assert.equal(s.scores[2][11], p2Sum);
-  assert.equal(s.message, `P2 wins with ${p2Sum}`); // 220 for P1
+  assert.equal(s.scores[1][elden - 1], AMERICANO.finishScore);
+  assert.equal(s.scores[2][elden - 1], p2Sum);
+  assert.equal(s.message, `P2 wins with ${p2Sum}`); // P1 has 20 a round
 });
 
 test("the others' time to take a discard before the next one", () => {
@@ -732,6 +733,44 @@ test("a claim waits in the slot it was dropped on, and can be taken back", () =>
   );
   s = americano.collectInbox(s, 3);
   assert.equal(player(s, 3).hand[22].id, offered.id);
+  assertAllTiles(s);
+});
+
+test("4 çift: open with four pairs, then lay pairs, sets and runs", () => {
+  const round = AMERICANO.rounds.findIndex((r) => r.name === "4 çift") + 1;
+  assert.equal(round, AMERICANO.rounds.length - 1); // just before Elden
+  const pairs = [
+    ...["red5-0", "red5-1", "black9-0", "black9-1"],
+    ...["yellow2-0", "yellow2-1", "red6-0", "red6-1"],
+  ];
+  const kut4 = ["red4-0", "black4-0", "yellow4-0"];
+  const pair7 = ["black7-0", "black7-1"];
+  let s = americano.startGame(seated(2), {
+    okeyTile: "blue13-1",
+    hands: [[...pairs, ...kut4, ...pair7, "yellow10-0", "red1-0"], p2Hand],
+  });
+  s = { ...s, round };
+  assert.match(americano.openHand(s, 1, [kut4]), /Open with exactly: 4 çift/);
+  assert.match(
+    americano.openHand(s, 1, [pairs.slice(0, 6)]),
+    /Open with exactly/,
+  );
+  s = americano.openHand(s, 1, [[...pairs, "yellow10-0"]]);
+  assert.deepEqual(
+    s.melds.map((m) => m.type),
+    ["pair", "pair", "pair", "pair"],
+  );
+  assert.isOk(tileIn(s, 1, "yellow10-0"));
+  assert.isNotOk(s.openedWithPairs?.[1]); // nothing doubles in Americano
+  // from the next turn, a pair and a küt in one go
+  s = americano.layMelds({ ...s, justOpened: null }, 1, [[...pair7, ...kut4]]);
+  assert.deepEqual(
+    s.melds.slice(4).map((m) => [m.type, ids(m.tiles)]),
+    [
+      ["pair", pair7],
+      ["kut", kut4],
+    ],
+  );
   assertAllTiles(s);
 });
 

@@ -263,8 +263,8 @@ export function layMelds(state, player, groups) {
   if (typeof taken === "string") return taken;
   const [s, tiles] = taken;
 
-  // whoever opened with pairs lays only pairs (and adds to sets and runs);
-  // the others never lay pairs
+  // whoever opened with pairs (101) lays only pairs (and adds to sets and
+  // runs); the others lay pairs only in a round that opens with them
   const flat = tiles.flat();
   if (s.openedWithPairs?.[player]) {
     const pairs =
@@ -274,8 +274,15 @@ export function layMelds(state, player, groups) {
     lay(s, player, pairs, groups.flat());
     return s;
   }
-  const melds = splitMelds(flat, s.okeyTile, undefined, wrap(s));
-  if (!melds) return "That's not a küt or a seri";
+  const pairs = s.rules.rounds[s.round - 1].melds?.some(
+    ([type]) => type === "pair",
+  );
+  const melds = splitMelds(flat, s.okeyTile, undefined, wrap(s), false, pairs);
+  if (!melds) {
+    return pairs
+      ? "That's not a pair, küt or seri"
+      : "That's not a küt or a seri";
+  }
   lay(s, player, melds, groups.flat());
   return s;
 }

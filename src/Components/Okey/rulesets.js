@@ -1,7 +1,7 @@
 // Rulesets: a game's numbers and switches, stored in its state (`rules`),
 // so a game keeps the rules it was started with. A classic game has none.
 
-// Americano: 12 rounds, each with its own opening (el açma) requirement.
+// Americano: 13 rounds, each with its own opening (el açma) requirement.
 export const AMERICANO = {
   id: "americano",
   name: "Americano",
@@ -56,6 +56,16 @@ export const AMERICANO = {
       ],
     },
     { name: "5'li seri", melds: [["seri", 5]] },
+    // once opened with pairs, more pairs as well as sets and runs
+    {
+      name: "4 çift",
+      melds: [
+        ["pair", 2],
+        ["pair", 2],
+        ["pair", 2],
+        ["pair", 2],
+      ],
+    },
     { name: "Elden", melds: null },
   ],
   // score sheet values; lowest total after the last round wins

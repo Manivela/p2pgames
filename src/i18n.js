@@ -41,6 +41,7 @@ const TR = [
     "Çiftle açtın: çift aç ya da yerdekilere işle",
   ],
   [/^That's not a küt or a seri$/, "Bu küt ya da seri değil"],
+  [/^That's not a pair, küt or seri$/, "Bu çift, küt ya da seri değil"],
   [/^That tile doesn't fit there$/, "Bu taş oraya işlemez"],
   [
     /^No okey there that tile can replace$/,
@@ -167,6 +168,7 @@ const TR = [
 const EN = [
   [/(\d)'l[üi] küt/g, "set of $1"],
   [/(\d)'l[üi] seri/g, "run of $1"],
+  [/(\d) çift/g, "$1 pairs"],
   [/\bküt\b/g, "set"],
   [/\bseri\b/g, "run"],
   [/\bElden\b/g, "from hand"],

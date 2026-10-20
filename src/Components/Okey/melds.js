@@ -118,9 +118,17 @@ const combos = (arr, k) =>
 // Splits the picked tiles into melds, using every tile, or with `spare` as
 // many as the shapes need. `shapes` is a list of [type, size] to make
 // exactly (an opening); without it any küts (3–4) and seris of 3+ will do
-// (laying down later). A group that could be both is a seri. Returns
-// [{ type, tiles }] with each meld's tiles in order, or null.
-export function splitMelds(tiles, indicator, shapes, wrap = true, spare) {
+// (laying down later), and pairs too `withPairs`. A group that could be
+// both is a seri. Returns [{ type, tiles }] with each meld's tiles in
+// order, or null.
+export function splitMelds(
+  tiles,
+  indicator,
+  shapes,
+  wrap = true,
+  spare,
+  withPairs,
+) {
   if (shapes && !shapes.length) return tiles.length && !spare ? null : [];
   if (!tiles.length) return shapes?.length ? null : [];
   // too few tiles left for the shapes
@@ -140,6 +148,7 @@ export function splitMelds(tiles, indicator, shapes, wrap = true, spare) {
         ...Array.from({ length: tiles.length - 2 }, (_, k) => ["seri", k + 3]),
         ["kut", 3],
         ["kut", 4],
+        ...(withPairs ? [["pair", 2]] : []),
       ];
   for (const [type, size, i] of options) {
     for (const others of combos(rest, size - 1)) {
@@ -152,10 +161,13 @@ export function splitMelds(tiles, indicator, shapes, wrap = true, spare) {
         shapes?.filter((_, j) => j !== i),
         wrap,
         spare,
+        withPairs,
       );
       if (more) return [{ type, tiles: ordered }, ...more];
     }
   }
   // the first tile left out
-  return spare ? splitMelds(rest, indicator, shapes, wrap, spare) : null;
+  return spare
+    ? splitMelds(rest, indicator, shapes, wrap, spare, withPairs)
+    : null;
 }
