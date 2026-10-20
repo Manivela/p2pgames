@@ -15,9 +15,9 @@ function Tile({ tile, disabled, className, style }) {
     useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
   const canSee = tile.source.includes("hand-") ? myTile : true;
-  // a thrown okey lies face down
-  const thrownOkey =
-    /^(discard|claim)-/.test(tile.source) &&
+  // an okey lies face down once it's thrown or laid on the table
+  const okeyDown =
+    /^(discard-|claim-|table$)/.test(tile.source) &&
     okeyState.okeyTile &&
     isOkey(tile, okeyState.okeyTile);
   // a face-down tile keeps its colour out of the page too, or inspecting the
@@ -25,7 +25,7 @@ function Tile({ tile, disabled, className, style }) {
   const faceUp =
     (canSee || ["finish", "roundEnd"].includes(okeyState.gameState)) &&
     !tile.hidden &&
-    !thrownOkey;
+    !okeyDown;
   function handleClick(e) {
     e.preventDefault();
     // Android long-presses fire contextmenu too; touch has its own hold below

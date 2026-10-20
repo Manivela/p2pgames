@@ -318,10 +318,8 @@ export function useMoves() {
       } else if (to.in === "hand" || to.in === "inbox") {
         if (from.in === "inbox" || from.in === "hand") continue;
         const target = to.p === me ? q(".rack") : seatEl(to.p);
-        // a thrown okey lies face down (Tile.jsx)
-        const up =
-          upFrom &&
-          !(from.in === "discard" && isOkey(from.tile, next.okeyTile));
+        // an okey on a pile or the table lies face down (Tile.jsx)
+        const up = upFrom && !isOkey(from.tile, next.okeyTile);
         fly(fromRect, target, { html: face(from.tile, up), into: true });
       } else if (to.in === "discard") {
         const el = q(`[data-pile="${to.p}"] [data-tile-id="${id}"]`);
