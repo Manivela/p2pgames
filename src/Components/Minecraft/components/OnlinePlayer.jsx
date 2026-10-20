@@ -5,7 +5,7 @@ import { extend, useThree, useFrame } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry";
 import { Text } from "@react-three/drei";
 import { Vector3 } from "three";
-import { signalingServers, iceServers } from "../../../constants";
+import { signalingServers, peerOpts } from "../../../constants";
 
 extend({ TextGeometry });
 
@@ -60,7 +60,7 @@ export function OnlinePlayers() {
 
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
-    webrtcOptions: { iceServers },
+    peerOpts,
   });
 
   const { states, localID } = useAwareness(provider.awareness);

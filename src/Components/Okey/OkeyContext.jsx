@@ -11,7 +11,7 @@ import { readState, replaceState, writeState } from "./sync";
 import { t } from "../../i18n";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
-import { signalingServers, iceServers } from "../../constants";
+import { signalingServers, peerOpts } from "../../constants";
 // TODO:
 // oyun bitince taşları oynatmaya izin verme
 // bitirme algoritması seri başladıysa seri kontrol etmeli renk başladıysa renk aralarında geçemez (resim var)
@@ -30,7 +30,7 @@ export function OkeyProvider({ children }) {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, {
     signaling: signalingServers,
-    webrtcOptions: { iceServers },
+    peerOpts,
   });
   const { states, localID } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((state) => state.currentUser);

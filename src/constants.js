@@ -1,9 +1,5 @@
 export const signalingServers = ["wss://webrtc-signaling.fly.dev"];
 
-export const iceServers = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-  { urls: "stun:stun2.l.google.com:19302" },
-  { urls: "stun:stun3.l.google.com:19302" },
-  { urls: "stun:stun4.l.google.com:19302" },
-];
+// simple-peer's options, through y-webrtc: its own STUN servers until
+// main.jsx gets a TURN relay login (functions/api/turn.js)
+export const peerOpts = { config: {} };

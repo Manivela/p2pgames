@@ -14,6 +14,16 @@ import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
 import Okey from "./Components/Okey";
+import { peerOpts } from "./constants";
+
+// a TURN relay login, for players whose networks block a direct connection.
+// y-webrtc reads peerOpts as it connects to someone, after the login page.
+fetch("/api/turn")
+  .then((r) => r.json())
+  .then(
+    ({ iceServers }) => iceServers && (peerOpts.config.iceServers = iceServers),
+  )
+  .catch(() => {}); // the dev server has no /api: STUN only
 
 const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
 const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
