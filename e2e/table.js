@@ -87,16 +87,16 @@ export function playToEnd() {
   window.okey.set(s);
 }
 
-// eight more runs on the table, for a crowded one (only shown: they don't
-// come out of anyone's hand)
-export function crowd() {
+// n more runs on the table, for a crowded one (only shown: they don't come
+// out of anyone's hand)
+export function crowd(n = 8) {
   const s = window.okey.get();
   const tile = (id) => ({
     ...game.tiles.find((t) => t.id === id),
     source: "table",
     hidden: false,
   });
-  const runs = [
+  const starts = [
     ["red", 1],
     ["blue", 5],
     ["black", 9],
@@ -105,11 +105,16 @@ export function crowd() {
     ["blue", 10],
     ["yellow", 6],
     ["black", 3],
-  ].map(([color, from], i) => ({
-    type: "seri",
-    owner: (i % 4) + 1,
-    tiles: [0, 1, 2, 3].map((k) => tile(`${color}${from + k}-1`)),
-  }));
+  ];
+  const runs = Array.from({ length: n }, (_, i) => {
+    const [color, from] = starts[i % starts.length];
+    const copy = 1 - Math.floor(i / starts.length);
+    return {
+      type: "seri",
+      owner: (i % 4) + 1,
+      tiles: [0, 1, 2, 3].map((k) => tile(`${color}${from + k}-${copy}`)),
+    };
+  });
   window.okey.set({ ...s, melds: [...s.melds, ...runs] });
 }
 

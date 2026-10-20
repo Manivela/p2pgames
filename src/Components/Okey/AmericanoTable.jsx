@@ -99,8 +99,9 @@ export function RoundInfo() {
   );
 }
 
-// the melds on the table
-export function Melds() {
+// the melds on the table, and under them while the draw pile is in the
+// middle (Board.jsx)
+export function Melds({ underPile }) {
   const { okeyState, me, selected, openHand, layMelds } =
     useContext(OkeyContext);
   const { round, melds, opened, rules } = okeyState;
@@ -142,10 +143,12 @@ export function Melds() {
       }
     };
     fit();
+    // the table's size, not the band's: under the pile the band is as tall
+    // as its melds, and refitting would resize what it watches
     const observer = new ResizeObserver(fit);
-    observer.observe(el);
+    observer.observe(el.parentElement);
     return () => observer.disconnect();
-  }, [layout]);
+  }, [layout, underPile, canLay]);
 
   return (
     <div

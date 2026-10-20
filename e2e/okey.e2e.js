@@ -118,6 +118,19 @@ test("a crowded table fits", async ({ page }) => {
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
+// a table with room has the draw pile in the middle until the melds need
+// it (phones keep the pile on the left: see their screenshots)
+test("the draw pile makes way as the table fills", async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 700 });
+  await sitDown(page);
+  await stages.play(page);
+  const inMiddle = page.locator(".center .draw");
+  await expect(inMiddle).toHaveCount(1);
+  await table(page, "crowd", 16);
+  await expect(inMiddle).toHaveCount(0);
+  await expect(page.locator(".middle > .draw")).toHaveCount(1);
+});
+
 test("dragging picked tiles onto the table opens the hand", async ({
   page,
 }) => {

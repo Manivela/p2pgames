@@ -65,6 +65,8 @@
   grid-template-columns:
     calc(var(--t) * 3) minmax(0, 1fr)
     minmax(calc(var(--t) * 3), auto);
+  /* the table's height, never its contents': what doesn't fit shrinks */
+  grid-template-rows: minmax(0, 1fr);
   gap: calc(var(--t) * 0.2);
   min-height: 0;
 }
@@ -74,15 +76,32 @@
   justify-self: center;
 }
 
+/* the draw pile in the middle sits above what's on the table, apart from
+   where picked tiles are dropped to open */
 .center {
+  grid-column: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: calc(var(--t) * 0.3);
   min-height: 0;
 }
 
+/* under the pile, the melds start out as tall as they are: the space left
+   goes above the pile and below them, so the pile rises as they come in */
+.center:has(> .draw + .melds)::before {
+  content: "";
+  flex: 1 1 0;
+}
+
+.center > .draw + .melds {
+  flex: 1 1 auto;
+  align-content: flex-start;
+}
+
 .side {
+  grid-column: 3;
   align-self: center;
   max-width: calc(var(--t) * 4);
   display: flex;
@@ -568,6 +587,8 @@
   gap: calc(var(--t) * 0.15) calc(var(--t) * 0.4);
   max-height: 100%;
   overflow-y: auto;
+  /* too tall beside the draw pile: the pile makes way (Board.jsx) */
+  flex-shrink: 0;
 }
 
 .hand {
