@@ -53,9 +53,10 @@ function Name({ player }) {
   );
 }
 
-// Your rack (its tiles show only to you, and to everyone once the round
-// ends), with your name on its top edge
-function Rack({ player }) {
+// Your rack (its tiles show only to you), with your name on its top edge;
+// once the round ends, every hand (`hands`, yours first) in place of its
+// tiles
+function Rack({ player, hands }) {
   const {
     myHand,
     swapTile,
@@ -96,9 +97,10 @@ function Rack({ player }) {
     !tile && ghost?.slot === index
       ? { tile: ghost.tile, className: "ghost" }
       : { tile: tile?.id === held ? null : tile };
-  // 13 slots a row, empty before a deal, and on someone else's rack
-  // (watched from outside the game) until the round ends
-  const hand = me === player || ended(okeyState) ? myHand(player) : [];
+  // 13 slots a row, empty before a deal, on someone else's rack (watched
+  // from outside the game), and once the round ends: the hands are shown
+  const over = ended(okeyState);
+  const hand = me === player && !over ? myHand(player) : [];
   const row = (from) =>
     Array.from({ length: 13 }, (_, i) => hand[from + i] ?? null).map(
       (tile, i) => (
@@ -128,6 +130,7 @@ function Rack({ player }) {
       {turn && <Timer okeyState={okeyState} />}
       <div className="top">{row(0)}</div>
       <div className="bottom">{row(13)}</div>
+      {over && <Hands players={hands} />}
       <Name player={player} />
     </div>
   );
@@ -159,10 +162,9 @@ export function Seat({ player }) {
   );
 }
 
-// The others' hands once the round ends, in the middle of the table, with
-// what each scored: the two rows as they were laid out, up to their last
-// tile, gaps and all
-export function Hands({ players }) {
+// Every hand once the round ends, on your rack, with what each scored:
+// each as it sat on its rack, so the groups keep their spaces (rack.css)
+function Hands({ players }) {
   const { okeyState, myHand } = useContext(OkeyContext);
   const round = okeyState.round - 1;
   return (

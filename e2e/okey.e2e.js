@@ -171,12 +171,15 @@ test("a tile flips during play, and shows once the round is over", async ({
   await sitDown(page);
   await table(page, "start", 4);
   const hidden = async () => (await state(page)).players[0].hand[0].hidden;
-  const tile = slot(page, 0).locator(".tile");
+  const { id } = (await state(page)).players[0].hand[0];
+  let tile = slot(page, 0).locator(".tile");
   const flip = () => tile.click({ button: "right" });
   await flip();
   await expect.poll(hidden).toBe(true);
   await expect(tile).toHaveClass(/\bback\b/);
   await table(page, "playToEnd");
+  // once it's over, every hand is shown on the rack: mine too
+  tile = page.locator(`.rack [data-hand="1"] [data-tile-id="${id}"]`);
   await expect(tile).not.toHaveClass(/\bback\b/);
   await flip();
   await page.waitForTimeout(300);
@@ -280,6 +283,13 @@ test("the last tile is thrown to the middle to finish", async ({ page }) => {
   await expect(
     page.locator(`.draw .thrown[data-tile-id="${last.id}"]`),
   ).toBeVisible();
+  // the table stays as it ended: my turn's moves, opening and finishing,
+  // marked on their tiles and listed; the hands left on the rack (mine is
+  // empty)
+  await expect(page.locator(".moves li")).toHaveCount(2);
+  await expect(page.locator(".melds .tile.marked")).toHaveCount(3);
+  await expect(page.locator(".draw .thrown")).toHaveAttribute("data-mark", "2");
+  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(3);
 });
 
 test("picked tiles move together", async ({ page }) => {

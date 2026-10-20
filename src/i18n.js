@@ -93,6 +93,13 @@ const TR = [
   [/^(.+) wins with (-?\d+)$/, "$1 kazandı: $2"],
   [/^(.+) wins!$/, "$1 kazandı!"],
   [/^(.+) left$/, "$1 ayrıldı"],
+  // how the round finished (LastTurn)
+  [/^(.+) took the discard$/, "$1 yandan aldı"],
+  [/^(.+) opened$/, "$1 açtı"],
+  [/^(.+) laid down$/, "$1 per indirdi"],
+  [/^(.+) added to a meld$/, "$1 işledi"],
+  [/^(.+) took an okey$/, "$1 okey aldı"],
+  [/^(.+) finished$/, "$1 bitirdi"],
   [
     /^not enough players to start the game$/,
     "Başlamak için yeterli oyuncu yok",

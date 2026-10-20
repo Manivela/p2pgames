@@ -377,25 +377,13 @@ export function useMoves() {
     // round over: the finisher's tiles wave, the others' scores count up
     if (prev.gameState === "play" && next.gameState !== "play") {
       const i = next.round - 1;
-      // the finisher's dealt hand is empty (their score can carry doubles
-      // and catches); Americano's Elden finish keeps it, but scores exactly
-      // the finish score, as nothing is laid there to catch
-      const finisher = !next.rules
-        ? next.currentPlayer
-        : (
-            next.players.find((p) => p.hand.length && !p.hand.some(Boolean)) ??
-            next.players.find(
-              (p) => next.scores?.[p.id]?.[i] === next.rules.finishScore,
-            )
-          )?.id;
       // nobody finishes when the pile runs out
+      const finisher = next.turnMoves?.find((m) => m.move === "finished")?.by;
       const tiles =
         finisher === undefined
           ? []
           : [
-              ...(finisher === me
-                ? document.querySelectorAll(".rack .tile")
-                : document.querySelectorAll(`[data-hand="${finisher}"] .tile`)),
+              ...document.querySelectorAll(`[data-hand="${finisher}"] .tile`),
               ...(next.melds ?? []).flatMap((m, k) =>
                 m.owner === finisher
                   ? [...document.querySelectorAll(`[data-meld="${k}"] .tile`)]

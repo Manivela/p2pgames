@@ -6,7 +6,7 @@ import { claimants, upForClaim } from "./americano";
 import { allSeats } from "./game";
 import { colorOf, isOkey, rankOf } from "./melds";
 import { colorMap, symbols } from "./constants";
-import Tile, { TileFace } from "./Tile";
+import Tile, { TileFace, lastTurn, markOf } from "./Tile";
 import { t } from "../../i18n";
 
 function Meld({ meld, index }) {
@@ -34,6 +34,9 @@ function Meld({ meld, index }) {
     meld.type === "kut" &&
     meld.tiles.length === 4 &&
     !meld.tiles.some((x) => isOkey(x, ind));
+  const moves = lastTurn(okeyState);
+  const marks = meld.tiles.map((x) => markOf(moves, x.id)).filter(Boolean);
+  const mark = marks.length ? Math.min(...marks) : null;
   return (
     <div
       ref={drop}
@@ -41,7 +44,10 @@ function Meld({ meld, index }) {
       data-meld={index}
     >
       {full ? (
-        <div className="tile full">
+        <div
+          className={`tile full ${mark ? "marked" : ""}`}
+          data-mark={mark ?? undefined}
+        >
           <div className="rank">{rankOf(meld.tiles[0], ind)}</div>
           <div className="syms">
             {meld.tiles.map((x) => {
@@ -56,7 +62,18 @@ function Meld({ meld, index }) {
           </div>
         </div>
       ) : (
-        meld.tiles.map((x) => <Tile key={x.id} tile={x} disabled />)
+        meld.tiles.map((x, i) => (
+          <Tile
+            key={x.id}
+            tile={x}
+            disabled
+            // tiles side by side from one move show its number once, on the
+            // last of them
+            numbered={
+              markOf(moves, x.id) !== markOf(moves, meld.tiles[i + 1]?.id)
+            }
+          />
+        ))
       )}
     </div>
   );
@@ -77,7 +94,7 @@ function Example({ melds }) {
                 : type === "seri"
                   ? [COLORS[i], 3 + 5 * i + j]
                   : [COLORS[i], 2 + 3 * i];
-            return <TileFace key={j} tile={{ id: `${color}${rank}`, rank }} />;
+            return <TileFace key={j} id={`${color}${rank}`} />;
           })}
         </span>
       ))}
@@ -126,6 +143,37 @@ export function RoundInfo() {
         </small>
       )}
     </h3>
+  );
+}
+
+const SAID = {
+  took: "took the discard",
+  opened: "opened",
+  laid: "laid down",
+  added: "added to a meld",
+  swapped: "took an okey",
+  finished: "finished",
+};
+
+// once the round is over, how it finished, under where it stands: each move
+// of the finisher's last turn, numbered as its tiles are marked on the
+// table, with its first tile
+export function LastTurn() {
+  const { okeyState } = useContext(OkeyContext);
+  const moves = lastTurn(okeyState);
+  if (!moves.length) return null;
+  const name = (id) =>
+    okeyState.players.find((p) => p.id === id)?.user?.name ?? t(`Player ${id}`);
+  return (
+    <ol className="moves">
+      {moves.map((m, i) => (
+        <li key={i}>
+          <b>{i + 1}</b>
+          <span className="said">{t(`${name(m.by)} ${SAID[m.move]}`)}</span>
+          <TileFace id={m.tiles[0]} />
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -190,7 +238,7 @@ export function Melds({ underPile }) {
     const observer = new ResizeObserver(fit);
     observer.observe(el.parentElement);
     return () => observer.disconnect();
-  }, [layout, underPile, canLay]);
+  }, [layout, underPile, canLay, okeyState.gameState]);
 
   return (
     <div

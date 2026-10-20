@@ -2,10 +2,10 @@ import _ from "lodash";
 import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
-import Rack, { DiscardPile, Hands, Seat } from "./Rack";
+import Rack, { DiscardPile, Seat } from "./Rack";
 import Slot from "./Slot";
 import Tile from "./Tile";
-import { Melds, RoundInfo, Scores } from "./AmericanoTable";
+import { LastTurn, Melds, RoundInfo, Scores } from "./AmericanoTable";
 import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
@@ -64,8 +64,8 @@ function useTileSize() {
 // The draw pile sits in the middle of a table with room for it and a
 // couple of rows of melds (3.5 tiles tall: desktops and tablets, not
 // phones), until what's on the table needs the room: the melds would have
-// to shrink, or the hands or the invite don't fit beside it. Then it moves
-// to the left, where phones keep it, until the next deal.
+// to shrink, or the invite doesn't fit beside it. Then it moves to the
+// left, where phones keep it, until the next deal.
 function usePileAside(deal) {
   const ref = useRef(null);
   const [small, setSmall] = useState(false);
@@ -144,10 +144,10 @@ function NextStep() {
   }
 }
 
-// what's on the table: the melds, the others' hands once the round ends,
+// what's on the table: the melds (left as they are when the round ends),
 // before a game a way to bring the others; and the draw pile, while it's
 // in the middle
-function OnTheTable({ others, pile }) {
+function OnTheTable({ pile }) {
   const { okeyState } = useContext(OkeyContext);
   if (okeyState.gameState === "start") {
     return (
@@ -166,14 +166,6 @@ function OnTheTable({ others, pile }) {
       </>
     );
   }
-  if (["roundEnd", "finish"].includes(okeyState.gameState)) {
-    return (
-      <>
-        {pile}
-        <Hands players={others.map((p) => p.id)} />
-      </>
-    );
-  }
   return (
     <>
       {pile}
@@ -187,8 +179,9 @@ function OnTheTable({ others, pile }) {
 // players in seat order between them, each pile between the player who
 // throws to it and the one who takes from it. The table: the draw pile in
 // the middle or, once the table fills, on the left (usePileAside); where
-// the round stands and the next step on the right. Along the bottom: the
-// pile you take from, your rack, the pile you throw to.
+// the round stands (once it's over, how it finished) and the next step on
+// the right. Along the bottom: the pile you take from, your rack (every
+// hand once the round ends), the pile you throw to.
 function Board() {
   const { okeyState, myIndex } = useContext(OkeyContext);
   // you first, then round the table: right, across, left
@@ -229,16 +222,17 @@ function Board() {
         <div className="middle">
           {pileAside && <DrawPile />}
           <div className="center" ref={table}>
-            <OnTheTable others={others} pile={!pileAside && <DrawPile />} />
+            <OnTheTable pile={!pileAside && <DrawPile />} />
           </div>
           <div className="side">
             <RoundInfo />
+            <LastTurn />
             <NextStep />
           </div>
         </div>
         <div className="foot">
           {others[0] && <DiscardPile player={others[0].id} />}
-          <Rack player={mine.id} />
+          <Rack player={mine.id} hands={[mine, ...others].map((p) => p.id)} />
           <DiscardPile player={mine.id} />
         </div>
       </div>

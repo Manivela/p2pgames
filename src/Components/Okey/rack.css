@@ -574,6 +574,66 @@
   display: flex;
 }
 
+/* how the round finished (LastTurn): each move's number, what it was, its
+   first tile */
+.moves {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--t) * 0.08);
+  color: #fff;
+  font-size: calc(var(--t) * 0.24);
+  text-align: left;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.moves li {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--t) * 0.12);
+}
+
+.moves b {
+  flex-shrink: 0;
+  min-width: 1.5em;
+  height: 1.5em;
+  border-radius: 999px;
+  background: #ffd54f;
+  color: #3a2600;
+  line-height: 1.5em;
+  text-align: center;
+  text-shadow: none;
+}
+
+.moves .tile {
+  flex-shrink: 0;
+  zoom: 0.4;
+  text-shadow: none;
+}
+
+/* a phone's table is short: the moves go in a row, a number and a tile
+   each */
+@media (max-height: 500px) {
+  .moves {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--t) * 0.15);
+  }
+
+  .moves .said {
+    display: none;
+  }
+}
+
+/* a marked tile's number (tile.css) sticks out of its corner: room for it
+   in the meld band, which scrolls and would clip it */
+.melds:has(.marked) {
+  padding: calc(var(--t) * 0.13) calc(var(--t) * 0.13) 0;
+}
+
 /* the melds fill the table and shrink (--fit) until they all show */
 .melds {
   align-self: stretch;
@@ -625,16 +685,18 @@
   font-size: calc(var(--t) * 0.22);
 }
 
-/* the others' hands once the round ends, with what each scored */
-.hands {
+/* every hand once the round ends, on your rack in place of your tiles,
+   with what each scored (Rack.jsx); each as it sat on its rack, 13 slots
+   a row, the two rows side by side, an empty slot a whole tile, so the
+   groups keep their spaces and the hands line up */
+.rack > .hands {
+  position: absolute;
+  /* clear of the end caps */
+  inset: 0 calc(var(--t) * 0.33);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   justify-content: center;
-  gap: calc(var(--t) * 0.15) calc(var(--t) * 0.4);
-  max-height: 100%;
-  overflow-y: auto;
-  /* too tall beside the draw pile: the pile makes way (Board.jsx) */
-  flex-shrink: 0;
+  gap: calc(var(--t) * 0.08);
 }
 
 .hand {
@@ -643,7 +705,7 @@
   gap: calc(var(--t) * 0.12);
   padding: calc(var(--t) * 0.06) calc(var(--t) * 0.14);
   border-radius: calc(var(--t) * 0.2);
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(60, 30, 10, 0.45);
 }
 
 .hand .avatar {
@@ -654,29 +716,26 @@
 }
 
 .hand .score {
-  min-width: 2.2em;
+  flex-shrink: 0;
+  min-width: 2.8em;
   text-align: right;
   font-weight: 800;
 }
 
-/* the two rows side by side, small; a gap stays a gap */
 .hand .tiles {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 calc(var(--t) * 0.5);
-  zoom: 0.36;
+  gap: calc(var(--t) * 0.5);
+  zoom: 0.4;
 }
 
 .hand .half {
   display: flex;
-}
-
-.hand .half:empty {
-  display: none;
+  flex-shrink: 0;
+  width: calc(var(--t) * 13);
 }
 
 .hand .gap {
-  width: calc(var(--t) * 0.4);
+  width: var(--t);
 }
 
 /* a caught discard (işler taş) can't be taken */

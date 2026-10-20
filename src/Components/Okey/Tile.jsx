@@ -29,9 +29,10 @@ function Face({ tile }) {
   );
 }
 
-// a picture of a tile, face up: nothing to drag or flip, and no id for the
-// animations (moves.js) to fly to
-export function TileFace({ tile }) {
+// a picture of a tile, face up, from its id (red7-0): nothing to drag or
+// flip, and no data-tile-id for the animations (moves.js) to fly to
+export function TileFace({ id }) {
+  const tile = { id, rank: id.replace(/^[a-z]+|-\d+$/g, "") };
   return (
     <span className={`tile c-${colorOf(tile)}`}>
       <Face tile={tile} />
@@ -39,7 +40,26 @@ export function TileFace({ tile }) {
   );
 }
 
-function Tile({ tile, disabled, className, style }) {
+// Once the round is over, how it finished: the finisher's last turn
+// (turnMoves, game.js), numbered as the table marks its tiles; a run of the
+// same move (adding three tiles) is one
+export function lastTurn(state) {
+  if (!ended(state)) return [];
+  const moves = [];
+  for (const m of state.turnMoves ?? []) {
+    const last = moves.at(-1);
+    if (last?.move === m.move && last.by === m.by) {
+      last.tiles = [...last.tiles, ...m.tiles];
+    } else moves.push({ ...m });
+  }
+  return moves;
+}
+
+// the number of the move that moved the tile, or null
+export const markOf = (moves, id) =>
+  (id && moves.findIndex((m) => m.tiles.includes(id)) + 1) || null;
+
+function Tile({ tile, disabled, className, style, numbered = true }) {
   const { me, toggleHidden, okeyState, selected, toggleSelected } =
     useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
@@ -114,17 +134,20 @@ function Tile({ tile, disabled, className, style }) {
   useEffect(() => {
     if (!touch) preview(getEmptyImage());
   }, [preview]);
+  const mark = markOf(lastTurn(okeyState), tile.id);
   const classes = [
     "tile",
     faceUp ? `c-${colorOf(tile)}` : "back",
     className,
     myTile && selected.includes(tile.id) && "selected",
     armed && "armed",
+    mark && "marked",
   ];
   return (
     <div
       ref={dragRef}
       data-tile-id={tile.id}
+      data-mark={(numbered && mark) || undefined}
       className={classes.filter(Boolean).join(" ")}
       style={{ ...style, opacity }}
       onClick={() => {

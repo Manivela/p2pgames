@@ -49,6 +49,35 @@
   font-size: calc(var(--t) * 0.28);
 }
 
+/* once the round is over, the tiles of how it finished (LastTurn): a glow
+   and the move's number */
+.tile.marked {
+  outline: calc(var(--t) * 0.07) solid #ffd54f;
+  outline-offset: 1px;
+  box-shadow: 0 0 calc(var(--t) * 0.4) #ffd54f;
+}
+
+/* (the tile thrown to finish is placed already) */
+.tile.marked:not(.thrown) {
+  position: relative;
+}
+
+.tile.marked[data-mark]::after {
+  content: attr(data-mark);
+  position: absolute;
+  z-index: 1;
+  top: -0.6em;
+  right: -0.6em;
+  min-width: 1.5em;
+  height: 1.5em;
+  border-radius: 999px;
+  background: #ffd54f;
+  color: #3a2600;
+  font: 800 calc(var(--t) * 0.3) / 1.5em system-ui;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
 /* a finger on a tile drags it instead of scrolling or selecting text */
 .tile {
   touch-action: none;
