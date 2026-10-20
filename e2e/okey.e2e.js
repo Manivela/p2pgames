@@ -118,6 +118,20 @@ test("a crowded table fits", async ({ page }) => {
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
+// the "Drag here" line shows only where it has room: on a phone it would
+// shrink every meld each time you pick a tile
+test("picking a tile keeps the melds' size", async ({ page }) => {
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "crowd", 4);
+  const fit = () =>
+    page.locator(".melds").evaluate((el) => el.style.getPropertyValue("--fit"));
+  const before = await fit();
+  await slot(page, 3).locator(".tile").click();
+  await expect(page.locator(".melds.droppable")).toBeVisible();
+  expect(await fit()).toBe(before);
+});
+
 // a table with room has the draw pile in the middle until the melds need
 // it (phones keep the pile on the left: see their screenshots)
 test("the draw pile makes way as the table fills", async ({ page }) => {

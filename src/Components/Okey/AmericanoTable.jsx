@@ -166,12 +166,24 @@ export function Melds({ underPile }) {
   const layout = melds.map((m) => m.tiles.length).join();
   useLayoutEffect(() => {
     const el = band.current;
-    const fit = () => {
+    const shrink = () => {
       let scale = 1;
       el.style.setProperty("--fit", scale);
       while (el.scrollHeight > el.clientHeight && scale > 0.3) {
         scale -= 0.05;
         el.style.setProperty("--fit", scale);
+      }
+      return scale;
+    };
+    // "Drag here" shows only where it costs the melds nothing: on a phone
+    // its line would shrink the whole table each time you pick a tile
+    const fit = () => {
+      const hint = el.querySelector(".hint");
+      if (hint) hint.hidden = false;
+      const scale = shrink();
+      if (hint && scale < 1) {
+        hint.hidden = true;
+        if (shrink() === scale) hint.hidden = false;
       }
     };
     fit();
