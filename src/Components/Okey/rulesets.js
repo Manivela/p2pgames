@@ -81,7 +81,7 @@ export const AMERICANO = {
   // discarding a tile that fits a table meld (işler taş): whoever catches it
   // adds this to the discarder's round score, and nobody can take the tile
   catchPenalty: 20,
-  wrapRuns: true, // 12-13-1 is a run
+  wrapRuns: false, // runs stop at 13: 12-13-1 is classic only
   outOfTurnTakes: true, // anyone may claim the discard (maxTakes a round)
   swapOkeys: true, // a table okey can be traded for the tile it stands for
   buildWhenOpening: false, // lay more and add to melds only from next turn

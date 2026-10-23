@@ -27,7 +27,7 @@ function kutOrder(tiles, indicator) {
 }
 
 // seri: 3+ consecutive ranks of one colour; 1 may follow 13 (12-13-1) but
-// not lead into 2 from there, unless `wrap` is off (101). Returns the tiles
+// not lead into 2 from there, unless `wrap` is off (Americano, 101). Returns the tiles
 // in run order, okeys filling the gaps, or null.
 function seriOrder(tiles, indicator, wrap) {
   const top = wrap ? 14 : 13;

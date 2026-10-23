@@ -605,7 +605,7 @@ test("a catch counts what could go on the table as it lies", () => {
   // the tile the okey stands for could take its place
   assert.deepEqual(catchOf(sixTo9, "black9-1"), ["black9-1"]);
 
-  // a 1 after 13 doesn't count, though Americano lets you lay it there
+  // a 1 after 13 doesn't count (a game started when Americano allowed it)
   assert.equal(
     catchOf(["black11-1", "black12-1", "black13-1"], "black1-1"),
     no,
@@ -614,6 +614,33 @@ test("a catch counts what could go on the table as it lies", () => {
   assert.deepEqual(catchOf(["black2-1", "black3-1", "black4-1"], "black1-1"), [
     "black1-1",
   ]);
+});
+
+test("Americano runs stop at 13: no 12-13-1, to open or to add", () => {
+  const black = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((r) => `black${r}-0`);
+  let s = americano.startGame(seated(2), {
+    okeyTile: "blue13-1",
+    hands: [
+      ["red11-0", "red12-0", "red13-0", "red1-0", ...black],
+      [...Array.from({ length: 13 }, (_, i) => `yellow${i + 1}-0`), "blue2-0"],
+    ],
+  });
+  s = { ...s, round: 2 }; // 3'lü seri
+  assert.isString(americano.openHand(s, 1, [["red12-0", "red13-0", "red1-0"]]));
+  s = americano.openHand(s, 1, [["red11-0", "red12-0", "red13-0"]]);
+  assert.deepEqual(ids(s.melds[0].tiles), ["red11-0", "red12-0", "red13-0"]);
+
+  let t = seriOnTable(["black11-1", "black12-1", "black13-1"]);
+  t = {
+    ...t,
+    opened: { 2: true },
+    players: t.players.map((p) =>
+      p.id === 2
+        ? { ...p, hand: [lying("black1-1", "hand-2"), ...p.hand.slice(1)] }
+        : p,
+    ),
+  };
+  assert.isString(americano.playOnMeld(t, 2, "black1-1", 0));
 });
 
 test("a tile goes on either end of a seri with a table okey in it", () => {
