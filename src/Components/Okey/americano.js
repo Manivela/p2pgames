@@ -175,6 +175,27 @@ function asLaid(row, ind) {
   return best[row.length];
 }
 
+// the tiles side by side on a rack, group by group: an empty slot or a
+// row's end separates them
+function groupsOf(slots) {
+  const groups = [];
+  slots.forEach((t, i) => {
+    if (!t) return;
+    if (i % 13 === 0 || !slots[i - 1]) groups.push([]);
+    groups.at(-1).push(t);
+  });
+  return groups;
+}
+
+// 101: what the sets and runs as they lie on a player's rack are worth, as
+// the opening counts them
+export const rackPoints = (state, player) =>
+  sum(
+    groupsOf(seat(state, player)?.hand ?? []).map(
+      (g) => asLaid(g, state.okeyTile).total,
+    ),
+  );
+
 // 101's opening: sets and runs as laid out on the rack (a gap or a tile
 // left out separates them, and an okey counts where it stands) worth
 // `points`, or `pairs` pairs or more anywhere on the rack; picked tiles
@@ -182,14 +203,7 @@ function asLaid(row, ind) {
 function openingOf(state, player, ids) {
   const { okeyTile: ind, rules } = state;
   const hand = seat(state, player).hand;
-  const at = ids
-    .map((id) => hand.findIndex((t) => t?.id === id))
-    .sort((a, b) => a - b);
-  const groups = [];
-  at.forEach((i, k) => {
-    if (k === 0 || i !== at[k - 1] + 1 || i === 13) groups.push([]);
-    groups.at(-1).push(hand[i]);
-  });
+  const groups = groupsOf(hand.map((t) => (ids.includes(t?.id) ? t : null)));
   const laid = groups.map((g) => asLaid(g, ind));
   if (sum(laid.map((l) => l.total)) >= rules.opening.points) {
     return [laid.flatMap((l) => l.melds), false];

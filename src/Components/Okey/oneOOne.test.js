@@ -85,6 +85,14 @@ test("101: 22 tiles for the starter, 21 for the others, the rules kept", () => {
   assertAllTiles(start());
 });
 
+test("101: the sets and runs as they lie on the rack count as the opening would", () => {
+  const s = start();
+  // the okey counts as the 12; the rest of P1's rack makes nothing
+  assert.equal(americano.rackPoints(s, 1), 33 + 52 + 18);
+  // the 12s count; blue 2 | 3-4 sit either side of a row's end
+  assert.equal(americano.rackPoints(s, 2), 36);
+});
+
 test("101: runs don't wrap, and a pair is two of a tile or an okey and any", () => {
   const run = (tiles, wrap) => ids(meldOrder(tiles, "seri", indicator, wrap));
   assert.isNull(run([t("red", 12), t("red", 13), t("red", 1)], false));

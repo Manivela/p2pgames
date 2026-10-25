@@ -4,7 +4,7 @@ import Tile from "./Tile";
 import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
-import { upForClaim } from "./americano";
+import { rackPoints, upForClaim } from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
 import { ended } from "./game";
@@ -27,6 +27,19 @@ function TilesLeft({ player }) {
   const left = myHand(player).filter(Boolean).length;
   return (
     <span className={`tilesLeft ${left === 1 ? "last" : ""}`}>{left}</span>
+  );
+}
+
+// 101, until you've opened: what your sets and runs are worth as they lie
+// on your rack, against what opening takes
+function RackPoints({ player }) {
+  const { okeyState } = useContext(OkeyContext);
+  const { rules, gameState, opened } = okeyState;
+  if (!rules?.opening || gameState !== "play" || opened?.[player]) return null;
+  return (
+    <span className="badge points">
+      {rackPoints(okeyState, player)}/{rules.opening.points}
+    </span>
   );
 }
 
@@ -144,7 +157,12 @@ function Rack({ player, hands }) {
       <div className="bottom">{row(13)}</div>
       {over && <Hands players={hands} />}
       <Name player={player}>
-        {me === player && <TilesLeft player={player} />}
+        {me === player && (
+          <>
+            <RackPoints player={player} />
+            <TilesLeft player={player} />
+          </>
+        )}
       </Name>
     </div>
   );
