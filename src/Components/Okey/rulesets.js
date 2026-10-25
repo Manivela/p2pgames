@@ -114,7 +114,6 @@ export const ONE_O_ONE = {
   // Eşli 101 Turnuvası's rules (medya.barobirlik.org.tr/barowebsite/uploads/
   // 52/kural1.pdf), on top of pagat's: a game started before keeps pagat's
   returnPenalty: 101, // taking the discard and putting it back
-  failedOpeningPenalty: 101, // an opening that falls short
   catchUntilDraw: true, // a discard is caught before the next player draws
   pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn
   pairsForAll: true, // once someone opens with pairs, everyone lays pairs

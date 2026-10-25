@@ -237,6 +237,34 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
   await expect(page.locator(".meld .ghost")).toHaveCount(0);
 });
 
+// 101's options go into the game it starts; in pairs it takes four
+test("101 starts with its options, and in pairs with four at the table", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await page.getByLabel(/^(Partners|Eşli)$/).check();
+  await page.getByLabel(/^(Doubling|Katlamalı)$/).check();
+  const start101 = page.getByRole("button", {
+    name: /^(Start 101|101 başlat)$/,
+  });
+  await start101.click();
+  await expect(
+    page.getByText(
+      /^(Partners take four players|Eşli oyun dört kişiyle oynanır)$/,
+    ),
+  ).toBeVisible();
+  await table(page, "seatBots", 4);
+  await start101.click();
+  await expect
+    .poll(async () => (await state(page)).rules)
+    .toMatchObject({
+      id: "101",
+      partners: true,
+      doubling: true,
+    });
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
 // a link dragged over the table is the browser's own drag, with no tile in
 // it: the table stays
 test("a link dragged over the table leaves it be", async ({ page }, info) => {

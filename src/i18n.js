@@ -66,7 +66,6 @@ const TR = [
   [/^That's your partner's tile$/, "Bu eşinin taşı"],
   [/^Too late to catch it$/, "Yakalamak için geç: ortadan çekildi"],
   [/^Partners take four players$/, "Eşli oyun dört kişiyle oynanır"],
-  [/^(.+) couldn't open: \+(\d+)$/, "$1 açamadı: +$2"],
   [/^(.+) put the tile back: \+(\d+)$/, "$1 taşı geri bıraktı: +$2"],
   [
     /^You opened with pairs: (\d+) tiles a turn$/,

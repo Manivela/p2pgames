@@ -3,8 +3,13 @@ import { useDrop } from "react-dnd";
 import { findKey, sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
 // playOnMeld here is the rule, tried out for the ghost
-import { claimants, playOnMeld as onMeld, upForClaim } from "./americano";
-import { allSeats } from "./game";
+import {
+  claimants,
+  penaltiesSoFar,
+  playOnMeld as onMeld,
+  upForClaim,
+} from "./americano";
+import { allSeats, partner } from "./game";
 import { colorOf, isOkey, okeyStandsFor, rankOf } from "./melds";
 import { colorMap, symbols } from "./constants";
 import Tile, { TileFace, lastTurn, markOf } from "./Tile";
@@ -176,8 +181,18 @@ export function RoundInfo() {
   return (
     <h3 className="round">
       {t(`Round ${round}/${rounds.length}`)}
-      {/* 101 has the same opening every hand */}
-      <small>{rules.opening ? rules.name : t(rounds[round - 1].name)}</small>
+      {/* 101 has the same opening every hand, and the table's options */}
+      <small>
+        {rules.opening
+          ? [
+              rules.name,
+              rules.partners && t("Partners"),
+              rules.doubling && t("Doubling"),
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : t(rounds[round - 1].name)}
+      </small>
       {/* what opens the round, until everyone has (Elden has no opening) */}
       {!rules.opening &&
         rounds[round - 1].melds &&
@@ -317,14 +332,38 @@ export function Melds({ underPile }) {
   );
 }
 
-// the score sheet, from its button at the table's top right
+// the score sheet, from its button at the table's top right: a column a
+// player, or a pair's when four play in pairs; the hand being played shows
+// what's owed so far (a caught tile, an okey thrown…), scored at its end
 export function Scores() {
   const { okeyState } = useContext(OkeyContext);
-  const { scores, rules } = okeyState;
+  const { scores, rules, round, gameState } = okeyState;
   // a freed seat keeps its column: whoever sits there next carries it on
   const players = allSeats(okeyState.players).filter(
     (p) => p.user || scores?.[p.id],
   );
+  const columns = rules.partners
+    ? players
+        .filter((p) => p.id < partner(okeyState.players, p.id).id)
+        .map((p) => [p, partner(okeyState.players, p.id)])
+    : players.map((p) => [p]);
+  const live = gameState === "play" ? round - 1 : -1;
+  // a player's line, with what they owe so far on the hand being played
+  const line = (p, i) => {
+    const owed = i === live ? penaltiesSoFar(okeyState, p.id) : 0;
+    const scored = scores[p.id]?.[i];
+    return scored == null && !owed ? null : (scored ?? 0) + owed;
+  };
+  const cell = (team, i) => {
+    const values = team.map((p) => line(p, i));
+    if (values.every((v) => v === null)) return "";
+    const value = sum(values);
+    // Americano's finish is a line; 101's varies
+    return !rules.opening && team.length === 1 && value === rules.finishScore
+      ? "—"
+      : value;
+  };
+  const name = (p) => p.user?.name ?? t(`Player ${p.id}`);
   return (
     // a tap away: a round's end shows its scores with the hands, the end
     // of the game who won, and an open sheet would cover the next step
@@ -335,30 +374,28 @@ export function Scores() {
           <thead>
             <tr>
               <th />
-              {players.map((p) => (
-                <th key={p.id}>{p.user?.name ?? t(`Player ${p.id}`)}</th>
+              {columns.map((team) => (
+                <th key={team[0].id}>{team.map(name).join(" & ")}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rules.rounds.map((r, i) => (
-              <tr key={r.name}>
+              <tr key={r.name} className={i === live ? "running" : ""}>
                 <th>{t(r.name)}</th>
-                {players.map((p) => (
-                  <td key={p.id}>
-                    {/* Americano's finish is a line; 101's varies */}
-                    {!rules.opening && scores[p.id]?.[i] === rules.finishScore
-                      ? "—"
-                      : scores[p.id]?.[i]}
-                  </td>
+                {columns.map((team) => (
+                  <td key={team[0].id}>{cell(team, i)}</td>
                 ))}
               </tr>
             ))}
             <tr>
               <th>{t("Total")}</th>
-              {players.map((p) => (
+              {columns.map((team) => (
                 // blank for someone new: their total comes with the deal
-                <td key={p.id}>{scores?.[p.id] && sum(scores[p.id])}</td>
+                <td key={team[0].id}>
+                  {team.some((p) => scores?.[p.id]) &&
+                    sum(team.map((p) => sum(scores?.[p.id] ?? [])))}
+                </td>
               ))}
             </tr>
           </tbody>

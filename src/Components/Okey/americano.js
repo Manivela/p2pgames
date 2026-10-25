@@ -260,17 +260,9 @@ export function openHand(state, player, groups) {
     ? (openingOf(state, player, groups.flat()) ?? [])
     : [splitMelds(tiles, state.okeyTile, required, wrap(state), true), false];
   if (!melds) {
-    const cost = rules.failedOpeningPenalty;
-    if (!cost) {
-      return rules.opening
-        ? `Open with ${rules.opening.points}+ or ${rules.opening.pairs} pairs`
-        : `Open with exactly: ${rules.rounds[state.round - 1].name}`;
-    }
-    // 101: an opening that falls short costs the player; the tiles stay
-    const s = cloneDeep(state);
-    penalize(s, player, cost);
-    s.message = `${seat(s, player).user?.name} couldn't open: +${cost}`;
-    return s;
+    return rules.opening
+      ? `Open with ${rules.opening.points}+ or ${rules.opening.pairs} pairs`
+      : `Open with exactly: ${rules.rounds[state.round - 1].name}`;
   }
   const taken = takeFromHand(state, player, [
     melds.flatMap((m) => m.tiles.map((t) => t.id)),
@@ -688,6 +680,20 @@ function throwTile(state, player, tile, now = Date.now()) {
 const isCaught = (state, tileId) =>
   state.players.some((p) => p.caught?.includes(tileId));
 
+// what a player owes for this hand before it's scored: their tiles caught
+// on their pile, and the penalties during play (an okey thrown, a short
+// opening, a discard put back); shown on the score sheet as it happens,
+// added to the hand's score at its end
+export function penaltiesSoFar(state, player) {
+  const caught = state.players.flatMap((p) => p.caught ?? []);
+  const pile = seat(state, player)?.discardPile ?? [];
+  return (
+    state.rules.catchPenalty *
+      pile.filter((t) => caught.includes(t.id)).length +
+    (state.penalties?.[player] ?? 0)
+  );
+}
+
 // 101: a discard taken that can't be used goes back on its pile, and the
 // player draws from the pile instead (for returnPenalty, if the rules ask)
 export function returnDiscard(state, player) {
@@ -780,7 +786,6 @@ function endRound(state, finisher, last, inOne = false) {
   const s = cloneDeep(state);
   const { rules } = s;
   const i = s.round - 1;
-  const caught = s.players.flatMap((p) => p.caught ?? []);
   const pairs = (id) => !!s.openedWithPairs?.[id];
   // 101, doubling (a game started before always doubles): a win with pairs,
   // with the okey as the last discard, or opened and finished in one go
@@ -821,11 +826,7 @@ function endRound(state, finisher, last, inOne = false) {
           : (finisher || rules.pileOutCounts) && !isElden(s) && !s.opened[p.id]
             ? notOpened
             : handScore(p.hand, s) * (pairs(p.id) && doubles ? 2 : 1) * times;
-    const score =
-      hand +
-      rules.catchPenalty *
-        p.discardPile.filter((t) => caught.includes(t.id)).length +
-      (s.penalties?.[p.id] ?? 0);
+    const score = hand + penaltiesSoFar(s, p.id);
     // a hand dealt again adds to the same line
     s.scores[p.id] = s.scores[p.id] ?? [];
     s.scores[p.id][i] = (s.scores[p.id][i] ?? 0) + score;

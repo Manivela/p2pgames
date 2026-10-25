@@ -16,7 +16,7 @@ const ok = (s) => {
 const seat = (s, id) => s.players.find((p) => p.id === id);
 
 // bots in seats 2..n; they share my awareness key, so they stay seated
-function seatBots(n) {
+export function seatBots(n) {
   const s = window.okey.get();
   const { userKey } = seat(s, 1);
   window.okey.set({
@@ -31,10 +31,11 @@ function seatBots(n) {
 
 // n players dealt the same tiles every run: a fixed shuffle (tile i goes
 // to i * 37 mod 106), seat 1's hand starting with KUT. mode: "americano",
-// "101" or "classic"
-export function start(n, mode = "americano") {
+// "101" or "classic"; options: 101's (partners, doubling)
+export function start(n, mode = "americano", options = {}) {
   seatBots(n);
-  const rules = { americano: AMERICANO, 101: ONE_O_ONE }[mode];
+  const preset = { americano: AMERICANO, 101: ONE_O_ONE }[mode];
+  const rules = preset && { ...preset, ...options };
   const size = rules?.handSize ?? 14;
   const drawPile = game.tiles.map((_, i) => ({
     ...game.tiles[(i * 37) % game.tiles.length],

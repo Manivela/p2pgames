@@ -128,6 +128,19 @@ function DrawPile() {
 function NextStep() {
   const { okeyState, me, startGame, newGame, nextRound, shuffleDiscards } =
     useContext(OkeyContext);
+  // 101's options: four in pairs, doubling (katlamalı)
+  const [partners, setPartners] = useState(false);
+  const [doubling, setDoubling] = useState(false);
+  const option = (label, on, set) => (
+    <label>
+      <input
+        type="checkbox"
+        checked={on}
+        onChange={(e) => set(e.target.checked)}
+      />
+      {t(label)}
+    </label>
+  );
   switch (okeyState.gameState) {
     case "start":
       return (
@@ -136,7 +149,15 @@ function NextStep() {
           <button onClick={() => startGame(AMERICANO)}>
             {t("Start Americano")}
           </button>
-          <button onClick={() => startGame(ONE_O_ONE)}>{t("Start 101")}</button>
+          <button
+            onClick={() => startGame({ ...ONE_O_ONE, partners, doubling })}
+          >
+            {t("Start 101")}
+          </button>
+          <span className="options">
+            {option("Partners", partners, setPartners)}
+            {option("Doubling", doubling, setDoubling)}
+          </span>
         </>
       );
     case "play":

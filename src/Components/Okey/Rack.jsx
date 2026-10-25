@@ -7,7 +7,7 @@ import { t } from "../../i18n";
 import { rackPoints, upForClaim } from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-import { ended, rowOf } from "./game";
+import { ended, partner, rowOf } from "./game";
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -46,7 +46,7 @@ function RackPoints({ player }) {
 // A name and what everyone at the table can see about them, or an empty
 // seat to sit in
 function Name({ player, children }) {
-  const { okeyState, sit, isAlreadySitting } = useContext(OkeyContext);
+  const { okeyState, me, sit, isAlreadySitting } = useContext(OkeyContext);
   const seat = okeyState.players.find((p) => p.id === player);
   if (!seat.user) {
     return (
@@ -71,6 +71,12 @@ function Name({ player, children }) {
         {playing && okeyState.rules && okeyState.opened[player] && (
           <span className="badge">{t("opened")}</span>
         )}
+        {playing &&
+          okeyState.rules?.partners &&
+          me &&
+          partner(okeyState.players, me)?.id === player && (
+            <span className="badge">{t("partner")}</span>
+          )}
       </span>
       {playing && turn && <TeaGlass />}
       {children}

@@ -145,13 +145,12 @@ test("101: runs don't wrap, and a pair is two of a tile or an okey and any", () 
   assert.isNull(pair([t("red", 5), t("red", 5, 1), t("blue", 1)]));
 });
 
-test("101: open with 101 points as laid out on the rack, an okey where it stands; short of it costs 101", () => {
+test("101: open with 101 points as laid out on the rack, an okey where it stands", () => {
   let s = start();
-  const short = americano.openHand(s, 1, [[...seri, ...kut]]);
-  assert.isNotOk(short.opened[1]);
-  assert.deepEqual(short.penalties, { 1: 101 });
-  assert.equal(short.message, "P1 couldn't open: +101");
-  assert.isOk(tileIn(short, 1, "red10-0"));
+  assert.equal(
+    americano.openHand(s, 1, [[...seri, ...kut]]),
+    "Open with 101+ or 5 pairs",
+  );
   s = americano.openHand(s, 1, [opening]);
   assert.isTrue(s.opened[1]);
   assert.deepEqual(
@@ -160,9 +159,9 @@ test("101: open with 101 points as laid out on the rack, an okey where it stands
   );
   // the okey left of the 10 is the 9: 30 + 52 + 18 = 100
   const okeyFirst = ["blue1-0", "red10-0", "red11-0"];
-  assert.deepEqual(
-    americano.openHand(start(2, okeyFirst), 1, [opening]).penalties,
-    { 1: 101 },
+  assert.equal(
+    americano.openHand(start(2, okeyFirst), 1, [opening]),
+    "Open with 101+ or 5 pairs",
   );
 });
 
@@ -179,9 +178,9 @@ test("101: picked tiles that fit no set or run stay on the rack", () => {
   assert.isOk(tileIn(s, 1, "black2-0"));
   assertAllTiles(s);
   // the 13s and yellows alone are 70
-  assert.deepEqual(
-    americano.openHand(start(), 1, [[...kut, ...yellow, "black2-0"]]).penalties,
-    { 1: 101 },
+  assert.equal(
+    americano.openHand(start(), 1, [[...kut, ...yellow, "black2-0"]]),
+    "Open with 101+ or 5 pairs",
   );
   // P2: six pairs out of more picked tiles, all six laid
   s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
@@ -207,11 +206,9 @@ test("101: open with 5 pairs; then only pairs, or adding to sets and runs", () =
   s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
   s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
 
-  assert.deepEqual(
-    americano.openHand(s, 2, [fivePairs.slice(0, 8)]).penalties,
-    {
-      2: 101,
-    },
+  assert.equal(
+    americano.openHand(s, 2, [fivePairs.slice(0, 8)]),
+    "Open with 101+ or 5 pairs",
   );
   s = americano.openHand(s, 2, [fivePairs]);
   assert.isTrue(s.openedWithPairs[2]);
@@ -310,10 +307,10 @@ test("101: open all but one tile at once and finish, under 101 too", () => {
       "blue9-1",
       ...extra,
     ]);
-  // a tile more short of 101 is a failed opening
-  assert.deepEqual(
-    americano.openHand(one(["blue10-1"]), 1, [melds]).penalties,
-    { 1: 101 },
+  // a tile more, short of 101, doesn't open
+  assert.equal(
+    americano.openHand(one(["blue10-1"]), 1, [melds]),
+    "Open with 101+ or 5 pairs",
   );
   let s = americano.openHand(one([]), 1, [melds]);
   assert.isTrue(s.opened[1]);

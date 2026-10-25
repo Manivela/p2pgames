@@ -119,6 +119,13 @@
   gap: calc(var(--t) * 0.3);
   /* room for the name tab rising out of your rack */
   padding-top: calc(var(--t) * 0.5);
+  /* that room, and the row's empty ends, let taps through to what's above
+     (the side column's last controls reach down into it on a phone) */
+  pointer-events: none;
+}
+
+.foot > * {
+  pointer-events: auto;
 }
 
 /* Your rack: wood with a ledge under each row and darker end caps standing
@@ -851,6 +858,31 @@
   font-size: calc(var(--t) * 0.34);
 }
 
+/* 101's options, under its Start */
+.side .options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(var(--t) * 0.1) calc(var(--t) * 0.25);
+  color: #fff;
+  font-size: calc(var(--t) * 0.3);
+}
+
+.side .options label {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  margin: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.side .options input {
+  width: 1em;
+  height: 1em;
+  margin: 0;
+}
+
 .board .playerName button {
   height: auto;
   margin-left: 0.3em;
@@ -914,6 +946,12 @@
 .table-menu > .dots {
   width: calc(var(--t) * 0.7);
   padding: 0;
+}
+
+/* the hand being played: what's owed so far, until it's scored */
+.scores tr.running td {
+  font-style: italic;
+  opacity: 0.7;
 }
 
 .scores .sheet,

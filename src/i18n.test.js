@@ -29,7 +29,6 @@ test("messages with names and numbers translate both ways", () => {
     "Open with exactly: set of 3 + run of 3",
   );
   assert.equal(t("No tiles left", true), "Taş kalmadı"); // not "(.+) left"
-  assert.equal(t("Ayşe couldn't open: +101", true), "Ayşe açamadı: +101");
   assert.equal(
     t("Ayşe put the tile back: +101", true),
     "Ayşe taşı geri bıraktı: +101",
