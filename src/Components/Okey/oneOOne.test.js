@@ -1,5 +1,4 @@
 import { assert, test } from "vitest";
-import { sum } from "lodash";
 import * as americano from "./americano";
 import * as game from "./game";
 import { isOkey, meldOrder } from "./melds";
