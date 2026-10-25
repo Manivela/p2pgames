@@ -19,9 +19,20 @@ const Timer = ({ okeyState }) => (
   <i key={`${okeyState.deal}-${okeyState.currentPlayer}`} className="timer" />
 );
 
+// how many tiles a player holds, while a ruleset's round is played
+// (classic hands don't shrink)
+function TilesLeft({ player }) {
+  const { okeyState, myHand } = useContext(OkeyContext);
+  if (!okeyState.rules || okeyState.gameState !== "play") return null;
+  const left = myHand(player).filter(Boolean).length;
+  return (
+    <span className={`tilesLeft ${left === 1 ? "last" : ""}`}>{left}</span>
+  );
+}
+
 // A name and what everyone at the table can see about them, or an empty
 // seat to sit in
-function Name({ player }) {
+function Name({ player, children }) {
   const { okeyState, sit, isAlreadySitting } = useContext(OkeyContext);
   const seat = okeyState.players.find((p) => p.id === player);
   if (!seat.user) {
@@ -49,6 +60,7 @@ function Name({ player }) {
         )}
       </span>
       {playing && turn && <TeaGlass />}
+      {children}
     </h1>
   );
 }
@@ -131,7 +143,9 @@ function Rack({ player, hands }) {
       <div className="top">{row(0)}</div>
       <div className="bottom">{row(13)}</div>
       {over && <Hands players={hands} />}
-      <Name player={player} />
+      <Name player={player}>
+        {me === player && <TilesLeft player={player} />}
+      </Name>
     </div>
   );
 }
@@ -139,9 +153,8 @@ function Rack({ player, hands }) {
 // Someone else at the table: a round avatar in their seat's colour with
 // how many tiles they hold, and their name
 export function Seat({ player }) {
-  const { okeyState, myHand } = useContext(OkeyContext);
+  const { okeyState } = useContext(OkeyContext);
   const name = okeyState.players.find((p) => p.id === player).user?.name;
-  const left = myHand(player).filter(Boolean).length;
   const turn = turnOf(okeyState, player);
   return (
     <div className={`seat ${turn ? "turn" : ""}`} data-seat={player}>
@@ -151,11 +164,7 @@ export function Seat({ player }) {
       >
         {turn && <Timer okeyState={okeyState} />}
         {name && [...name][0].toLocaleUpperCase()}
-        {okeyState.rules && okeyState.gameState === "play" && (
-          <span className={`tilesLeft ${left === 1 ? "last" : ""}`}>
-            {left}
-          </span>
-        )}
+        <TilesLeft player={player} />
       </div>
       <Name player={player} />
     </div>

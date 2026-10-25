@@ -387,20 +387,35 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-.avatar .tilesLeft {
+/* tiles left: on an avatar's corner; yours beside your name tab, across
+   from the tea glass */
+.tilesLeft {
   position: absolute;
-  right: -28%;
-  bottom: -10%;
   padding: 0 0.3em;
   border: 2px solid #fff;
   border-radius: 1em;
   background: #222;
+  color: #fff;
+  text-shadow: none;
   font-size: calc(var(--t) * 0.2);
+  font-weight: 700;
   line-height: 1.4;
 }
 
-.avatar .tilesLeft.last {
+.tilesLeft.last {
   background: #e53935;
+}
+
+.avatar .tilesLeft {
+  right: -28%;
+  bottom: -10%;
+}
+
+.rack > .playerName .tilesLeft {
+  top: 50%;
+  right: calc(100% + var(--r) + var(--t) * 0.08);
+  translate: 0 -50%;
+  font-size: calc(var(--t) * 0.24);
 }
 
 /* whose turn it is: a soft glow around your rack, and a 30 s timer, a ring

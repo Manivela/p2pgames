@@ -140,6 +140,7 @@ const SEL = [
   ".draw .indicator",
   ".discardPile",
   ".playerName",
+  ".rack > .playerName .tilesLeft",
   ".side > *",
   ".center > button",
   ".meld",
