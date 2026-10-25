@@ -188,7 +188,7 @@ function asLaid(row, ind) {
 
 // the tiles side by side on a rack, group by group: an empty slot or a
 // row's end (every `row` slots) separates them
-function groupsOf(slots, row) {
+export function groupsOf(slots, row) {
   const groups = [];
   slots.forEach((t, i) => {
     if (!t) return;
@@ -209,9 +209,10 @@ export const rackPoints = (state, player) =>
 
 // 101's opening: sets and runs as laid out on the rack (a gap or a tile
 // left out separates them, and an okey counts where it stands) worth
-// `points`, or `pairs` pairs or more anywhere on the rack; picked tiles
-// that make neither stay on the rack. Returns [melds, with pairs] or null.
-function openingOf(state, player, ids) {
+// `points`, or (withPairs) `pairs` pairs or more anywhere on the rack;
+// picked tiles that make neither stay on the rack. Returns [melds, with
+// pairs] or null.
+function openingOf(state, player, ids, withPairs) {
   const { okeyTile: ind, rules } = state;
   const hand = seat(state, player).hand;
   const groups = groupsOf(
@@ -227,6 +228,7 @@ function openingOf(state, player, ids) {
   if (sum(laid.map((l) => l.total)) >= rules.opening.points || allButOne) {
     return [melds, false];
   }
+  if (!withPairs) return null;
   // as many pairs as there are
   const tiles = groups.flat();
   for (let n = Math.floor(tiles.length / 2); n >= rules.opening.pairs; n--) {
@@ -242,13 +244,17 @@ function openingOf(state, player, ids) {
   return null;
 }
 
-export function openHand(state, player, groups) {
+// withPairs false (openAll): sets and runs only, pairs are picked by hand
+export function openHand(state, player, groups, withPairs = true) {
   const { rules } = state;
   const required = rules.rounds[state.round - 1].melds;
   if (required === null) {
     return "No opening this round: finish from your hand";
   }
   if (state.opened[player]) return "You've already opened";
+  if (!withPairs && required?.some(([type]) => type === "pair")) {
+    return "Pick the pairs to open with";
+  }
   const picked = takeFromHand(state, player, groups);
   if (typeof picked === "string" && picked !== KEEP) return picked;
   const hand = seat(state, player).hand;
@@ -257,7 +263,7 @@ export function openHand(state, player, groups) {
   // Americano: the required melds, out of the picked tiles wherever they sit
   // on the rack; picked tiles left over stay on the rack
   const [melds, pairs] = rules.opening
-    ? (openingOf(state, player, groups.flat()) ?? [])
+    ? (openingOf(state, player, groups.flat(), withPairs) ?? [])
     : [splitMelds(tiles, state.okeyTile, required, wrap(state), true), false];
   if (!melds) {
     return rules.opening
@@ -280,6 +286,15 @@ export function openHand(state, player, groups) {
   if (pairs) s.openedWithPairs = { ...s.openedWithPairs, [player]: true };
   s.justOpened = player;
   return s;
+}
+
+// El aç pressed twice with nothing picked: the sets and runs the whole
+// rack opens with, the okeys tried last so a meld without one goes first
+export function openAll(state, player) {
+  const tiles = seat(state, player).hand.filter(Boolean);
+  const okey = (t) => isOkey(t, state.okeyTile);
+  const ids = [...tiles.filter((t) => !okey(t)), ...tiles.filter(okey)];
+  return openHand(state, player, [ids.map((t) => t.id)], false);
 }
 
 // puts the new melds on the table, in the order their tiles were picked
@@ -473,9 +488,14 @@ export function playOnMeld(state, player, tileId, meldIndex, atEnd) {
 // discard is on offer to everyone else until they discard; the claimant
 // earliest in turn order after them gets it plus a penalty tile from the pile.
 export function drawTile(state, player, tile, toIndex, now = Date.now()) {
-  if (isCaught(state, tile.id)) return "That tile was caught";
+  const caught = isCaught(state, tile.id);
+  if (caught && !state.rules.takeCaught) return "That tile was caught";
   const s = game.drawTile(state, player, tile, toIndex);
   if (!s || typeof s === "string") return s;
+  // 101: a caught tile taken off its pile still costs whoever threw it
+  if (caught) {
+    penalize(s, Number(tile.source.split("-")[1]), state.rules.catchPenalty);
+  }
   // 101: a discard taken must go into a meld before this turn's discard
   if (state.rules.takeMustBeUsed && tile.source.startsWith("discard-")) {
     s.tookDiscard = {
@@ -681,9 +701,9 @@ const isCaught = (state, tileId) =>
   state.players.some((p) => p.caught?.includes(tileId));
 
 // what a player owes for this hand before it's scored: their tiles caught
-// on their pile, and the penalties during play (an okey thrown, a short
-// opening, a discard put back); shown on the score sheet as it happens,
-// added to the hand's score at its end
+// on their pile, and the penalties during play (an okey thrown, a caught
+// tile taken off the pile, a discard put back); shown on the score sheet as
+// it happens, added to the hand's score at its end
 export function penaltiesSoFar(state, player) {
   const caught = state.players.flatMap((p) => p.caught ?? []);
   const pile = seat(state, player)?.discardPile ?? [];
@@ -709,6 +729,8 @@ export function returnDiscard(state, player) {
   s.drawn = false;
   s.tookDiscard = null;
   game.unlog(s, "took", tile.id);
+  // back on the pile, a caught tile counts there again
+  if (isCaught(s, tile.id)) penalize(s, from.id, -s.rules.catchPenalty);
   const cost = s.rules.returnPenalty;
   if (cost) {
     penalize(s, player, cost);
@@ -740,6 +762,10 @@ export function catchDiscard(state, player) {
   const no = cantCatch(state, player, from.id);
   if (no) return no;
   if (isCaught(state, tile.id)) return "Already caught";
+  // 101: a thrown okey already cost okeyDiscardPenalty
+  if (state.rules.okeyDiscardPenalty && isOkey(tile, state.okeyTile)) {
+    return "The okey's penalty is already written";
+  }
   // it could go on the table as it is: added without moving an okey, or in
   // place of the okey that stands for it; a 1 after 13 doesn't count
   const ind = state.okeyTile;

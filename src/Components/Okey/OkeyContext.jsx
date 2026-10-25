@@ -161,8 +161,14 @@ export function OkeyProvider({ children }) {
   // moves them all, and in Americano the rules split them into melds,
   // wherever they sit on the rack.
   const [selected, setSelected] = React.useState([]);
+  // El aç pressed once (local too): a tap picks the tile's whole group on
+  // the rack, as the opening reads it, until you open
+  const [picking, setPicking] = React.useState(false);
   // a new deal can hand out the same tile ids again
-  React.useEffect(() => setSelected([]), [okeyState.deal]);
+  React.useEffect(() => {
+    setSelected([]);
+    setPicking(false);
+  }, [okeyState.deal]);
   // and a picked tile that leaves the rack (discarded, laid) is unpicked
   const inHand = myHand(me)
     .filter(Boolean)
@@ -261,13 +267,20 @@ export function OkeyProvider({ children }) {
   );
 
   const toggleSelected = useCallback(
-    (tile) =>
+    (tile) => {
+      const group = picking
+        ? americano
+            .groupsOf(myHand(me), game.rowOf(okeyState))
+            .find((g) => g.some((t) => t.id === tile.id))
+            .map((t) => t.id)
+        : [tile.id];
       setSelected((ids) =>
         ids.includes(tile.id)
-          ? ids.filter((id) => id !== tile.id)
-          : [...ids, tile.id],
-      ),
-    [],
+          ? ids.filter((id) => !group.includes(id))
+          : [...ids, ...group.filter((id) => !ids.includes(id))],
+      );
+    },
+    [picking, myHand, me, okeyState],
   );
   const unselectAll = useCallback(() => setSelected([]), []);
 
@@ -280,9 +293,19 @@ export function OkeyProvider({ children }) {
     [myHand, me, selected],
   );
 
-  const openHand = useCallback(() => {
-    if (act(americano.openHand, me, picked())) setSelected([]);
-  }, [act, me, picked]);
+  const opened = useCallback((ok) => {
+    if (!ok) return;
+    setSelected([]);
+    setPicking(false);
+  }, []);
+  const openHand = useCallback(
+    () => opened(act(americano.openHand, me, picked())),
+    [act, me, picked, opened],
+  );
+  const openAll = useCallback(
+    () => opened(act(americano.openAll, me)),
+    [act, me, opened],
+  );
 
   const layMelds = useCallback(() => {
     if (act(americano.layMelds, me, picked())) setSelected([]);
@@ -476,8 +499,11 @@ export function OkeyProvider({ children }) {
       selected,
       toggleSelected,
       unselectAll,
+      picking,
+      setPicking,
       held,
       openHand,
+      openAll,
       layMelds,
       playOnMeld,
       claimDiscard,
@@ -512,8 +538,11 @@ export function OkeyProvider({ children }) {
       selected,
       toggleSelected,
       unselectAll,
+      picking,
+      setPicking,
       held,
       openHand,
+      openAll,
       layMelds,
       playOnMeld,
       claimDiscard,

@@ -14,7 +14,7 @@ How each part works is in its code comments; this file holds the conventions, de
 
 ## Table
 
-- Show what everyone at a real table sees and leave the thinking to the player: no hints about what to lay, no auto-sort. Make hands faster, not smarter.
+- Show what everyone at a real table sees and leave the thinking to the player: no hints about what to lay, no auto-sort. Make hands faster, not smarter. The one exception, asked for: El aç pressed again with nothing picked opens the sets and runs the rules find on the rack (never pairs, those are picked on purpose), with nothing shown beforehand.
 - Gestures over buttons wherever one fits. Moves that end or replace the game live in the ⋯ menu (`TableMenu.jsx`) behind a second tap (`Confirm`).
 - The turn timer only reminds: it loops, turns red after the first lap, and the turn waits for the player.
 - One layout for every screen (`Board.jsx`, a CSS grid), sized in tile widths `--t` (`useTileSize`); only the size changes. Anything that comes and goes (badges, Sit, the tea glass, Catch) is placed absolutely, so its row never shifts.

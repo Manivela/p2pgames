@@ -115,6 +115,7 @@ export const ONE_O_ONE = {
   // 52/kural1.pdf), on top of pagat's: a game started before keeps pagat's
   returnPenalty: 101, // taking the discard and putting it back
   catchUntilDraw: true, // a discard is caught before the next player draws
+  takeCaught: true, // and, caught, the next player can still take it
   pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn
   pairsForAll: true, // once someone opens with pairs, everyone lays pairs
   finishInOne: true, // open all but one tile at once and finish, under 101 too

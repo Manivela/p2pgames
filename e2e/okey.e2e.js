@@ -13,6 +13,8 @@ const NEXT = /^(Next Round|Sonraki el)$/;
 const SHUFFLE = /^(Shuffle and play on|Karıştır, devam et)$/;
 const END = /^(End the game|Oyunu bitir)$/;
 const NEW_GAME = /^(New Game|Yeni oyun)$/;
+const OPEN = /^(Open your hand|El aç)$/;
+const FIND = /^(Find and open|Bul ve aç)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const SEAT_1 = /(Player|Oyuncu) 1(?!\d)/;
 
@@ -202,6 +204,28 @@ test("dragging picked tiles onto the table opens the hand", async ({
   // the extra tile stays on the rack, no longer picked
   expect((await handIds(page))[3]).toBe(extra);
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
+});
+
+test("El aç: a tap picks a whole group, pressed again with none it opens what it finds", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  await page.getByRole("button", { name: OPEN }).click();
+  // my first row is one group, end to end
+  await slot(page, 0).locator(".tile").click();
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(13);
+  await slot(page, 5).locator(".tile").click();
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
+  await page.getByRole("button", { name: FIND }).click();
+  await expect.poll(async () => (await state(page)).melds.length).toBe(1);
+  expect((await state(page)).melds[0].tiles.map((t) => t.id).sort()).toEqual([
+    "black7-0",
+    "blue7-0",
+    "red7-0",
+  ]);
+  await expect(page.getByRole("button", { name: OPEN })).toHaveCount(0);
 });
 
 // an okey held over a seri's right half shows where it would go, as the

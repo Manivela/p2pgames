@@ -803,6 +803,24 @@ test("a claim waits in the slot it was dropped on, and can be taken back", () =>
   assertAllTiles(s);
 });
 
+test("El aç with nothing picked: the round's melds out of the whole rack, okeys last", () => {
+  const hand = ["blue1-0", ...deal.hands[0].slice(0, -1)];
+  let s = americano.startGame(seated(2), { ...deal, hands: [hand, p2Hand] });
+  s = americano.openAll(s, 1);
+  assert.deepEqual(
+    s.melds.map((m) => ids(m.tiles)),
+    [kut5],
+  );
+  assert.isOk(tileIn(s, 1, "blue1-0"));
+  // pairs are opened with only when picked
+  const round = AMERICANO.rounds.findIndex((r) => r.name === "4 çift") + 1;
+  s = americano.startGame(seated(2), deal);
+  assert.equal(
+    americano.openAll({ ...s, round }, 1),
+    "Pick the pairs to open with",
+  );
+});
+
 test("4 çift: open with four pairs, then lay pairs, sets and runs", () => {
   const round = AMERICANO.rounds.findIndex((r) => r.name === "4 çift") + 1;
   assert.equal(round, AMERICANO.rounds.length - 1); // just before Elden

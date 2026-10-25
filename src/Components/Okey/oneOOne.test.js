@@ -196,6 +196,19 @@ test("101: picked tiles that fit no set or run stay on the rack", () => {
   assert.isOk(tileIn(s, 2, "yellow4-0"));
 });
 
+test("101: El aç with nothing picked opens the sets and runs on the rack, never pairs", () => {
+  let s = americano.openAll(start(), 1);
+  assert.deepEqual(
+    s.melds.map((m) => ids(m.tiles)),
+    [seri, kut, yellow],
+  );
+  assert.equal(player(s, 1).hand.filter(Boolean).length, 22 - 10);
+  // P2's six pairs open only when picked
+  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  assert.equal(americano.openAll(s, 2), "Open with 101+ or 5 pairs");
+});
+
 test("101: open with 5 pairs; then only pairs, or adding to sets and runs", () => {
   let s = americano.openHand(start(), 1, [opening]);
   // laying more right after opening is allowed (this just isn't a meld)
@@ -366,6 +379,31 @@ test("101: a discard is caught until the next player draws, and never by a partn
   ]);
   s = americano.drawTile(s, 3, s.drawPile.at(-1), 25);
   assert.equal(americano.catchDiscard(s, 1), "Too late to catch it");
+});
+
+test("101: a caught tile can still be taken, its penalty staying with the thrower; a thrown okey isn't caught again", () => {
+  let s = americano.openHand(start(3), 1, [opening]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "black2-0"));
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow4-0"));
+  s = americano.catchDiscard(s, 1);
+  assert.equal(americano.penaltiesSoFar(s, 2), 101);
+  const taken = americano.drawTile(s, 3, player(s, 2).discardPile.at(-1), 25);
+  assert.isOk(tileIn(taken, 3, "yellow4-0"));
+  assert.equal(americano.penaltiesSoFar(taken, 2), 101);
+  // put back, it's on the pile again: still 101, and 101 for putting it back
+  const back = americano.returnDiscard(taken, 3);
+  assert.equal(americano.penaltiesSoFar(back, 2), 101);
+  assert.equal(americano.penaltiesSoFar(back, 3), 101);
+  // the okey thrown: 101 once
+  s = americano.drawTile(s, 3, s.drawPile.at(-1), 25);
+  s = holding(s, 3, ["blue1-1", "red3-0"]);
+  s = americano.discardTile(s, 3, tileIn(s, 3, "blue1-1"));
+  assert.equal(americano.penaltiesSoFar(s, 3), 101);
+  assert.equal(
+    americano.catchDiscard(s, 1),
+    "The okey's penalty is already written",
+  );
 });
 
 // P1 finishes by discarding their last tile; P2 opened with sets and runs,

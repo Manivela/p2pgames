@@ -126,8 +126,19 @@ function DrawPile() {
 // the next round, a new game once it's over (Reset, New Game mid-game and
 // ending a game whose pile ran out live in the table menu)
 function NextStep() {
-  const { okeyState, me, startGame, newGame, nextRound, shuffleDiscards } =
-    useContext(OkeyContext);
+  const {
+    okeyState,
+    me,
+    startGame,
+    newGame,
+    nextRound,
+    shuffleDiscards,
+    selected,
+    picking,
+    setPicking,
+    openHand,
+    openAll,
+  } = useContext(OkeyContext);
   // 101's options: four in pairs, doubling (katlamalı)
   const [partners, setPartners] = useState(false);
   const [doubling, setDoubling] = useState(false);
@@ -161,10 +172,40 @@ function NextStep() {
         </>
       );
     case "play":
+      if (!okeyState.rules) {
+        return (
+          pileOut(okeyState, me) && (
+            <button onClick={shuffleDiscards}>
+              {t("Shuffle and play on")}
+            </button>
+          )
+        );
+      }
+      // El aç: pressed once, a tap on your rack picks a whole group; pressed
+      // again, it opens with the picked tiles or, none picked, with the sets
+      // and runs it finds on your rack (pairs only when picked)
       return (
-        !okeyState.rules &&
-        pileOut(okeyState, me) && (
-          <button onClick={shuffleDiscards}>{t("Shuffle and play on")}</button>
+        me &&
+        !okeyState.opened[me] &&
+        okeyState.rules.rounds[okeyState.round - 1].melds !== null && (
+          <button
+            aria-pressed={picking}
+            onClick={() =>
+              !picking
+                ? setPicking(true)
+                : selected.length
+                  ? openHand()
+                  : openAll()
+            }
+          >
+            {t(
+              !picking
+                ? "Open your hand"
+                : selected.length
+                  ? "Open picked"
+                  : "Find and open",
+            )}
+          </button>
         )
       );
     case "roundEnd":

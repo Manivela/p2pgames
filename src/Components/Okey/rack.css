@@ -858,6 +858,12 @@
   font-size: calc(var(--t) * 0.34);
 }
 
+/* El aç while a tap picks a whole group */
+.side button[aria-pressed="true"] {
+  background: #fff;
+  color: #1d1d1d;
+}
+
 /* 101's options, under its Start */
 .side .options {
   display: flex;

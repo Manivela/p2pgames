@@ -21,6 +21,8 @@ const TR = [
     "Elden elinde yere açılmaz",
   ],
   [/^Open your hand first$/, "Önce elini aç"],
+  [/^Pick the pairs to open with$/, "Açacağın çiftleri seç"],
+  [/^The okey's penalty is already written$/, "Okeyin cezası zaten yazıldı"],
   [
     /^You can lay more from next turn$/,
     "Daha fazlasını sonraki turda açabilirsin",
@@ -128,6 +130,9 @@ const TR = [
   [/^Start 101$/, "101 başlat"],
   [/^Partners$/, "Eşli"],
   [/^Doubling$/, "Katlamalı"],
+  [/^Open your hand$/, "El aç"],
+  [/^Open picked$/, "Seçilenleri aç"],
+  [/^Find and open$/, "Bul ve aç"],
   [/^partner$/, "eş"],
   [/^Reset Game$/, "Oyunu sıfırla"],
   [/^New Game$/, "Yeni oyun"],
