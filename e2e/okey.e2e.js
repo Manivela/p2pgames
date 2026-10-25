@@ -15,6 +15,7 @@ const END = /^(End the game|Oyunu bitir)$/;
 const NEW_GAME = /^(New Game|Yeni oyun)$/;
 const OPEN = /^(Open your hand|El aç)$/;
 const UPDATE = /^↻ (New version|Yeni sürüm)$/;
+const SOUND = /^(Sound|Ses)$/;
 const FIND = /^(Find and open|Bul ve aç)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const SEAT_1 = /(Player|Oyuncu) 1(?!\d)/;
@@ -491,6 +492,19 @@ test("picked tiles move together", async ({ page }) => {
   await expect(picked).toHaveCount(3);
   await slot(page, 25).click();
   await expect(picked).toHaveCount(0);
+});
+
+test("the sound level is set in the menu and kept", async ({ page }) => {
+  await sitDown(page);
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByLabel(SOUND).fill("0.3");
+  expect(await page.evaluate(() => localStorage.getItem("okey-volume"))).toBe(
+    "0.3",
+  );
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  await page.reload();
+  await page.getByRole("button", { name: MENU }).click();
+  await expect(page.getByLabel(SOUND)).toHaveValue("0.3");
 });
 
 // a second player, in the same browser: tabs sync over BroadcastChannel,

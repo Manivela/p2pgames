@@ -1000,6 +1000,27 @@
   flex: none;
 }
 
+/* this device's sound level */
+.table-menu .volume {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.table-menu .volume input {
+  flex: 1;
+  min-width: 90px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+
 /* a second tap confirms */
 .table-menu button.armed {
   background-color: #e53935;

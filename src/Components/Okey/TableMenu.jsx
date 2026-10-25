@@ -360,8 +360,16 @@ async function report(okeyState, tags) {
 // ⋯ in a corner of the table: the moves that end or replace the game live
 // here, a tap away instead of in reach of a stray finger
 export default function TableMenu() {
-  const { okeyState, me, stand, resetGame, newGame, endGame } =
-    useContext(OkeyContext);
+  const {
+    okeyState,
+    me,
+    stand,
+    resetGame,
+    newGame,
+    endGame,
+    volume,
+    setVolume,
+  } = useContext(OkeyContext);
   const { roomId } = useParams();
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState(null);
@@ -420,6 +428,17 @@ export default function TableMenu() {
           {(okeyState.gameState === "start" || okeyState.rules) && (
             <button onClick={() => show("setup")}>{t("Set up a game")}</button>
           )}
+          <label className="volume">
+            {t("Sound")}
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+            />
+          </label>
           {/* classic: the pile ran out, and whoever's turn it is calls it */}
           {!okeyState.rules && game.pileOut(okeyState, me) && (
             <Confirm label={t("End the game")} onConfirm={then(endGame)} />

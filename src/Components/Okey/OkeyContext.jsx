@@ -43,8 +43,31 @@ export function OkeyProvider({ children }) {
   });
   const { states, localID, setLocalState } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((state) => state.currentUser);
-  const [playBellSound] = useSound(bell, { volume: 0.1 });
-  const [playTile1Sound] = useSound(tile1, { volume: 0.5 });
+  // this device's sound level, 0 to 1 (the ⋯ menu), kept for next time
+  const [volume, setVolume] = React.useState(() => {
+    try {
+      const v = Number(localStorage.getItem("okey-volume") ?? 1);
+      return Number.isFinite(v) ? v : 1;
+    } catch {
+      return 1;
+    }
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("okey-volume", volume);
+    } catch {
+      // blocked: back to full next time
+    }
+  }, [volume]);
+  const [playBellSound] = useSound(bell, { volume: 0.1 * volume });
+  const [playTile1Sound] = useSound(tile1, { volume: 0.5 * volume });
+  // a new level clicks at itself, to be heard as it's set (not on load)
+  const level = React.useRef(volume);
+  React.useEffect(() => {
+    if (level.current === volume) return;
+    level.current = volume;
+    playTile1Sound();
+  }, [volume, playTile1Sound]);
   useMap("okey-state"); // re-render on every change
   const map = useDoc().getMap("okey-state");
   const shared = readState(map);
@@ -576,6 +599,8 @@ export function OkeyProvider({ children }) {
       endGame,
       dragged,
       newVersion,
+      volume,
+      setVolume,
     }),
     [
       okeyState,
@@ -616,6 +641,7 @@ export function OkeyProvider({ children }) {
       shuffleDiscards,
       endGame,
       newVersion,
+      volume,
     ],
   );
 
