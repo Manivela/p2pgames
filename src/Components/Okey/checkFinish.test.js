@@ -550,3 +550,21 @@ test("a group is sets and runs side by side, never a mix of the two", () => {
   ];
   for (const h of finished) assert.isTrue(checkFinished(hand(h), indicator), h);
 });
+
+test("12-13-1 finishes only where runs wrap (classic, not Americano)", () => {
+  const hand = makeHand([
+    ...[createTile("red", 12), createTile("red", 13), createTile("red", 1)],
+    null,
+    ...[createTile("blue", 5), createTile("blue", 6), createTile("blue", 7)],
+    null,
+    ...[createTile("yellow", 2), createTile("yellow", 3)],
+    createTile("yellow", 4),
+    createTile("yellow", 5),
+    null,
+    ...[createTile("red", 9), createTile("blue", 9), createTile("yellow", 9)],
+    createTile("red", 2),
+  ]);
+  hand[hand.findIndex((t) => t?.id.startsWith("red2-"))] = null; // thrown
+  assert.isTrue(checkFinished(hand, indicator));
+  assert.isFalse(checkFinished(hand, indicator, false));
+});
