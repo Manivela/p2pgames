@@ -1,36 +1,78 @@
-import { useContext, useLayoutEffect, useRef } from "react";
+import { useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useDrop } from "react-dnd";
 import { findKey, sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
-import { claimants, upForClaim } from "./americano";
+// playOnMeld here is the rule, tried out for the ghost
+import { claimants, playOnMeld as onMeld, upForClaim } from "./americano";
 import { allSeats } from "./game";
-import { colorOf, isOkey, rankOf } from "./melds";
+import { colorOf, isOkey, okeyStandsFor, rankOf } from "./melds";
 import { colorMap, symbols } from "./constants";
 import Tile, { TileFace, lastTurn, markOf } from "./Tile";
 import { t } from "../../i18n";
+
+// What a tile held over a meld would do there, by the rules: where it would
+// go (`at`: "before", "after", or the index of the okey it would replace)
+// and the face it would show; an okey in a seri shows the tile it would
+// stand for, in a küt a blank back. Null if the rules would refuse it.
+function ghostOf(state, player, tile, index, atEnd) {
+  const next = onMeld(state, player, tile.id, index, atEnd);
+  if (!next || typeof next === "string") return null;
+  const before = state.melds[index].tiles;
+  const after = next.melds[index].tiles;
+  const i = after.findIndex((x) => x.id === tile.id);
+  if (i === -1) return null;
+  const at = after.length === before.length ? i : i === 0 ? "before" : "after";
+  const ind = state.okeyTile;
+  if (!isOkey(tile, ind)) return { at, face: tile.id };
+  if (next.melds[index].type !== "seri") return { at, face: null };
+  const { rank, colors } = okeyStandsFor(next.melds[index], i, ind);
+  return { at, face: `${findKey(colorMap, (c) => c === colors[0])}${rank}` };
+}
+
+const Ghost = ({ face, at }) => (
+  <span className={`ghost ${typeof at === "string" ? at : ""}`}>
+    {face ? <TileFace id={face} /> : <span className="tile" />}
+  </span>
+);
+
+// one tile of a bigger pick brings the pick: that's opening or laying
+// down, wherever on the table it lands
+const inPick = (selected, tile) =>
+  selected.length > 1 && selected.includes(tile.id);
 
 function Meld({ meld, index }) {
   const { playOnMeld, okeyState, me, selected, openHand, layMelds } =
     useContext(OkeyContext);
   const box = useRef(null);
-  const [{ isOver }, drop] = useDrop(
+  // the end a tile goes on: the half of the meld it's over
+  const endOf = (monitor) => {
+    const r = box.current.getBoundingClientRect();
+    return monitor.getClientOffset()?.x > r.left + r.width / 2;
+  };
+  const [atEnd, setAtEnd] = useState(false);
+  const [{ held }, drop] = useDrop(
     () => ({
       accept: "TILE",
+      hover: (e, monitor) => setAtEnd(endOf(monitor)),
       drop: (e, monitor) => {
-        // one tile of a bigger pick brings the pick: that's opening or
-        // laying down, wherever on the table it lands
-        if (selected.length > 1 && selected.includes(e.tile.id)) {
+        if (inPick(selected, e.tile)) {
           (okeyState.opened[me] ? layMelds : openHand)();
         } else {
-          // an okey goes on the end of a seri it's dropped nearer
-          const r = box.current.getBoundingClientRect();
-          const x = monitor.getClientOffset()?.x;
-          playOnMeld(e.tile, index, x > r.left + r.width / 2);
+          playOnMeld(e.tile, index, endOf(monitor));
         }
       },
-      collect: (monitor) => ({ isOver: monitor.isOver() }),
+      collect: (monitor) => ({
+        held: monitor.isOver() ? monitor.getItem().tile : null,
+      }),
     }),
     [playOnMeld, index, selected, okeyState.opened, me, openHand, layMelds],
+  );
+  const ghost = useMemo(
+    () =>
+      held && !inPick(selected, held)
+        ? ghostOf(okeyState, me, held, index, atEnd)
+        : null,
+    [held, okeyState, me, index, atEnd, selected],
   );
   // a full küt (all four colours, no okey left to swap out) is one tile
   const ind = okeyState.okeyTile;
@@ -47,7 +89,7 @@ function Meld({ meld, index }) {
         box.current = el;
         drop(el);
       }}
-      className={`meld ${isOver ? "over" : ""}`}
+      className={`meld ${held ? "over" : ""}`}
       data-meld={index}
     >
       {full ? (
@@ -69,19 +111,24 @@ function Meld({ meld, index }) {
           </div>
         </div>
       ) : (
-        meld.tiles.map((x, i) => (
-          <Tile
-            key={x.id}
-            tile={x}
-            disabled
-            // tiles side by side from one move show its number once, on the
-            // last of them
-            numbered={
-              markOf(moves, x.id) !== markOf(moves, meld.tiles[i + 1]?.id)
-            }
-          />
-        ))
+        meld.tiles.map((x, i) =>
+          ghost?.at === i ? (
+            <Ghost key={x.id} {...ghost} />
+          ) : (
+            <Tile
+              key={x.id}
+              tile={x}
+              disabled
+              // tiles side by side from one move show its number once, on
+              // the last of them
+              numbered={
+                markOf(moves, x.id) !== markOf(moves, meld.tiles[i + 1]?.id)
+              }
+            />
+          ),
+        )
       )}
+      {typeof ghost?.at === "string" && <Ghost {...ghost} />}
     </div>
   );
 }

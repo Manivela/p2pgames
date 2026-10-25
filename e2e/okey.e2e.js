@@ -204,19 +204,37 @@ test("dragging picked tiles onto the table opens the hand", async ({
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
-// an okey dropped on a seri's right half goes on its high end
-test("an okey goes on the end of a seri it's dropped on", async ({ page }) => {
+// an okey held over a seri's right half shows where it would go, as the
+// tile it would stand for, and goes there when dropped
+test("an okey shows where it would go, and goes on the end it's dropped on", async ({
+  page,
+}) => {
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
   const okey = await table(page, "okeyAndSeri");
-  // its last tile is right of the middle; dragTo waits for the table to settle
-  await slot(page, 0)
-    .locator(".tile")
-    .dragTo(page.locator('[data-meld="0"] .tile').last(), { steps: 8 });
+  // the seri's last tile is right of its middle; hovering it first waits
+  // for the table to settle
+  const last = page.locator('[data-meld="0"] .tile').last();
+  await last.hover();
+  const b = await last.boundingBox();
+  const [x, y] = [b.x + b.width / 2, b.y + b.height / 2];
+  await slot(page, 0).locator(".tile").hover();
+  await page.mouse.down();
+  await page.mouse.move(x, y, { steps: 8 });
+  // a held mouse keeps hovering; Playwright's drag only does when it moves
+  let dx = 0;
+  await expect
+    .poll(async () => {
+      await page.mouse.move(x + (++dx % 4), y);
+      return page.locator(".meld .ghost.after").count();
+    })
+    .toBe(1);
+  await page.mouse.up();
   await expect
     .poll(async () => (await state(page)).melds[0].tiles.at(-1).id)
     .toBe(okey);
+  await expect(page.locator(".meld .ghost")).toHaveCount(0);
 });
 
 // right click flips your tile while the round is played; once it's over,
