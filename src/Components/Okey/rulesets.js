@@ -126,6 +126,9 @@ export const ONE_O_ONE = {
   // okey, with pairs or in one go, and a pairs opener's own score
   partners: false,
   doubling: false,
+  // gösterge, which the PDF leaves out: the indicator's twin dropped on it
+  // on your first turn takes this off your hand's score
+  indicatorScore: -101,
   // a table okey goes to whoever holds its tile, once they've opened
   swapOkeys: true,
   okeySwapFromRound: null,

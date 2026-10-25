@@ -2,7 +2,7 @@ import { assert, test } from "vitest";
 import * as americano from "./americano";
 import * as game from "./game";
 import { isOkey, meldOrder } from "./melds";
-import { ONE_O_ONE } from "./rulesets";
+import { AMERICANO, ONE_O_ONE } from "./rulesets";
 import { createTile } from "./utils";
 
 const indicator = createTile("blue", 13, 1); // okey is blue1, fake okey = blue1
@@ -403,6 +403,36 @@ test("101: a caught tile can still be taken, its penalty staying with the throwe
   assert.equal(
     americano.catchDiscard(s, 1),
     "The okey's penalty is already written",
+  );
+});
+
+test("101: the indicator's twin shown on your first turn takes 101 off, once", () => {
+  // the indicator is blue 13-1; P1 holds blue 13-0 in the 13s
+  let s = start();
+  assert.equal(
+    americano.showIndicator(s, 1, "black13-0"),
+    "That's not the indicator's twin",
+  );
+  assert.equal(americano.showIndicator(s, 2, "blue13-0"), "Not your turn");
+  s = americano.showIndicator(s, 1, "blue13-0");
+  assert.equal(americano.penaltiesSoFar(s, 1), -101);
+  assert.equal(s.message, "P1 showed the indicator: -101");
+  assert.equal(
+    americano.showIndicator(s, 1, "blue13-0"),
+    "The indicator's been shown",
+  );
+  // the next lap is too late
+  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow4-0"));
+  s = americano.drawTile(s, 1, s.drawPile.at(-1), 25);
+  assert.equal(
+    americano.showIndicator(s, 1, "blue13-0"),
+    "Only on your first turn",
+  );
+  // Americano has no gösterge
+  assert.isUndefined(
+    americano.showIndicator(start(2, seri, AMERICANO), 1, "blue13-0"),
   );
 });
 

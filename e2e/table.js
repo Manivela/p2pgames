@@ -102,22 +102,27 @@ export function emptyPile() {
   window.okey.set({ ...s, currentPlayer: 1 });
 }
 
-// I've opened, an okey is in my first slot (swapped with the tile there),
-// and a 6-7-8 seri in another colour is on the table
-export function okeyAndSeri() {
-  const s = structuredClone(window.okey.get());
-  const name = (id) => id.replace(/\d+-\d+$/, "");
-  const okey = `${name(s.okeyTile.id)}${(s.okeyTile.rank % 13) + 1}-0`;
+// tile `id` into my first slot, swapped with the tile there
+function intoMyFirstSlot(s, id) {
   const me = seat(s, 1);
   const mine = me.hand[0];
   const places = [
     s.drawPile,
     ...s.players.flatMap((p) => [p.hand, p.discardPile]),
   ];
-  const list = places.find((l) => l.some((t) => t?.id === okey));
-  const i = list.findIndex((t) => t?.id === okey);
+  const list = places.find((l) => l.some((t) => t?.id === id));
+  const i = list.findIndex((t) => t?.id === id);
   me.hand[0] = { ...list[i], source: "hand-1", hidden: false };
   list[i] = { ...mine, source: list[i].source, hidden: list[i].hidden };
+}
+
+// I've opened, an okey is in my first slot (swapped with the tile there),
+// and a 6-7-8 seri in another colour is on the table
+export function okeyAndSeri() {
+  const s = structuredClone(window.okey.get());
+  const name = (id) => id.replace(/\d+-\d+$/, "");
+  const okey = `${name(s.okeyTile.id)}${(s.okeyTile.rank % 13) + 1}-0`;
+  intoMyFirstSlot(s, okey);
   const color = ["red", "blue", "black", "yellow"].find(
     (c) => c !== name(okey),
   );
@@ -131,6 +136,14 @@ export function okeyAndSeri() {
   s.justOpened = null;
   window.okey.set(s);
   return okey;
+}
+
+// the indicator's twin in my first slot (101's gösterge)
+export function twinFirst() {
+  const s = structuredClone(window.okey.get());
+  const [kind, copy] = s.okeyTile.id.split("-");
+  intoMyFirstSlot(s, `${kind}-${1 - copy}`);
+  window.okey.set(s);
 }
 
 // n more runs on the table, for a crowded one (only shown: they don't come

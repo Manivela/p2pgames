@@ -228,6 +228,20 @@ test("El aç: a tap picks a whole group, pressed again with none it opens what i
   await expect(page.getByRole("button", { name: OPEN })).toHaveCount(0);
 });
 
+test("101: the indicator's twin dropped on it is shown to the table", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4, "101");
+  await table(page, "twinFirst");
+  // tiles still sliding into place would be picked up instead
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => !a.effect.target?.matches(".tile")),
+  );
+  await drag(page, slot(page, 0).locator(".tile"), page.locator(".indicator"));
+  await expect.poll(async () => (await state(page)).penalties[1]).toBe(-101);
+});
+
 // an okey held over a seri's right half shows where it would go, as the
 // tile it would stand for, and goes there when dropped
 test("an okey shows where it would go, and goes on the end it's dropped on", async ({

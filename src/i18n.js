@@ -23,6 +23,10 @@ const TR = [
   [/^Open your hand first$/, "Önce elini aç"],
   [/^Pick the pairs to open with$/, "Açacağın çiftleri seç"],
   [/^The okey's penalty is already written$/, "Okeyin cezası zaten yazıldı"],
+  [/^The indicator's been shown$/, "Gösterge zaten gösterildi"],
+  [/^Only on your first turn$/, "Yalnızca ilk turunda"],
+  [/^That's not the indicator's twin$/, "Bu taş göstergenin aynısı değil"],
+  [/^(.+) showed the indicator: (-?\d+)$/, "$1 göstergeyi gösterdi: $2"],
   [
     /^You can lay more from next turn$/,
     "Daha fazlasını sonraki turda açabilirsin",

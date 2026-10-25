@@ -311,6 +311,11 @@ export function OkeyProvider({ children }) {
     if (act(americano.layMelds, me, picked())) setSelected([]);
   }, [act, me, picked]);
 
+  const showIndicator = useCallback(
+    (tile) => okeyState.rules && act(americano.showIndicator, me, tile.id),
+    [act, me, okeyState.rules],
+  );
+
   const playOnMeld = useCallback(
     (tile, meldIndex, atEnd) =>
       !ghost(tile) && act(americano.playOnMeld, me, tile.id, meldIndex, atEnd),
@@ -505,6 +510,7 @@ export function OkeyProvider({ children }) {
       openHand,
       openAll,
       layMelds,
+      showIndicator,
       playOnMeld,
       claimDiscard,
       catchDiscard,
@@ -544,6 +550,7 @@ export function OkeyProvider({ children }) {
       openHand,
       openAll,
       layMelds,
+      showIndicator,
       playOnMeld,
       claimDiscard,
       catchDiscard,

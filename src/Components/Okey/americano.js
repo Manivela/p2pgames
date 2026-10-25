@@ -41,6 +41,8 @@ export function startGame(state, deal, rules = AMERICANO) {
     replay: false,
     tookDiscard: null,
     tookOkey: null,
+    discards: 0,
+    indicatorShown: null,
   };
 }
 
@@ -79,6 +81,8 @@ export function nextRound(state, deal) {
       takes: {},
       penalties: {},
       replay: false,
+      discards: 0,
+      indicatorShown: null,
     },
     game.shuffledPile(),
     deal,
@@ -702,8 +706,8 @@ const isCaught = (state, tileId) =>
 
 // what a player owes for this hand before it's scored: their tiles caught
 // on their pile, and the penalties during play (an okey thrown, a caught
-// tile taken off the pile, a discard put back); shown on the score sheet as
-// it happens, added to the hand's score at its end
+// tile taken off the pile, a discard put back, the gösterge's minus); shown
+// on the score sheet as it happens, added to the hand's score at its end
 export function penaltiesSoFar(state, player) {
   const caught = state.players.flatMap((p) => p.caught ?? []);
   const pile = seat(state, player)?.discardPile ?? [];
@@ -736,6 +740,30 @@ export function returnDiscard(state, player) {
     penalize(s, player, cost);
     s.message = `${me.user?.name} put the tile back: +${cost}`;
   }
+  return s;
+}
+
+// 101's gösterge (the user's, not the PDF's): the indicator's twin, shown
+// on your first turn of a hand, scores indicatorScore once
+export function showIndicator(state, player, tileId) {
+  const score = state.rules.indicatorScore;
+  if (!score) return;
+  if (roundOver(state)) return roundOver(state);
+  if (state.currentPlayer !== player) return "Not your turn";
+  if (state.indicatorShown) return "The indicator's been shown";
+  // a turn ends with a discard: the first lap is the first n of them
+  if ((state.discards ?? 0) >= state.players.length) {
+    return "Only on your first turn";
+  }
+  const kind = (id) => id.split("-")[0];
+  const tile = seat(state, player).hand.find((t) => t?.id === tileId);
+  if (!tile || kind(tile.id) !== kind(state.okeyTile.id)) {
+    return "That's not the indicator's twin";
+  }
+  const s = cloneDeep(state);
+  s.indicatorShown = player;
+  penalize(s, player, score);
+  s.message = `${seat(s, player).user?.name} showed the indicator: ${score}`;
   return s;
 }
 

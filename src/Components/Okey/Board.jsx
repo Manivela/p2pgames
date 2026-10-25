@@ -1,6 +1,7 @@
 import _ from "lodash";
 import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
+import { useDrop } from "react-dnd";
 import { OkeyContext } from "./OkeyContext";
 import Rack, { DiscardPile, Seat } from "./Rack";
 import Slot from "./Slot";
@@ -98,9 +99,15 @@ function usePileAside(deal) {
   return [ref, aside];
 }
 
-// the draw pile as a stack, its count, and the indicator beside it
+// the draw pile as a stack, its count, and the indicator beside it (101's
+// gösterge: its twin dropped on it)
 function DrawPile() {
-  const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
+  const { okeyState, nextDrawTile, finishGame, showIndicator } =
+    useContext(OkeyContext);
+  const [, show] = useDrop(
+    () => ({ accept: "TILE", drop: (e) => void showIndicator(e.tile) }),
+    [showIndicator],
+  );
   return (
     <div className="draw">
       <Slot
@@ -112,7 +119,9 @@ function DrawPile() {
       />
       <span className="count">{okeyState.drawPile.length}</span>
       {okeyState.okeyTile && (
-        <Tile className="indicator" tile={okeyState.okeyTile} disabled />
+        <div ref={show} className="twin">
+          <Tile className="indicator" tile={okeyState.okeyTile} disabled />
+        </div>
       )}
       {/* the tile someone finished with */}
       {okeyState.finishTile && (
