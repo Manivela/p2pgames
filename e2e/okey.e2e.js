@@ -17,6 +17,7 @@ const OPEN = /^(Open your hand|El aç)$/;
 const UPDATE = /^↻ (New version|Yeni sürüm)$/;
 const SOUND = /^(Sound|Ses)$/;
 const FIND = /^(Find and open|Bul ve aç)$/;
+const LAY = /^(Lay melds|Per aç)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const SEAT_1 = /(Player|Oyuncu) 1(?!\d)/;
 
@@ -222,26 +223,30 @@ test("dragging picked tiles onto the table opens the hand", async ({
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
-test("El aç: a tap picks a whole group, pressed again with none it opens what it finds", async ({
+test("El aç: it picks what it would open, a tap picks a whole group, and it stays to lay more", async ({
   page,
 }) => {
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
+  const picked = () =>
+    page
+      .locator(".rack .tile.selected")
+      .evaluateAll((els) => els.map((e) => e.dataset.tileId).sort());
+  const kut = ["black7-0", "blue7-0", "red7-0"];
   await page.getByRole("button", { name: OPEN }).click();
+  await expect.poll(picked).toEqual(kut);
   // my first row is one group, end to end
-  await slot(page, 0).locator(".tile").click();
+  await slot(page, 5).locator(".tile").click();
   await expect(page.locator(".rack .tile.selected")).toHaveCount(13);
   await slot(page, 5).locator(".tile").click();
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
   await page.getByRole("button", { name: FIND }).click();
   await expect.poll(async () => (await state(page)).melds.length).toBe(1);
-  expect((await state(page)).melds[0].tiles.map((t) => t.id).sort()).toEqual([
-    "black7-0",
-    "blue7-0",
-    "red7-0",
-  ]);
-  await expect(page.getByRole("button", { name: OPEN })).toHaveCount(0);
+  expect((await state(page)).melds[0].tiles.map((t) => t.id).sort()).toEqual(
+    kut,
+  );
+  await expect(page.getByRole("button", { name: LAY })).toBeVisible();
 });
 
 test("101: the indicator's twin dropped on it is shown to the table", async ({
@@ -256,6 +261,30 @@ test("101: the indicator's twin dropped on it is shown to the table", async ({
   );
   await drag(page, slot(page, 0).locator(".tile"), page.locator(".indicator"));
   await expect.poll(async () => (await state(page)).penalties[1]).toBe(-101);
+});
+
+test("101: once opened, El aç picks the runs on the rack and lays them", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4, "101");
+  await table(page, "toMyTurn");
+  await table(page, "runFirst");
+  const run = ["red3-1", "red4-1", "red5-1"];
+  await page.getByRole("button", { name: LAY }).click();
+  for (const id of run) {
+    await expect(page.locator(`.rack [data-tile-id="${id}"]`)).toHaveClass(
+      /selected/,
+    );
+  }
+  await page
+    .getByRole("button", { name: /^(Open picked|Seçilenleri aç)$/ })
+    .click();
+  await expect
+    .poll(async () =>
+      (await state(page)).melds.map((m) => m.tiles.map((t) => t.id).join()),
+    )
+    .toContain(run.join());
 });
 
 // an okey held over a seri's right half shows where it would go, as the

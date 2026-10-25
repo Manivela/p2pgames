@@ -144,9 +144,10 @@ function NextStep() {
     shuffleDiscards,
     selected,
     picking,
-    setPicking,
+    startPicking,
     openHand,
     openAll,
+    layMelds,
   } = useContext(OkeyContext);
   // 101's options: four in pairs, doubling (katlamalı)
   const [partners, setPartners] = useState(false);
@@ -180,7 +181,7 @@ function NextStep() {
           </span>
         </>
       );
-    case "play":
+    case "play": {
       if (!okeyState.rules) {
         return (
           pileOut(okeyState, me) && (
@@ -190,33 +191,40 @@ function NextStep() {
           )
         );
       }
-      // El aç: pressed once, a tap on your rack picks a whole group; pressed
-      // again, it opens with the picked tiles or, none picked, with the sets
-      // and runs it finds on your rack (pairs only when picked)
+      // El aç, all hand long: pressed once, it picks what it would lay down
+      // (the opening, then the sets and runs on your rack; pairs only by
+      // hand) and a tap on your rack picks a whole group; pressed again, it
+      // lays the picked tiles or, none picked, the opening it finds
+      const opened = okeyState.opened[me];
+      const lay = opened ? layMelds : openHand;
       return (
         me &&
-        !okeyState.opened[me] &&
         okeyState.rules.rounds[okeyState.round - 1].melds !== null && (
           <button
             aria-pressed={picking}
-            onClick={() =>
+            onClick={
               !picking
-                ? setPicking(true)
-                : selected.length
-                  ? openHand()
-                  : openAll()
+                ? startPicking
+                : selected.length || opened
+                  ? lay
+                  : openAll
             }
           >
             {t(
               !picking
-                ? "Open your hand"
+                ? opened
+                  ? "Lay melds"
+                  : "Open your hand"
                 : selected.length
                   ? "Open picked"
-                  : "Find and open",
+                  : opened
+                    ? "Lay melds"
+                    : "Find and open",
             )}
           </button>
         )
       );
+    }
     case "roundEnd":
       return <button onClick={nextRound}>{t("Next Round")}</button>;
     case "finish":

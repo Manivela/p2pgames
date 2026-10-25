@@ -333,23 +333,31 @@ export function OkeyProvider({ children }) {
     [myHand, me, selected],
   );
 
-  const opened = useCallback((ok) => {
+  // El aç's first press: picking, with what it would lay down picked
+  // (meldsToLay) unless you've picked tiles yourself
+  const startPicking = useCallback(() => {
+    setPicking(true);
+    setSelected((ids) =>
+      ids.length ? ids : americano.meldsToLay(okeyState, me),
+    );
+  }, [okeyState, me]);
+  const laid = useCallback((ok) => {
     if (!ok) return;
     setSelected([]);
     setPicking(false);
   }, []);
   const openHand = useCallback(
-    () => opened(act(americano.openHand, me, picked())),
-    [act, me, picked, opened],
+    () => laid(act(americano.openHand, me, picked())),
+    [act, me, picked, laid],
   );
   const openAll = useCallback(
-    () => opened(act(americano.openAll, me)),
-    [act, me, opened],
+    () => laid(act(americano.openAll, me)),
+    [act, me, laid],
   );
-
-  const layMelds = useCallback(() => {
-    if (act(americano.layMelds, me, picked())) setSelected([]);
-  }, [act, me, picked]);
+  const layMelds = useCallback(
+    () => laid(act(americano.layMelds, me, picked())),
+    [act, me, picked, laid],
+  );
 
   const showIndicator = useCallback(
     (tile) => okeyState.rules && act(americano.showIndicator, me, tile.id),
@@ -584,7 +592,7 @@ export function OkeyProvider({ children }) {
       toggleSelected,
       unselectAll,
       picking,
-      setPicking,
+      startPicking,
       held,
       openHand,
       openAll,
@@ -627,7 +635,7 @@ export function OkeyProvider({ children }) {
       toggleSelected,
       unselectAll,
       picking,
-      setPicking,
+      startPicking,
       held,
       openHand,
       openAll,

@@ -821,6 +821,11 @@ test("El aç with nothing picked: the round's melds out of the whole rack, okeys
   );
 });
 
+test("El aç's first press picks the round's melds it finds", () => {
+  const s = americano.startGame(seated(2), deal);
+  assert.sameMembers(americano.meldsToLay(s, 1), kut5);
+});
+
 test("4 çift: open with four pairs, then lay pairs, sets and runs", () => {
   const round = AMERICANO.rounds.findIndex((r) => r.name === "4 çift") + 1;
   assert.equal(round, AMERICANO.rounds.length - 1); // just before Elden

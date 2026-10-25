@@ -102,18 +102,30 @@ export function emptyPile() {
   window.okey.set({ ...s, currentPlayer: 1 });
 }
 
-// tile `id` into my first slot, swapped with the tile there
-function intoMyFirstSlot(s, id) {
+// tile `id` into my slot `at` (the first), swapped with the tile there
+function intoMyFirstSlot(s, id, at = 0) {
   const me = seat(s, 1);
-  const mine = me.hand[0];
+  const mine = me.hand[at];
   const places = [
     s.drawPile,
     ...s.players.flatMap((p) => [p.hand, p.discardPile]),
   ];
   const list = places.find((l) => l.some((t) => t?.id === id));
   const i = list.findIndex((t) => t?.id === id);
-  me.hand[0] = { ...list[i], source: "hand-1", hidden: false };
-  list[i] = { ...mine, source: list[i].source, hidden: list[i].hidden };
+  me.hand[at] = { ...list[i], source: "hand-1", hidden: false };
+  list[i] = mine && { ...mine, source: list[i].source, hidden: list[i].hidden };
+}
+
+// I've opened, and my rack starts with red 3-4-5 and a gap after them
+export function runFirst() {
+  const s = structuredClone(window.okey.get());
+  const hand = seat(s, 1).hand;
+  hand[hand.indexOf(null)] = hand[3];
+  hand[3] = null;
+  ["red3-1", "red4-1", "red5-1"].forEach((id, i) => intoMyFirstSlot(s, id, i));
+  s.opened = { ...s.opened, 1: true };
+  s.justOpened = null;
+  window.okey.set(s);
 }
 
 // I've opened, an okey is in my first slot (swapped with the tile there),

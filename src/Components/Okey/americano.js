@@ -301,6 +301,23 @@ export function openAll(state, player) {
   return openHand(state, player, [ids.map((t) => t.id)], false);
 }
 
+// What El aç picks on its first press, to be seen before it's laid: the
+// opening openAll would make (on your turn or not), or once opened the
+// sets and runs as they lie on the rack. Pairs are picked by hand only.
+export function meldsToLay(state, player) {
+  const hand = seat(state, player)?.hand ?? [];
+  if (state.gameState !== "play" || state.openedWithPairs?.[player]) return [];
+  if (state.opened[player]) {
+    return groupsOf(hand, game.rowOf(state))
+      .flatMap((g) => asLaid(g, state.okeyTile).melds)
+      .flatMap((m) => m.tiles.map((t) => t.id));
+  }
+  const s = openAll({ ...state, currentPlayer: player, drawn: true }, player);
+  if (!s || typeof s === "string") return [];
+  const kept = seat(s, player).hand.map((t) => t?.id);
+  return hand.filter((t) => t && !kept.includes(t.id)).map((t) => t.id);
+}
+
 // puts the new melds on the table, in the order their tiles were picked
 function lay(s, player, melds, ids) {
   const first = (m) => Math.min(...m.tiles.map((t) => ids.indexOf(t.id)));

@@ -209,6 +209,24 @@ test("101: El aç with nothing picked opens the sets and runs on the rack, never
   assert.equal(americano.openAll(s, 2), "Open with 101+ or 5 pairs");
 });
 
+test("101: El aç's first press picks what it would lay: the opening, then the sets and runs on the rack, never pairs", () => {
+  // P1's opening, seen on P2's turn too
+  assert.sameMembers(americano.meldsToLay(start(), 1), opening);
+  let s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  assert.sameMembers(americano.meldsToLay(s, 1), opening);
+  // P2's six pairs aren't picked
+  assert.deepEqual(americano.meldsToLay(s, 2), []);
+  // once opened: the run as it lies, not the loose tiles
+  s = americano.openHand(start(), 1, [opening]);
+  s = holding(s, 1, ["red3-0", "red4-0", "red5-0", null, "black2-0"]);
+  assert.deepEqual(americano.meldsToLay(s, 1), ["red3-0", "red4-0", "red5-0"]);
+  // a pairs opener lays pairs by hand
+  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = americano.openHand(s, 2, [fivePairs]);
+  assert.deepEqual(americano.meldsToLay(s, 2), []);
+});
+
 test("101: open with 5 pairs; then only pairs, or adding to sets and runs", () => {
   let s = americano.openHand(start(), 1, [opening]);
   // laying more right after opening is allowed (this just isn't a meld)
