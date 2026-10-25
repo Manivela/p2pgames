@@ -237,6 +237,22 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
   await expect(page.locator(".meld .ghost")).toHaveCount(0);
 });
 
+// a link dragged over the table is the browser's own drag, with no tile in
+// it: the table stays
+test("a link dragged over the table leaves it be", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "the browser's own drag");
+  await sitDown(page);
+  await table(page, "start", 4);
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  const a = await page.getByRole("link", { name: "TicTacToe" }).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  for (const x of [500, 700, 800]) await page.mouse.move(x, 450, { steps: 5 });
+  await page.waitForTimeout(300);
+  await expect(page.locator(".board")).toHaveCount(1);
+  await page.mouse.up();
+});
+
 // right click flips your tile while the round is played; once it's over,
 // every hand shows face up (the rules turn them) and stays that way
 test("a tile flips during play, and shows once the round is over", async ({

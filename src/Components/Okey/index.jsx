@@ -25,7 +25,8 @@ function DragPreview() {
     addEventListener("touchcancel", cancel, true);
     return () => removeEventListener("touchcancel", cancel, true);
   }, [manager]);
-  if (!item || !offset) return null;
+  // a link or text dragged from the page (a native drag) carries no tile
+  if (!item?.tile || !offset) return null;
   const group = selected.includes(item.tile.id) ? selected.length : 1;
   return (
     <div className="dragPreview" style={{ left: offset.x, top: offset.y }}>
