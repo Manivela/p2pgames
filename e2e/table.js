@@ -101,6 +101,37 @@ export function emptyPile() {
   window.okey.set({ ...s, currentPlayer: 1 });
 }
 
+// I've opened, an okey is in my first slot (swapped with the tile there),
+// and a 6-7-8 seri in another colour is on the table
+export function okeyAndSeri() {
+  const s = structuredClone(window.okey.get());
+  const name = (id) => id.replace(/\d+-\d+$/, "");
+  const okey = `${name(s.okeyTile.id)}${(s.okeyTile.rank % 13) + 1}-0`;
+  const me = seat(s, 1);
+  const mine = me.hand[0];
+  const places = [
+    s.drawPile,
+    ...s.players.flatMap((p) => [p.hand, p.discardPile]),
+  ];
+  const list = places.find((l) => l.some((t) => t?.id === okey));
+  const i = list.findIndex((t) => t?.id === okey);
+  me.hand[0] = { ...list[i], source: "hand-1", hidden: false };
+  list[i] = { ...mine, source: list[i].source, hidden: list[i].hidden };
+  const color = ["red", "blue", "black", "yellow"].find(
+    (c) => c !== name(okey),
+  );
+  const tiles = [6, 7, 8].map((r) => ({
+    ...game.tiles.find((t) => t.id === `${color}${r}-1`),
+    source: "table",
+    hidden: false,
+  }));
+  s.melds = [{ type: "seri", owner: 2, tiles }];
+  s.opened = { ...s.opened, 1: true };
+  s.justOpened = null;
+  window.okey.set(s);
+  return okey;
+}
+
 // n more runs on the table, for a crowded one (only shown: they don't come
 // out of anyone's hand)
 export function crowd(n = 8) {

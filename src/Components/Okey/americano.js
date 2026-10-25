@@ -295,7 +295,9 @@ export function layMelds(state, player, groups) {
   return s;
 }
 
-export function addToMeld(state, player, tileId, meldIndex) {
+// atEnd: dropped on the meld's right half, so an okey added to a seri goes
+// on its high end (the low end otherwise, or wherever it fits)
+export function addToMeld(state, player, tileId, meldIndex, atEnd = false) {
   const blocked = canBuild(state, player);
   if (blocked) return blocked;
   const meld = state.melds[meldIndex];
@@ -304,7 +306,7 @@ export function addToMeld(state, player, tileId, meldIndex) {
   if (typeof taken === "string") return taken;
   const [s, [[tile]]] = taken;
 
-  const ordered = withTile(s, meld, tile);
+  const ordered = withTile(s, meld, tile, wrap(s), atEnd);
   if (!ordered) return "That tile doesn't fit there";
   s.melds[meldIndex] = { ...meld, tiles: ordered.map(tableTile) };
   game.logMove(s, player, "added", [tile]);
@@ -312,21 +314,19 @@ export function addToMeld(state, player, tileId, meldIndex) {
 }
 
 // The meld with the tile added, in order, or null. A seri keeps its order,
-// so the tile goes on one end, and a table okey keeps the rank it stands
-// for; the tile it stands for swaps it out instead (swapOkey).
-function withTile(state, meld, tile, wrapRuns = wrap(state)) {
+// so the tile goes on one end (the high end first when `atEnd`), and a
+// table okey keeps the rank it stands for; the tile it stands for swaps it
+// out instead (swapOkey).
+function withTile(state, meld, tile, wrapRuns = wrap(state), atEnd = false) {
   const ind = state.okeyTile;
   const okeyRanks = (tiles) =>
     tiles.flatMap((t, i) =>
       isOkey(t, ind) ? [okeyStandsFor({ ...meld, tiles }, i, ind).rank] : [],
     );
+  const low = [tile, ...meld.tiles];
+  const high = [...meld.tiles, tile];
   const ends =
-    meld.type === "seri"
-      ? [
-          [tile, ...meld.tiles],
-          [...meld.tiles, tile],
-        ]
-      : [[...meld.tiles, tile]];
+    meld.type !== "seri" ? [high] : atEnd ? [high, low] : [low, high];
   for (const tiles of ends) {
     const ordered = meldOrder(tiles, meld.type, ind, wrapRuns);
     const moved =
@@ -412,12 +412,12 @@ function putOkeyBack(state, player, tileId, meldIndex) {
 
 // A tile dropped on a meld: swap out an okey if it can (that's why you'd
 // drop the exact tile an okey stands for), otherwise add it.
-export function playOnMeld(state, player, tileId, meldIndex) {
+export function playOnMeld(state, player, tileId, meldIndex, atEnd) {
   const back = putOkeyBack(state, player, tileId, meldIndex);
   if (back) return back;
   const swap = swapOkey(state, player, tileId, meldIndex);
   if (swap && typeof swap !== "string") return swap;
-  const add = addToMeld(state, player, tileId, meldIndex);
+  const add = addToMeld(state, player, tileId, meldIndex, atEnd);
   // the tile is the one an okey stands for: say why it can't swap
   return typeof add === "string" && typeof swap === "string" && swap !== NO_OKEY
     ? swap

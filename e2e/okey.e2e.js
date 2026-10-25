@@ -204,6 +204,21 @@ test("dragging picked tiles onto the table opens the hand", async ({
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
+// an okey dropped on a seri's right half goes on its high end
+test("an okey goes on the end of a seri it's dropped on", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  const okey = await table(page, "okeyAndSeri");
+  // its last tile is right of the middle; dragTo waits for the table to settle
+  await slot(page, 0)
+    .locator(".tile")
+    .dragTo(page.locator('[data-meld="0"] .tile').last(), { steps: 8 });
+  await expect
+    .poll(async () => (await state(page)).melds[0].tiles.at(-1).id)
+    .toBe(okey);
+});
+
 // right click flips your tile while the round is played; once it's over,
 // every hand shows face up (the rules turn them) and stays that way
 test("a tile flips during play, and shows once the round is over", async ({

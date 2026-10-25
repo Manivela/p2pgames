@@ -12,16 +12,20 @@ import { t } from "../../i18n";
 function Meld({ meld, index }) {
   const { playOnMeld, okeyState, me, selected, openHand, layMelds } =
     useContext(OkeyContext);
+  const box = useRef(null);
   const [{ isOver }, drop] = useDrop(
     () => ({
       accept: "TILE",
-      drop: (e) => {
+      drop: (e, monitor) => {
         // one tile of a bigger pick brings the pick: that's opening or
         // laying down, wherever on the table it lands
         if (selected.length > 1 && selected.includes(e.tile.id)) {
           (okeyState.opened[me] ? layMelds : openHand)();
         } else {
-          playOnMeld(e.tile, index);
+          // an okey goes on the end of a seri it's dropped nearer
+          const r = box.current.getBoundingClientRect();
+          const x = monitor.getClientOffset()?.x;
+          playOnMeld(e.tile, index, x > r.left + r.width / 2);
         }
       },
       collect: (monitor) => ({ isOver: monitor.isOver() }),
@@ -39,7 +43,10 @@ function Meld({ meld, index }) {
   const mark = marks.length ? Math.min(...marks) : null;
   return (
     <div
-      ref={drop}
+      ref={(el) => {
+        box.current = el;
+        drop(el);
+      }}
       className={`meld ${isOver ? "over" : ""}`}
       data-meld={index}
     >

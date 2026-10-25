@@ -289,8 +289,8 @@ export function OkeyProvider({ children }) {
   }, [act, me, picked]);
 
   const playOnMeld = useCallback(
-    (tile, meldIndex) =>
-      !ghost(tile) && act(americano.playOnMeld, me, tile.id, meldIndex),
+    (tile, meldIndex, atEnd) =>
+      !ghost(tile) && act(americano.playOnMeld, me, tile.id, meldIndex, atEnd),
     [act, me],
   );
 

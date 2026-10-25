@@ -660,6 +660,30 @@ test("a tile goes on either end of a seri with a table okey in it", () => {
   ]);
 });
 
+test("an okey added to a seri goes on the end it's dropped on, if it fits there", () => {
+  // P2 has opened and holds the other okey, blue1-1
+  const addOkey = (meld, atEnd) => {
+    let s = seriOnTable(meld);
+    s = {
+      ...s,
+      opened: { 2: true },
+      players: s.players.map((p) =>
+        p.id === 2
+          ? { ...p, hand: [lying("blue1-1", "hand-2"), ...p.hand.slice(1)] }
+          : p,
+      ),
+    };
+    s = americano.playOnMeld(s, 2, "blue1-1", 0, atEnd);
+    const i = s.melds[0].tiles.findIndex((x) => x.id === "blue1-1");
+    return okeyStandsFor(s.melds[0], i, s.okeyTile).rank;
+  };
+  const sixTo8 = ["black6-1", "black7-1", "black8-1"];
+  assert.equal(addOkey(sixTo8, false), 5);
+  assert.equal(addOkey(sixTo8, true), 9);
+  // no 14: the low end is all that's left
+  assert.equal(addOkey(["black11-1", "black12-1", "black13-1"], true), 10);
+});
+
 test("opening with 4-5-okey off the rack lays the okey as the 6", () => {
   let [s] = okeyOnTable(2); // 3'lü seri
   s = { ...s, melds: [] };
