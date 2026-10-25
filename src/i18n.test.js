@@ -29,6 +29,16 @@ test("messages with names and numbers translate both ways", () => {
     "Open with exactly: set of 3 + run of 3",
   );
   assert.equal(t("No tiles left", true), "Taş kalmadı"); // not "(.+) left"
+  assert.equal(t("Ayşe couldn't open: +101", true), "Ayşe açamadı: +101");
+  assert.equal(
+    t("Ayşe put the tile back: +101", true),
+    "Ayşe taşı geri bıraktı: +101",
+  );
+  assert.equal(
+    t("You opened with pairs: 2 tiles a turn", true),
+    "Çift açtın: elde en fazla 2 taş işlersin",
+  );
+  assert.equal(t("Ali & Can win with 38", true), "Ali & Can kazandı: 38");
   assert.equal(t("Elden", false), "from hand");
   assert.equal(t("Elden", true), "Elden");
 });

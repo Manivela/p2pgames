@@ -169,6 +169,8 @@ const along = (players, player, step) =>
   ];
 const next = (players, player) => along(players, player, 1);
 export const previous = (players, player) => along(players, player, -1);
+// across the table: a partner, when four play in pairs
+export const partner = (players, player) => along(players, player, 2);
 
 export const seat = (state, player) =>
   state.players.find((p) => p.id === player);

@@ -111,6 +111,23 @@ export const ONE_O_ONE = {
   outOfTurnTakes: false,
   // the previous discard can be taken only to use it in a meld that turn
   takeMustBeUsed: true,
-  swapOkeys: false, // a table okey stays where it is
+  // Eşli 101 Turnuvası's rules (medya.barobirlik.org.tr/barowebsite/uploads/
+  // 52/kural1.pdf), on top of pagat's: a game started before keeps pagat's
+  returnPenalty: 101, // taking the discard and putting it back
+  failedOpeningPenalty: 101, // an opening that falls short
+  catchUntilDraw: true, // a discard is caught before the next player draws
+  pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn
+  pairsForAll: true, // once someone opens with pairs, everyone lays pairs
+  finishInOne: true, // open all but one tile at once and finish, under 101 too
+  pileOutCounts: true, // a pile that runs out ends the hand, scored as usual
+  notOpenedCounts: true, // not opening: 202 and the okeys held, doubled too
+  // the table's choices when it starts: four in pairs across the table, the
+  // finisher's partner paying nothing; doubling (katlamalı) a win with the
+  // okey, with pairs or in one go, and a pairs opener's own score
+  partners: false,
+  doubling: false,
+  // a table okey goes to whoever holds its tile, once they've opened
+  swapOkeys: true,
+  okeySwapFromRound: null,
   buildWhenOpening: true,
 };

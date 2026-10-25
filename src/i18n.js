@@ -63,6 +63,15 @@ const TR = [
   [/^Nothing to take right now$/, "Şu an alınacak taş yok"],
   [/^You already drew this turn$/, "Bu tur zaten çektin"],
   [/^That's your own tile$/, "Bu senin taşın"],
+  [/^That's your partner's tile$/, "Bu eşinin taşı"],
+  [/^Too late to catch it$/, "Yakalamak için geç: ortadan çekildi"],
+  [/^Partners take four players$/, "Eşli oyun dört kişiyle oynanır"],
+  [/^(.+) couldn't open: \+(\d+)$/, "$1 açamadı: +$2"],
+  [/^(.+) put the tile back: \+(\d+)$/, "$1 taşı geri bıraktı: +$2"],
+  [
+    /^You opened with pairs: (\d+) tiles a turn$/,
+    "Çift açtın: elde en fazla $1 taş işlersin",
+  ],
   [/^You can take (\d+) a round$/, "Bir elde en fazla $1 taş alabilirsin"],
   [/^No tiles left for the extra draw$/, "Ekstra çekmek için taş kalmadı"],
   [
@@ -91,6 +100,7 @@ const TR = [
     "$1. el: taş kalmadı, yeniden dağıtılır",
   ],
   [/^(.+) wins with (-?\d+)$/, "$1 kazandı: $2"],
+  [/^(.+) & (.+) win with (-?\d+)$/, "$1 & $2 kazandı: $3"],
   [/^(.+) wins!$/, "$1 kazandı!"],
   [/^No tiles left$/, "Taş kalmadı"], // before "(.+) left"
   [/^(.+) left$/, "$1 ayrıldı"],
@@ -117,6 +127,9 @@ const TR = [
   [/^Start Okey$/, "Okey başlat"],
   [/^Start Americano$/, "Americano başlat"],
   [/^Start 101$/, "101 başlat"],
+  [/^Partners$/, "Eşli"],
+  [/^Doubling$/, "Katlamalı"],
+  [/^partner$/, "eş"],
   [/^Reset Game$/, "Oyunu sıfırla"],
   [/^New Game$/, "Yeni oyun"],
   [/^Next Round$/, "Sonraki el"],
