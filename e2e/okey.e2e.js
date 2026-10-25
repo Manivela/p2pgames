@@ -123,6 +123,20 @@ test("a crowded table fits", async ({ page }) => {
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
+test("on a wide screen the melds wrap about four to a row, as on a phone", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "a wide screen");
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "crowd", 6);
+  const tops = await page
+    .locator(".meld")
+    .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+  expect(new Set(tops.map(Math.round)).size).toBe(2);
+});
+
 // three at the table: the seats and piles along the top, the hands on the
 // rack at round end
 test("three at the table fit, in play and once the round is over", async ({

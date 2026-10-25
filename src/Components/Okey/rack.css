@@ -658,11 +658,15 @@
 /* a marked tile's number (tile.css) sticks out of its corner: room for it
    in the meld band, which scrolls and would clip it */
 .melds:has(.marked) {
-  padding: calc(var(--t) * 0.13) calc(var(--t) * 0.13) 0;
+  padding: calc(var(--t) * 0.13) max(calc(var(--t) * 0.13), var(--side)) 0;
 }
 
-/* the melds fill the table and shrink (--fit) until they all show */
+/* the melds fill the table and shrink (--fit) until they all show; on a
+   wide screen they wrap as on a phone, about four to a row, the band's
+   sides still taking dropped tiles */
 .melds {
+  --side: max(0px, calc((100% - var(--t) * 10.5) / 2));
+  padding-inline: var(--side);
   align-self: stretch;
   flex: 1;
   min-height: 0;
