@@ -226,6 +226,18 @@ function NextStep() {
   }
 }
 
+// a newer version out (OkeyContext): reload for it
+function NewVersion() {
+  const { newVersion } = useContext(OkeyContext);
+  return (
+    newVersion && (
+      <button className="update" onClick={() => location.reload()}>
+        ↻ {t("New version")}
+      </button>
+    )
+  );
+}
+
 // what's on the table: the melds (left as they are when the round ends),
 // before a game a way to bring the others; and the draw pile, while it's
 // in the middle
@@ -297,6 +309,7 @@ function Board() {
             ))}
           </div>
           <div className="end">
+            <NewVersion />
             {okeyState.rules && <Scores />}
             <TableMenu />
           </div>

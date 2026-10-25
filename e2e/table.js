@@ -190,6 +190,7 @@ const SEL = [
   ".center > button",
   ".meld",
   ".scores",
+  ".update",
   ".corner button",
   ".table-menu",
   ".discardPile .catch",

@@ -12,11 +12,28 @@ import { t } from "../../i18n";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
 import { signalingServers, peerOpts } from "../../constants";
+import { BUILD, useSiteBuild } from "../../version";
 
 export const OkeyContext = createContext({});
 
 // a claim's ghost only goes back to the discard pile or around the rack
 const ghost = (tile) => tile.source.startsWith("claim-");
+
+// this tab's own notes (sessionStorage), which a blocked storage just loses
+const stored = (key) => {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const store = (key, value) => {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // blocked: nothing kept
+  }
+};
 
 export function OkeyProvider({ children }) {
   const { roomId } = useParams();
@@ -24,7 +41,7 @@ export function OkeyProvider({ children }) {
     signaling: signalingServers,
     peerOpts,
   });
-  const { states, localID } = useAwareness(provider.awareness);
+  const { states, localID, setLocalState } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((state) => state.currentUser);
   const [playBellSound] = useSound(bell, { volume: 0.1 });
   const [playTile1Sound] = useSound(tile1, { volume: 0.5 });
@@ -387,6 +404,7 @@ export function OkeyProvider({ children }) {
       seat.user = currentUser;
       seat.userKey = localID;
       delete seat.left;
+      delete seat.away;
 
       setOkeyState({
         ...newState,
@@ -401,6 +419,43 @@ export function OkeyProvider({ children }) {
     () => okeyState.players.find((p) => p?.user?.id === currentUser?.id),
     [okeyState.players, currentUser?.id],
   );
+
+  // back after a reload (a new version, a phone that slept): sit down again
+  // in the seat you dropped out of (away) unless someone took it, or in
+  // yours still held by your old page, once it's gone (a tab duplicated
+  // with your login leaves the seat to the first)
+  React.useEffect(() => {
+    if (!currentUser) return;
+    const seat = okeyState.players.find((p) =>
+      p.user
+        ? p.user.id === currentUser.id && !states.has(p.userKey)
+        : p.away === currentUser.id,
+    );
+    if (seat) sit(seat.id);
+  }, [currentUser, okeyState.players, states, sit]);
+
+  // everyone at the table says which build they run (awareness): a newer
+  // one there, or on the site, is offered (Board.jsx). Between hands the
+  // table's is picked up by itself: whoever runs it keeps the game while
+  // this page reloads, once a build, so a page the site still serves old
+  // can't loop
+  React.useEffect(() => {
+    setLocalState((s) => (s?.build === BUILD ? s : { ...s, build: BUILD }));
+  }, [setLocalState]);
+  const tableBuild = Math.max(
+    0,
+    ...[...states.values()].map((s) => s?.build ?? 0),
+  );
+  const siteBuild = useSiteBuild();
+  const newVersion =
+    tableBuild > BUILD ? "table" : siteBuild > BUILD ? "site" : null;
+  React.useEffect(() => {
+    if (newVersion !== "table" || !shared) return;
+    if (okeyState.gameState === "play") return;
+    if (stored("reloadedFor") === String(tableBuild)) return;
+    store("reloadedFor", tableBuild);
+    if (stored("reloadedFor") === String(tableBuild)) location.reload();
+  }, [newVersion, shared, okeyState.gameState, tableBuild]);
 
   const stand = useCallback(
     (player) => {
@@ -445,6 +500,7 @@ export function OkeyProvider({ children }) {
       if (playerIndex >= 0) {
         const player = newState.players[playerIndex];
         lastLeaverName = player.user?.name || "Someone";
+        player.away = player.user?.id; // theirs to come back to (sit)
         player.user = null;
         player.userKey = null;
         changed = true;
@@ -519,6 +575,7 @@ export function OkeyProvider({ children }) {
       shuffleDiscards,
       endGame,
       dragged,
+      newVersion,
     }),
     [
       okeyState,
@@ -558,6 +615,7 @@ export function OkeyProvider({ children }) {
       nextRound,
       shuffleDiscards,
       endGame,
+      newVersion,
     ],
   );
 

@@ -14,6 +14,7 @@ const SHUFFLE = /^(Shuffle and play on|Karıştır, devam et)$/;
 const END = /^(End the game|Oyunu bitir)$/;
 const NEW_GAME = /^(New Game|Yeni oyun)$/;
 const OPEN = /^(Open your hand|El aç)$/;
+const UPDATE = /^↻ (New version|Yeni sürüm)$/;
 const FIND = /^(Find and open|Bul ve aç)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const SEAT_1 = /(Player|Oyuncu) 1(?!\d)/;
@@ -490,6 +491,74 @@ test("picked tiles move together", async ({ page }) => {
   await expect(picked).toHaveCount(3);
   await slot(page, 25).click();
   await expect(picked).toHaveCount(0);
+});
+
+// a second player, in the same browser: tabs sync over BroadcastChannel,
+// and this one keeps the game while the first reloads, once it has it.
+// build: a newer one it runs
+async function secondPlayer(page, room, build) {
+  const other = await page.context().newPage();
+  if (build) {
+    await other.addInitScript((b) => sessionStorage.setItem("build", b), build);
+  }
+  await sitDown(other, { name: "Bora", room, sit: false });
+  await expect
+    .poll(() => other.evaluate(() => !!window.okey?.get()))
+    .toBe(true);
+  return other;
+}
+
+test("a reload keeps you logged in and in your seat", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  const room = await sitDown(page);
+  await secondPlayer(page, room);
+  await table(page, "start", 2);
+  await page.reload();
+  await expect(page.getByRole("textbox")).toHaveCount(0);
+  await expect
+    .poll(async () => (await state(page))?.players[0].user?.name)
+    .toBe("Ayşe");
+  await expect(page.locator(".rack:not(.mini) .tile")).toHaveCount(15);
+});
+
+test("a newer version on the site is offered", async ({ page }) => {
+  await page.route("**/version.json", (route) =>
+    route.fulfill({ json: { build: Date.now() + 60_000 } }),
+  );
+  await sitDown(page);
+  await expect(page.getByRole("button", { name: UPDATE })).toBeVisible();
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  // beside the score sheet, with a full table
+  await table(page, "start", 4, "101");
+  await table(page, "toMyTurn");
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
+test("a newer version at the table is picked up between hands", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  const room = await sitDown(page);
+  await table(page, "start", 2);
+  // Bora comes in on a newer build
+  await secondPlayer(page, room, Date.now() + 60_000);
+  await expect(page.getByRole("button", { name: UPDATE })).toBeVisible();
+  // not in the middle of a hand
+  await page.evaluate(() => (window.stayed = true));
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.stayed)).toBe(true);
+  const reloaded = page.waitForEvent("load");
+  await table(page, "playToEnd");
+  await reloaded;
+  // back in the seat, and once is enough
+  await expect
+    .poll(async () => (await state(page))?.players[0].user?.name)
+    .toBe("Ayşe");
+  await page.evaluate(() => (window.stayed = true));
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => window.stayed)).toBe(true);
 });
 
 test("another player's move flies across the table", async ({ page }) => {

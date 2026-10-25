@@ -855,6 +855,12 @@
   color: #1d1d1d;
 }
 
+/* a newer version to reload for */
+.board .update {
+  background: #ffb300;
+  color: #3a2600;
+}
+
 /* 101's options, under its Start */
 .side .options {
   display: flex;

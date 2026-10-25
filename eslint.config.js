@@ -12,7 +12,8 @@ export default [
   prettier,
   {
     files: ["**/*.{js,jsx}"],
-    languageOptions: { globals: globals.browser },
+    // __BUILD__: the build's time (vite.config.js)
+    languageOptions: { globals: { ...globals.browser, __BUILD__: "readonly" } },
     settings: { react: { version: "detect" } },
     rules: {
       "prettier/prettier": ["error", { endOfLine: "auto" }],

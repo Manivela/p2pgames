@@ -10,6 +10,8 @@ How each part works is in its code comments; this file holds the conventions, de
 - A hand ends when someone throws their last tile to the middle (`finishGame`; discarding it is refused), where it lies as `finishTile` until the next deal, or when the pile runs out: Americano and 101 end the round, classic lets the player whose turn it is shuffle the discards into a new pile or end the game (`pileOut`).
 - A move the round end should show is logged with `logMove` (`turnMoves`, emptied as the turn passes).
 - Sync (`sync.js`) splits the state into Yjs keys by writer, so simultaneous moves by different players both survive. New top-level state lands in the `turn` key, written by the player whose turn it is; state another player can write at the same moment gets a key of its own. A hand is written only by its owner: tiles given to someone go through their `inbox`. Whole-game changes (start, new game, reset, load) go through `replaceState`.
+- A player who drops out (a reload, a phone that slept) leaves their seat `away: <user id>`, and only they sit back down in it by themselves; a reset or a freed seat (`left`) isn't sat back in.
+- New versions (`src/version.js`): each page tells the table its build (awareness). A page older than the site or than someone at the table offers Reload, and reloads by itself between hands only when someone at the table runs the newer build: they keep the game meanwhile. Never auto-reload on the site's version alone, or the whole table reloads at once and the game is gone.
 - Rules and shared messages are English, shown through `t()` (`src/i18n.js`): every new string gets a Turkish line. `TR` takes the first match, so a specific pattern sits above any catch-all it would hit (`No tiles left` above `(.+) left`). `i18n.test.js` checks the `return "…"` messages of the rules files it lists: a new rules file joins the list.
 
 ## Table
@@ -33,7 +35,8 @@ Done when vitest, lint and the Docker e2e are green and every layout change has 
 
 Driving the table (Playwright MCP or a script, against the dev server):
 
-- Tabs of one browser on the same `/<room>/okey` sync over BroadcastChannel, almost instantly; for real network sync, open the second player in `browser.newContext()`. Login is per tab and in memory: a reload logs out.
+- Tabs of one browser on the same `/<room>/okey` sync over BroadcastChannel, almost instantly; for real network sync, open the second player in `browser.newContext()`. Login is per tab (sessionStorage): a reload keeps it and sits you back down, a new tab is a new player. A tab reloaded while alone in its room comes back to an empty table: the game lives only in the open pages.
+- A tab plays a newer build in development with `sessionStorage.setItem("build", n)` before it loads (`secondPlayer()` in the e2e).
 - Dev-only `window.okey` reads and writes the shared state; to play any seat: `g = await import("/src/Components/Okey/game.js")`, then `okey.set(g.drawTile(okey.get(), seat, tile, slot))`. Dev-only `window.okeyFlights` counts animation flights.
 - `dragTo` works with react-dnd once source and target carry a `data-*` to find them by. Your own rack is the only `.rack`.
 - Turkish: override `navigator.language` with `addInitScript` before loading (CDP's locale override leaves it alone).

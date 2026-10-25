@@ -137,6 +137,7 @@ const TR = [
   [/^Open your hand$/, "El aç"],
   [/^Open picked$/, "Seçilenleri aç"],
   [/^Find and open$/, "Bul ve aç"],
+  [/^New version$/, "Yeni sürüm"],
   [/^partner$/, "eş"],
   [/^Reset Game$/, "Oyunu sıfırla"],
   [/^New Game$/, "Yeni oyun"],
