@@ -94,6 +94,7 @@ export const ONE_O_ONE = {
   id: "101",
   name: "101",
   handSize: 21,
+  rowSlots: 15, // a rack row: 22 tiles want more room than 13
   // the same opening every hand
   rounds: Array.from({ length: 11 }, (_, i) => ({ name: `${i + 1}` })),
   opening: { points: 101, pairs: 5 },

@@ -1,7 +1,7 @@
 import _, { cloneDeep } from "lodash";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
-import { createTile, maxHandSize } from "./utils";
+import { createTile } from "./utils";
 
 // Game rules as pure functions: (state, player, ...args) => new state,
 // an error string to show the player, or undefined for "nothing changed".
@@ -76,8 +76,12 @@ const handTile = (tile, player) => ({
   source: `hand-${player}`,
 });
 
-// ids: optional fixed hand (tile ids, null for a gap) instead of a random one
-function dealHand(drawPile, player, count, ids) {
+// slots a rack row has: the ruleset's, or 13
+export const rowOf = (state) => state.rules?.rowSlots ?? 13;
+
+// ids: optional fixed hand (tile ids, null for a gap) instead of a random
+// one; `slots`: the rack's, both rows
+function dealHand(drawPile, player, count, ids, slots) {
   const hand = ids
     ? ids.map(
         (id) =>
@@ -89,7 +93,7 @@ function dealHand(drawPile, player, count, ids) {
       )
     : _.sampleSize(drawPile, count).map((tile) => handTile(tile, player));
 
-  return hand.concat(Array(maxHandSize - hand.length).fill(null));
+  return hand.concat(Array(slots - hand.length).fill(null));
 }
 
 // a fake okey can't be the indicator: there's no rank to count up from
@@ -206,6 +210,7 @@ export function dealRound(state, drawPile, deal, starter = 0) {
       p.id,
       i === starter ? size + 1 : size,
       deal?.hands?.[i],
+      2 * rowOf(state),
     );
     hand.forEach((t) => t && taken.add(t.id));
     return { ...p, hand, discardPile: [], inbox: [], claim: null, caught: [] };
@@ -337,10 +342,11 @@ export function moveTiles(state, player, ids, toIndex) {
   const hand = [...myPlayer.hand];
   const from = hand.flatMap((t, i) => (t && ids.includes(t.id) ? [i] : []));
   if (!from.length) return;
-  const rowStart = toIndex - (toIndex % 13);
+  const row = rowOf(state);
+  const rowStart = toIndex - (toIndex % row);
   const start =
-    from.length <= 13
-      ? Math.min(toIndex, rowStart + 13 - from.length)
+    from.length <= row
+      ? Math.min(toIndex, rowStart + row - from.length)
       : Math.min(toIndex, hand.length - from.length);
   const to = from.map((_, j) => start + j);
 

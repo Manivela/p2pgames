@@ -784,7 +784,7 @@
 .hand .half {
   display: flex;
   flex-shrink: 0;
-  width: calc(var(--t) * 13);
+  width: calc(var(--t) * var(--row));
 }
 
 .hand .gap {

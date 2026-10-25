@@ -89,8 +89,23 @@ test("101: the sets and runs as they lie on the rack count as the opening would"
   const s = start();
   // the okey counts as the 12; the rest of P1's rack makes nothing
   assert.equal(americano.rackPoints(s, 1), 33 + 52 + 18);
-  // the 12s count; blue 2 | 3-4 sit either side of a row's end
-  assert.equal(americano.rackPoints(s, 2), 36);
+  // rows of 15: blue 2-3-4 and the 12s
+  assert.equal(americano.rackPoints(s, 2), 9 + 36);
+  assert.equal(player(s, 2).hand.length, 30);
+  // a row's end splits a run: blue 2-3 | 4
+  const across = (from) => ({
+    ...s,
+    players: s.players.map((p) => {
+      if (p.id !== 2) return p;
+      const hand = Array(30).fill(null);
+      ["blue2-0", "blue3-0", "blue4-0"].forEach(
+        (id, k) => (hand[from + k] = tileIn(s, 2, id)),
+      );
+      return { ...p, hand };
+    }),
+  });
+  assert.equal(americano.rackPoints(across(12), 2), 9);
+  assert.equal(americano.rackPoints(across(13), 2), 0);
 });
 
 test("101: runs don't wrap, and a pair is two of a tile or an okey and any", () => {

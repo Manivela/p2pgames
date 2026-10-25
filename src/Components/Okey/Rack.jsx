@@ -7,7 +7,7 @@ import { t } from "../../i18n";
 import { rackPoints, upForClaim } from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-import { ended } from "./game";
+import { ended, rowOf } from "./game";
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -122,12 +122,14 @@ function Rack({ player, hands }) {
     !tile && ghost?.slot === index
       ? { tile: ghost.tile, className: "ghost" }
       : { tile: tile?.id === held ? null : tile };
-  // 13 slots a row, empty before a deal, on someone else's rack (watched
-  // from outside the game), and once the round ends: the hands are shown
+  // a row's slots (13; 101's 15), empty before a deal, on someone else's
+  // rack (watched from outside the game), and once the round ends: the
+  // hands are shown
   const over = ended(okeyState);
   const hand = me === player && !over ? myHand(player) : [];
+  const width = rowOf(okeyState);
   const row = (from) =>
-    Array.from({ length: 13 }, (_, i) => hand[from + i] ?? null).map(
+    Array.from({ length: width }, (_, i) => hand[from + i] ?? null).map(
       (tile, i) => (
         <Slot
           key={from + i}
@@ -148,13 +150,14 @@ function Rack({ player, hands }) {
   return (
     <div
       className={`rack ${turn ? "turn" : ""}`}
+      style={{ "--row": width }}
       data-seat={player}
       onPointerDown={(e) => (pressed.current = e.target)}
       onClick={tap}
     >
       {turn && <Timer okeyState={okeyState} />}
       <div className="top">{row(0)}</div>
-      <div className="bottom">{row(13)}</div>
+      <div className="bottom">{row(width)}</div>
       {over && <Hands players={hands} />}
       <Name player={player}>
         {me === player && (
@@ -210,8 +213,8 @@ function Hands({ players }) {
               <b className="score">{score > 0 ? `+${score}` : score}</b>
             )}
             <div className="tiles">
-              {[0, 13].map((from) => {
-                const row = hand.slice(from, from + 13);
+              {[0, rowOf(okeyState)].map((from) => {
+                const row = hand.slice(from, from + rowOf(okeyState));
                 return (
                   <span key={from} className="half">
                     {row

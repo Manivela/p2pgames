@@ -1,6 +1,8 @@
 import { assert, test } from "vitest";
 import { checkFinished } from "./checkFinish";
-import { createTile, maxHandSize } from "./utils";
+import { createTile } from "./utils";
+
+const maxHandSize = 26; // a classic rack: two rows of 13
 
 function makeHand(hand) {
   const paddedHand = hand.concat(Array(maxHandSize - hand.length));

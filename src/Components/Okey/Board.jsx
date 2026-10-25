@@ -11,7 +11,7 @@ import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { AMERICANO, ONE_O_ONE } from "./rulesets";
 import { useMoves } from "./moves";
-import { pileOut } from "./game";
+import { pileOut, rowOf } from "./game";
 
 function rotateArray(array, x) {
   // Normalize the rotation count
@@ -40,17 +40,18 @@ function rotateArray(array, x) {
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
-// (16.8 tiles across) and for the whole table (7.4 tiles down), up to 70px.
+// (`across`: a rack row and 3.8 more) and for the whole table (7.4 tiles
+// down), up to 70px.
 // It's set on the page, so the tiles that fly or are dragged (outside the
 // table) and the site's corner buttons (index.css) match.
-function useTileSize() {
+function useTileSize(across) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const page = document.documentElement.style;
     const observer = new ResizeObserver(([{ contentRect: box }]) =>
       page.setProperty(
         "--t",
-        `${Math.min(box.width / 16.8, box.height / 7.4, 70)}px`,
+        `${Math.min(box.width / across, box.height / 7.4, 70)}px`,
       ),
     );
     observer.observe(ref.current);
@@ -58,7 +59,7 @@ function useTileSize() {
       observer.disconnect();
       page.removeProperty("--t");
     };
-  }, []);
+  }, [across]);
   return ref;
 }
 
@@ -201,7 +202,7 @@ function Board() {
       : okeyState.players;
   // left to right: the one before you first
   const others = rest.reverse();
-  const fit = useTileSize();
+  const fit = useTileSize(rowOf(okeyState) + 3.8);
   const [table, pileAside] = usePileAside(okeyState.deal);
   useMoves();
   return (
