@@ -88,6 +88,10 @@ function Meld({ meld, index }) {
   const moves = lastTurn(okeyState);
   const marks = meld.tiles.map((x) => markOf(moves, x.id)).filter(Boolean);
   const mark = marks.length ? Math.min(...marks) : null;
+  // a ghost past an end opens a slot there: the meld shrinks to make room,
+  // so nothing else on the table moves (nor the half it's over)
+  const end = typeof ghost?.at === "string" && <Ghost {...ghost} />;
+  const n = meld.tiles.length;
   return (
     <div
       ref={(el) => {
@@ -96,7 +100,9 @@ function Meld({ meld, index }) {
       }}
       className={`meld ${held ? "over" : ""}`}
       data-meld={index}
+      style={end ? { "--squeeze": n / (n + 1) } : undefined}
     >
+      {ghost?.at === "before" && end}
       {full ? (
         <div
           className={`tile full ${mark ? "marked" : ""}`}
@@ -133,7 +139,7 @@ function Meld({ meld, index }) {
           ),
         )
       )}
-      {typeof ghost?.at === "string" && <Ghost {...ghost} />}
+      {ghost?.at === "after" && end}
     </div>
   );
 }

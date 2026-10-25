@@ -251,11 +251,14 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
   await table(page, "start", 4);
   await table(page, "toMyTurn");
   const okey = await table(page, "okeyAndSeri");
+  await table(page, "crowd", 2);
   // the seri's last tile is right of its middle; hovering it first waits
   // for the table to settle
   const last = page.locator('[data-meld="0"] .tile').last();
   await last.hover();
   const b = await last.boundingBox();
+  const next = page.locator('[data-meld="1"]');
+  const was = await next.boundingBox();
   const [x, y] = [b.x + b.width / 2, b.y + b.height / 2];
   await slot(page, 0).locator(".tile").hover();
   await page.mouse.down();
@@ -268,6 +271,17 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
       return page.locator(".meld .ghost.after").count();
     })
     .toBe(1);
+  // the ghost opens a slot in its own meld: the next one stays put, clear
+  // of it
+  const is = await next.boundingBox();
+  expect(Math.abs(is.x - was.x) + Math.abs(is.y - was.y)).toBeLessThan(2);
+  const g = await page.locator(".meld .ghost").boundingBox();
+  expect(
+    g.x + g.width <= is.x + 1 ||
+      is.x + is.width <= g.x + 1 ||
+      g.y + g.height <= is.y + 1 ||
+      is.y + is.height <= g.y + 1,
+  ).toBe(true);
   await page.mouse.up();
   await expect
     .poll(async () => (await state(page)).melds[0].tiles.at(-1).id)

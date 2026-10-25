@@ -676,7 +676,9 @@
 
 .meld {
   display: flex;
-  zoom: calc(0.6 * var(--fit, 1));
+  /* squeezed for a ghost, its tiles stay in the middle of its row */
+  align-items: center;
+  zoom: calc(0.6 * var(--fit, 1) * var(--squeeze, 1));
   padding: 4px;
   border-radius: 4px;
   background-color: rgba(0, 0, 0, 0.2);
@@ -686,42 +688,22 @@
   outline: 3px dashed #fff;
 }
 
-/* what a tile held over a meld would do: see-through, in the okey's place
-   it would take, or past the end it would go on (over the gap, so nothing
-   on the table moves, and letting the pointer through to a meld under it) */
-.meld {
-  position: relative;
-}
-
+/* what a tile held over a meld would do: the tile in the okey's place it
+   would take, or in a slot opened at the end it would go on */
 .meld .ghost {
   display: flex;
-  opacity: 0.75;
+  opacity: 1;
   pointer-events: none;
 }
 
 .meld .ghost .tile {
-  outline: 2px dashed #ffd54f;
+  outline: 2px solid #ffd54f;
   outline-offset: -1px;
 }
 
-/* the tile in hand fades, so it doesn't cover the ghost under it */
+/* the held tile is the ghost now: it doesn't hang over it too */
 :root:has(.meld .ghost) .dragPreview {
-  opacity: 0.3;
-}
-
-.meld .ghost.before,
-.meld .ghost.after {
-  position: absolute;
-  z-index: 1;
-  top: 4px;
-}
-
-.meld .ghost.before {
-  right: calc(100% + 2px);
-}
-
-.meld .ghost.after {
-  left: calc(100% + 2px);
+  visibility: hidden;
 }
 
 /* picked tiles open when dragged onto the table */
