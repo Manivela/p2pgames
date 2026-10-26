@@ -31,6 +31,19 @@ export default defineConfig(({ command }) => ({
       org: "manivela",
       project: "p2pgames",
       authToken: process.env.SENTRY_AUTH_TOKEN,
+      // each Cloudflare Pages build is a deploy of its release (the plugin
+      // finds deploys by itself only on Vercel): production from main
+      release: {
+        deploy: process.env.CF_PAGES
+          ? {
+              env:
+                process.env.CF_PAGES_BRANCH === "main"
+                  ? "production"
+                  : "preview",
+              url: process.env.CF_PAGES_URL,
+            }
+          : undefined,
+      },
       sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
       telemetry: false,
     }),
