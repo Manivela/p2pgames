@@ -6,6 +6,13 @@
   padding: 0;
 }
 
+/* the table fits the window, so the page never scrolls: a scrollbar that
+   takes room (Windows) and came for the first, still unsized frame would go
+   as useTileSize set --t, resizing the table under its own observer */
+html:has(.fit) {
+  overflow: hidden;
+}
+
 #detail:has(.fit),
 .fit::after {
   background:

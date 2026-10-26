@@ -584,6 +584,33 @@ test("a page leaving the table keeps it till it's gone", async ({
   expect([mine.user?.name, mine.away]).toEqual(["Ayşe", undefined]);
 });
 
+test("the table comes up without a ResizeObserver loop", async ({
+  playwright,
+  baseURL,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  // Playwright hides scrollbars; Windows' take room, as these do
+  const browser = await playwright.chromium.launch({
+    ignoreDefaultArgs: ["--hide-scrollbars"],
+  });
+  const page = await browser.newPage({ baseURL });
+  await page.addInitScript(() => {
+    window.errors = [];
+    addEventListener("error", (e) => window.errors.push(e.message));
+    document.addEventListener("DOMContentLoaded", () =>
+      document.head.insertAdjacentHTML(
+        "beforeend",
+        "<style>::-webkit-scrollbar { width: 17px; height: 17px }</style>",
+      ),
+    );
+  });
+  await sitDown(page);
+  await table(page, "start", 4);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.errors)).toEqual([]);
+  await browser.close();
+});
+
 test("a newer version on the site is offered", async ({ page }) => {
   await page.route("**/version.json", (route) =>
     route.fulfill({ json: { build: Date.now() + 60_000 } }),
