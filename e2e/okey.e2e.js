@@ -566,6 +566,24 @@ test("a reload keeps you logged in and in your seat", async ({
   await expect(page.locator(".rack:not(.mini) .tile")).toHaveCount(15);
 });
 
+test("a page leaving the table keeps it till it's gone", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  const room = await sitDown(page);
+  // two others, so this page still sees someone once it drops itself
+  await secondPlayer(page, room);
+  await secondPlayer(page, room);
+  await table(page, "start", 2);
+  // y-webrtc drops this page's own presence as it unloads (a reload for a
+  // new version): its seat was marked away and taken back, over and over
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeunload")));
+  await page.waitForTimeout(500);
+  await expect(page.locator(".board")).toBeVisible();
+  const [mine] = (await state(page)).players;
+  expect([mine.user?.name, mine.away]).toEqual(["Ayşe", undefined]);
+});
+
 test("a newer version on the site is offered", async ({ page }) => {
   await page.route("**/version.json", (route) =>
     route.fulfill({ json: { build: Date.now() + 60_000 } }),

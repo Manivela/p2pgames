@@ -518,7 +518,12 @@ export function OkeyProvider({ children }) {
     // drops everyone it hasn't heard from in 30s, and must not unseat them.
     if (states.size <= 1) return;
 
-    const disconnectedPlayerKeys = playerKeys.filter((key) => !states.has(key));
+    // and never our own seat: it drops out of states only as this page
+    // unloads (y-webrtc), where marking it away would have the sit-back
+    // effect above take it again, over and over
+    const disconnectedPlayerKeys = playerKeys.filter(
+      (key) => key !== localID && !states.has(key),
+    );
 
     if (disconnectedPlayerKeys.length === 0) return;
 
@@ -544,7 +549,7 @@ export function OkeyProvider({ children }) {
         message: `${lastLeaverName} left`,
       });
     }
-  }, [states, playerKeys, okeyState, setOkeyState]);
+  }, [states, playerKeys, localID, okeyState, setOkeyState]);
 
   const myIndex = useMemo(
     () => okeyState.players.findIndex((p) => p?.user?.id === currentUser?.id),
