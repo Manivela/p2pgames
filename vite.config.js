@@ -43,6 +43,19 @@ export default defineConfig(({ command }) => ({
               url: process.env.CF_PAGES_URL,
             }
           : undefined,
+        // and its commits come from GitHub (Sentry's GitHub integration), not
+        // the checkout: Cloudflare's holds only a push's last commit, so a
+        // release missed the others, and a "Fixes" in them
+        setCommits: process.env.CF_PAGES
+          ? {
+              repo: "Manivela/p2pgames",
+              commit: process.env.CF_PAGES_COMMIT_SHA,
+              ignoreMissing: true,
+              // as the plugin's own default: a failure here mustn't skip
+              // finalizing the release and its deploy
+              shouldNotThrowOnFailure: true,
+            }
+          : undefined,
       },
       sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
       telemetry: false,
