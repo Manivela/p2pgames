@@ -60,7 +60,7 @@ export const markOf = (moves, id) =>
   (id && moves.findIndex((m) => m.tiles.includes(id)) + 1) || null;
 
 function Tile({ tile, disabled, className, style, numbered = true }) {
-  const { me, toggleHidden, okeyState, selected, toggleSelected } =
+  const { me, toggleHidden, okeyState, selected, toggleSelected, spun, spin } =
     useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
   const canSee = tile.source.includes("hand-") ? myTile : true;
@@ -82,8 +82,10 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
     const touch = pointerType
       ? pointerType === "touch"
       : navigator.maxTouchPoints > 0;
-    if (!canFlip || touch) return;
-    toggleHidden(tile);
+    if (touch) return;
+    // the fake okey, wherever anyone sees it, turns instead (OkeyContext)
+    if (faceUp && tile.rank === "👌") spin(tile);
+    else if (canFlip) toggleHidden(tile);
   }
   // phones have no right click: hold your tile still and let go to flip it.
   // Held long enough, it wiggles; a finger that moves drags it instead.
@@ -142,6 +144,7 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
     myTile && selected.includes(tile.id) && "selected",
     armed && "armed",
     mark && "marked",
+    faceUp && spun[tile.id] && "spun",
   ];
   return (
     <div

@@ -15,6 +15,7 @@ import { signalingServers, peerOpts } from "../../constants";
 import { BUILD, useSiteBuild } from "../../version";
 
 export const OkeyContext = createContext({});
+const NONE_SPUN = {};
 
 // a claim's ghost only goes back to the discard pile or around the rack
 const ghost = (tile) => tile.source.startsWith("claim-");
@@ -72,6 +73,16 @@ export function OkeyProvider({ children }) {
   const map = useDoc().getMap("okey-state");
   const shared = readState(map);
   const okeyState = shared ?? game.initialState;
+  // an easter egg: anyone's right click turns a fake okey upside down, or
+  // back, for the whole room and every game in it (apart from the game state)
+  const spun = map.get("spun") ?? NONE_SPUN;
+  const spin = useCallback(
+    (tile) => {
+      const now = map.get("spun") ?? {};
+      map.set("spun", { ...now, [tile.id]: !now[tile.id] });
+    },
+    [map],
+  );
 
   // every setOkeyState(next) is computed from this render's okeyState
   const setOkeyState = useCallback(
@@ -610,6 +621,8 @@ export function OkeyProvider({ children }) {
       me,
       currentUser,
       toggleHidden,
+      spun,
+      spin,
       selected,
       toggleSelected,
       unselectAll,
@@ -654,6 +667,8 @@ export function OkeyProvider({ children }) {
       me,
       currentUser,
       toggleHidden,
+      spun,
+      spin,
       selected,
       toggleSelected,
       unselectAll,

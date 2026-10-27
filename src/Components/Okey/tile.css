@@ -37,6 +37,15 @@
   line-height: calc(var(--t) * 0.82);
 }
 
+/* a fake okey turned upside down (Tile.jsx) */
+.tile .rank {
+  transition: rotate 0.3s ease-out;
+}
+
+.tile.spun .rank {
+  rotate: 180deg;
+}
+
 /* the colour's symbol under the number */
 .sym {
   width: calc(var(--t) * 0.46);

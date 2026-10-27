@@ -412,6 +412,24 @@ test("a tile flips during play, and shows once the round is over", async ({
   await expect(tile).not.toHaveClass(/\bback\b/);
 });
 
+// an easter egg: a right click turns the fake okey upside down, and back
+test("the fake okey turns on a right click, for good", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  const id = (await handIds(page)).find((x) => x?.includes("👌"));
+  const fake = page.locator(`.rack [data-tile-id="${id}"]`);
+  await fake.click({ button: "right" });
+  await expect(fake).toHaveClass(/\bspun\b/);
+  // turned, not flipped
+  await expect(fake).not.toHaveClass(/\bback\b/);
+  // it stays turned in the next game
+  await confirm(page, NEW_GAME);
+  await table(page, "start", 4);
+  await expect(fake).toHaveClass(/\bspun\b/);
+  await fake.click({ button: "right" });
+  await expect(fake).not.toHaveClass(/\bspun\b/);
+});
+
 // phones: a tile held still flips when the finger lets go (or the phone
 // cancels the touch); a finger that moves drags it instead, and nothing
 // stays in the air

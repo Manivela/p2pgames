@@ -59,7 +59,8 @@ export function readState(map) {
 export function replaceState(map, next) {
   const deal = Math.random().toString(36).slice(2);
   map.doc.transact(() => {
-    for (const key of [...map.keys()]) map.delete(key);
+    // the fake okeys' spin (OkeyContext) stays through every game
+    for (const key of [...map.keys()]) if (key !== "spun") map.delete(key);
     for (const [key, value] of Object.entries(parts(next))) {
       map.set(`${deal}/${key}`, value);
     }
