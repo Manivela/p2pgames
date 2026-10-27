@@ -68,7 +68,8 @@ export const AMERICANO = {
     },
     { name: "Elden", melds: null },
   ],
-  // score sheet values; lowest total after the last round wins
+  // score sheet values; lowest total after the last round wins; the okey
+  // thrown as the last tile doubles everyone else's
   finishScore: -20, // shown as a line on the sheet
   notOpenedScore: 100,
   okeyInHandScore: 25,

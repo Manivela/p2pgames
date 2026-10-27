@@ -839,7 +839,7 @@ export function finishGame(state, player, tile) {
   }
   const s = game.finishGame(state, player, tile);
   if (!s || typeof s === "string") return s;
-  return endRound(s, player);
+  return endRound(s, player, tile);
 }
 
 function handScore(hand, { okeyTile, rules }) {
@@ -858,20 +858,20 @@ function endRound(state, finisher, last, inOne = false) {
   const { rules } = s;
   const i = s.round - 1;
   const pairs = (id) => !!s.openedWithPairs?.[id];
-  // 101, doubling (a game started before always doubles): a win with pairs,
-  // with the okey as the last discard, or opened and finished in one go
-  // while nobody else had opened (finishInOne) doubles every score, each
+  // the okey as the last discard doubles every score but Americano's
+  // finisher's line; in 101, doubling (a game started before always
+  // doubles), so does a win with pairs, or opened and finished in one go
+  // while nobody else had opened (finishInOne), each
   const doubles = rules.doubling ?? true;
   const alone =
     rules.finishInOne &&
     inOne &&
     Object.keys(s.opened).every((id) => Number(id) === finisher);
-  const times =
-    !rules.opening || !doubles
-      ? 1
-      : (pairs(finisher) ? 2 : 1) *
-        (last && isOkey(last, s.okeyTile) ? 2 : 1) *
-        (alone ? 2 : 1);
+  const times = !doubles
+    ? 1
+    : (pairs(finisher) ? 2 : 1) *
+      (last && isOkey(last, s.okeyTile) ? 2 : 1) *
+      (alone ? 2 : 1);
   // 101: a hand nobody finishes scores only the okeys held, and is dealt
   // again by the same player, unless it's scored as usual (pileOutCounts),
   // then only when everyone opened with pairs: nobody could finish
@@ -891,7 +891,7 @@ function endRound(state, finisher, last, inOne = false) {
     const hand = voided
       ? rules.okeyInHandScore * okeys
       : p.id === finisher
-        ? rules.finishScore * times
+        ? rules.finishScore * (rules.opening ? times : 1) // Americano's: a line
         : p.id === mate?.id
           ? 0
           : (finisher || rules.pileOutCounts) && !isElden(s) && !s.opened[p.id]
@@ -912,7 +912,7 @@ function endRound(state, finisher, last, inOne = false) {
       gameState: "roundEnd",
       replay: voided,
       message: finisher
-        ? `${name(finisher)} finished round ${s.round}`
+        ? `${name(finisher)} finished round ${s.round}${times > 1 ? ` ×${times}` : ""}`
         : voided
           ? `Round ${s.round}: no tiles left, dealt again`
           : `Round ${s.round}: no tiles left`,

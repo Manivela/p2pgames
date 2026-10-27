@@ -98,7 +98,7 @@ const TR = [
     /^Throw your last tile to the middle to finish$/,
     "Bitirmek için son taşını ortaya at",
   ],
-  [/^(.+) finished round (\d+)$/, "$1 $2. eli bitirdi"],
+  [/^(.+) finished round (\d+)( ×\d+)?$/, "$1 $2. eli bitirdi$3"],
   [/^Round (\d+): no tiles left$/, "$1. el: taş kalmadı"],
   [
     /^Round (\d+): no tiles left, dealt again$/,

@@ -300,6 +300,28 @@ test("the round ends with no finisher when the pile runs out", () => {
   }
 });
 
+test("the okey thrown as the last tile doubles everyone else's score", () => {
+  const [p1Hand] = deal.hands;
+  let s = americano.startGame(seated(2), {
+    ...deal,
+    hands: [p1Hand.map((x) => (x === "yellow11-0" ? "blue1-0" : x)), p2Hand],
+  });
+  s = americano.openHand(s, 1, [kut5]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 20);
+  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow5-0"));
+  s = game.drawTile(s, 1, player(s, 2).discardPile.at(-1), 20);
+  s = americano.addToMeld(s, 1, "yellow5-0", 0);
+  s = americano.layMelds(s, 1, [seri789, seri234, kut10]);
+  s = americano.addToMeld(s, 1, "red10-0", 1);
+  s = americano.finishGame(s, 1, tileIn(s, 1, "blue1-0"));
+  assert.deepEqual(s.scores, {
+    1: [AMERICANO.finishScore],
+    2: [AMERICANO.notOpenedScore * 2],
+  });
+  assert.equal(s.message, "P1 finished round 1 ×2");
+});
+
 test("Elden: no opening, finish from hand, lowest total wins the game", () => {
   const winningHand = [
     ...["red1-0", "red2-0", "red3-0", "red4-0", null],
@@ -334,6 +356,15 @@ test("Elden: no opening, finish from hand, lowest total wins the game", () => {
   assert.equal(s.scores[1][elden - 1], AMERICANO.finishScore);
   assert.equal(s.scores[2][elden - 1], p2Sum);
   assert.equal(s.message, `P2 wins with ${p2Sum}`); // P1 has 20 a round
+
+  // thrown on the okey, the others' scores double
+  s = americano.startGame(seated(2), {
+    okeyTile: "blue13-1",
+    hands: [[...winningHand, "blue1-0"], p2Hand],
+  });
+  s = americano.finishGame({ ...s, round: elden }, 1, tileIn(s, 1, "blue1-0"));
+  assert.equal(s.scores[1][elden - 1], AMERICANO.finishScore);
+  assert.equal(s.scores[2][elden - 1], p2Sum * 2);
 });
 
 test("the others' time to take a discard before the next one", () => {
