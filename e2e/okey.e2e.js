@@ -226,6 +226,7 @@ test("dragging picked tiles onto the table opens the hand", async ({
 test("El aç: it picks what it would open, a tap picks a whole group, and it stays to lay more", async ({
   page,
 }) => {
+  await page.clock.install();
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
@@ -247,6 +248,14 @@ test("El aç: it picks what it would open, a tap picks a whole group, and it sta
     kut,
   );
   await expect(page.getByRole("button", { name: LAY })).toBeVisible();
+  // left pressed with nothing touched, it goes back to normal
+  const elAc = page.locator("button[aria-pressed]");
+  await elAc.click();
+  await expect(elAc).toHaveAttribute("aria-pressed", "true");
+  await page.clock.fastForward(20000);
+  await expect(elAc).toHaveAttribute("aria-pressed", "false");
+  await expect(elAc).toHaveText(LAY);
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
 test("101: the indicator's twin dropped on it is shown to the table", async ({

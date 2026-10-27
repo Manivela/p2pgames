@@ -209,6 +209,16 @@ export function OkeyProvider({ children }) {
     setSelected([]);
     setPicking(false);
   }, [okeyState.deal]);
+  // El aç left pressed, nothing picked or unpicked for a while: back to
+  // normal, the pick dropped
+  React.useEffect(() => {
+    if (!picking) return;
+    const timer = setTimeout(() => {
+      setSelected([]);
+      setPicking(false);
+    }, 20000);
+    return () => clearTimeout(timer);
+  }, [picking, selected]);
   // and a picked tile that leaves the rack (discarded, laid) is unpicked
   const inHand = myHand(me)
     .filter(Boolean)
