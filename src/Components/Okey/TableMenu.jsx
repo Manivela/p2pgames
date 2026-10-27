@@ -370,6 +370,7 @@ export default function TableMenu() {
     stand,
     resetGame,
     newGame,
+    redealRound,
     endGame,
     volume,
     setVolume,
@@ -446,6 +447,13 @@ export default function TableMenu() {
           {/* classic: the pile ran out, and whoever's turn it is calls it */}
           {!okeyState.rules && game.pileOut(okeyState, me) && (
             <Confirm label={t("End the game")} onConfirm={then(endGame)} />
+          )}
+          {/* someone stands or sits mid-round: back to before the deal */}
+          {okeyState.rules && okeyState.gameState === "play" && (
+            <Confirm
+              label={t("Deal this round again")}
+              onConfirm={then(redealRound)}
+            />
           )}
           {okeyState.gameState !== "start" && (
             <Confirm label={t("New Game")} onConfirm={then(newGame)} />

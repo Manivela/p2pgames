@@ -46,6 +46,32 @@ export function startGame(state, deal, rules = AMERICANO) {
   };
 }
 
+// The round void, back to before it was dealt (its penalties too): seats can
+// be freed and taken, and Next Round deals it again, from the same seat
+export function redealRound(state) {
+  if (roundOver(state)) return roundOver(state);
+  return {
+    ...state,
+    players: game.allSeats(state.players).map((p) => ({
+      ...p,
+      hand: [],
+      discardPile: [],
+      inbox: [],
+      claim: null,
+      caught: [],
+    })),
+    melds: [],
+    turnMoves: [],
+    finishTile: null,
+    offer: null,
+    drawPile: game.shuffledPile(),
+    okeyTile: null,
+    gameState: "roundEnd",
+    replay: true,
+    message: `Round ${state.round}: dealt again`,
+  };
+}
+
 // Deals every seat in the game, sat in or not: its player can sit back down
 // (a phone that slept) or a friend take over, and the seat is scored either
 // way. A seat freed from the menu (left) is out until someone sits in it.

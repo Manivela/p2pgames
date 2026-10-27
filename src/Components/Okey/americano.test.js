@@ -249,6 +249,38 @@ test("between rounds seats can be freed and taken", () => {
   assert.equal(s.scores[3].length, 3);
 });
 
+test("a round dealt again: seats change in between, scores stay, its penalties go", () => {
+  let s = {
+    ...americano.startGame(seated(3)),
+    round: 2,
+    scores: { 1: [10], 2: [30], 3: [-20] },
+  };
+  s = americano.nextRound({ ...s, gameState: "roundEnd" });
+  const { gameId, currentPlayer } = s;
+  assert.isOk(gameId);
+  s = americano.discardTile(s, currentPlayer, player(s, currentPlayer).hand[0]);
+  s = { ...s, penalties: { [currentPlayer]: [20] } };
+
+  s = americano.redealRound(s);
+  assert.equal(s.gameState, "roundEnd");
+  assert.equal(s.message, "Round 3: dealt again");
+  // back to before the deal: nothing on the table, every seat to sit in
+  assert.equal(s.players.length, 4);
+  assert.isTrue(
+    s.players.every((p) => !p.hand.length && !p.discardPile.length),
+  );
+  assert.deepEqual(s.melds, []);
+  assert.equal(americano.redealRound(s), "The round is over");
+
+  s = americano.nextRound(s);
+  assert.equal(s.round, 3);
+  assert.equal(s.currentPlayer, currentPlayer); // from the same seat
+  assert.equal(s.gameId, gameId);
+  assert.deepEqual(s.scores, { 1: [10], 2: [30], 3: [-20] });
+  assert.deepEqual(s.penalties, {});
+  assertAllTiles(s);
+});
+
 test("a round isn't dealt to a table of one", () => {
   const s = {
     ...americano.startGame(seated(2)),

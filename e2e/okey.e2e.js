@@ -13,6 +13,7 @@ const NEXT = /^(Next Round|Sonraki el)$/;
 const SHUFFLE = /^(Shuffle and play on|Karıştır, devam et)$/;
 const END = /^(End the game|Oyunu bitir)$/;
 const NEW_GAME = /^(New Game|Yeni oyun)$/;
+const REDEAL = /^(Deal this round again|Bu eli yeniden dağıt)$/;
 const OPEN = /^(Open your hand|El aç)$/;
 const UPDATE = /^↻ (New version|Yeni sürüm)$/;
 const SOUND = /^(Sound|Ses)$/;
@@ -747,6 +748,28 @@ test("between rounds a seat can be freed and taken", async ({
   expect(scores[3]).toHaveLength(1);
   // Ece starts level with the worst total still playing
   expect(total(4)).toBe(Math.max(total(1), total(2)));
+});
+
+test("mid-round, the round is dealt again once the seats are right", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  const { round } = await state(page);
+  await confirm(page, REDEAL);
+  await expect.poll(async () => (await state(page)).gameState).toBe("roundEnd");
+  // an empty table between rounds
+  expect(await table(page, "check", [".scores"])).toEqual({
+    overlaps: [],
+    offscreen: [],
+  });
+  await confirm(page, FREE("Can"));
+  await page.getByRole("button", { name: NEXT }).click();
+  await expect
+    .poll(async () => (await state(page)).players.map((p) => p.user?.name))
+    .toEqual(["Ayşe", "Bora", "Deniz"]);
+  expect((await state(page)).round).toBe(round);
 });
 
 test("this device keeps the last two games", async ({ page }) => {

@@ -408,6 +408,13 @@ export function OkeyProvider({ children }) {
     if (typeof next === "string") toast(t(next));
     else if (next) replaceState(map, next);
   }, [map, okeyState]);
+  // someone stands or sits mid-round: the round void, dealt again once the
+  // seats are right; the whole table changes, like the next round's deal
+  const redealRound = useCallback(() => {
+    const next = americano.redealRound(okeyState);
+    if (typeof next === "string") toast(t(next));
+    else replaceState(map, next);
+  }, [map, okeyState]);
 
   // classic, the pile ran out: a new one from the discards, or the end
   const shuffleDiscards = useCallback(
@@ -618,6 +625,7 @@ export function OkeyProvider({ children }) {
       catchDiscard,
       returnDiscard,
       nextRound,
+      redealRound,
       shuffleDiscards,
       endGame,
       dragged,
@@ -661,6 +669,7 @@ export function OkeyProvider({ children }) {
       catchDiscard,
       returnDiscard,
       nextRound,
+      redealRound,
       shuffleDiscards,
       endGame,
       newVersion,
