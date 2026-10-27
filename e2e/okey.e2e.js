@@ -412,6 +412,46 @@ test("a tile flips during play, and shows once the round is over", async ({
   await expect(tile).not.toHaveClass(/\bback\b/);
 });
 
+// an easter egg: two quick taps on the felt knock on the table, and each
+// player hears it from where it was, as they sit
+test("a knock on the table is heard from where it was", async ({
+  page,
+  context,
+}, info) => {
+  const room = await sitDown(page);
+  const guest = await context.newPage();
+  await sitDown(guest, { room, name: "Bora", sit: false });
+  await guest
+    .locator(".playerName", { hasText: /(Player|Oyuncu) 2(?!\d)/ })
+    .getByRole("button", { name: SIT })
+    .click();
+  await expect
+    .poll(async () => (await state(page)).players[1].user?.name)
+    .toBe("Bora");
+  // bare felt: the bottom left of the table's middle
+  const board = await page.locator(".board").boundingBox();
+  const middle = await page.locator(".middle").boundingBox();
+  const at = { x: middle.x + 10, y: middle.y + middle.height - 10 };
+  if (info.project.name === "desktop") await page.mouse.dblclick(at.x, at.y);
+  else {
+    await page.touchscreen.tap(at.x, at.y);
+    await page.touchscreen.tap(at.x, at.y);
+  }
+  const x = ((at.x - board.x) / board.width) * 2 - 1;
+  const y = 1 - ((at.y - board.y) / board.height) * 2;
+  const heard = (p) => p.evaluate(() => window.okeyKnocks ?? []);
+  // Ayşe hears it on her left; Bora sits on her right, so that side of the
+  // table is in front of him: the farther up her screen, the more to his right
+  await expect.poll(() => heard(page)).toHaveLength(1);
+  expect((await heard(page))[0]).toBeCloseTo(x);
+  await expect.poll(() => heard(guest)).toHaveLength(1);
+  expect((await heard(guest))[0]).toBeCloseTo(y);
+  // a knock beside the ⋯ button picks no word off the table
+  const dots = await page.locator(".dots").boundingBox();
+  await page.mouse.dblclick(dots.x - 30, dots.y + dots.height / 2);
+  expect(await page.evaluate(() => getSelection().toString())).toBe("");
+});
+
 // an easter egg: a right click turns the fake okey upside down, and back
 test("the fake okey turns on a right click, for good", async ({ page }) => {
   await sitDown(page);

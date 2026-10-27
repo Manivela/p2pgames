@@ -284,6 +284,38 @@ function OnTheTable({ pile }) {
 // the round stands (once it's over, how it finished) and the next step on
 // the right. Along the bottom: the pile you take from, your rack (every
 // hand once the round ends), the pile you throw to.
+// two quick taps on the felt, off anything to pick up or press, knock on
+// the table (knock.js) where they land: x and y from -1 to 1 across it
+function useKnock() {
+  const { knock } = useContext(OkeyContext);
+  const last = useRef(null);
+  return (e) => {
+    if (
+      e.target.closest(
+        ".tile, .rack, button, input, label, a, details, .dialog-backdrop",
+      )
+    ) {
+      return;
+    }
+    const tap = { at: e.timeStamp, x: e.clientX, y: e.clientY };
+    const before = last.current;
+    last.current = tap;
+    if (
+      !before ||
+      tap.at - before.at > 350 ||
+      Math.hypot(tap.x - before.x, tap.y - before.y) > 30
+    ) {
+      return;
+    }
+    last.current = null;
+    const r = e.currentTarget.getBoundingClientRect();
+    knock(
+      ((tap.x - r.left) / r.width) * 2 - 1,
+      1 - ((tap.y - r.top) / r.height) * 2,
+    );
+  };
+}
+
 function Board() {
   const { okeyState, myIndex } = useContext(OkeyContext);
   // you first, then round the table: right, across, left
@@ -296,13 +328,14 @@ function Board() {
   const fit = useTileSize(rowOf(okeyState) + 3.8);
   const [table, pileAside] = usePileAside(okeyState.deal);
   useMoves();
+  const onKnock = useKnock();
   return (
     <div
       className="fit"
       ref={fit}
       data-rotate={t("Turn your phone sideways to play")}
     >
-      <div className="board">
+      <div className="board" onPointerDown={onKnock}>
         <div className="head">
           <div className="end" />
           <div className="others">

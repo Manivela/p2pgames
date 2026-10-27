@@ -31,12 +31,23 @@ html:has(.fit) {
 /* Board.jsx: the others along the top, the table, you along the bottom */
 .board {
   height: 100%;
+  /* two quick taps knock on the table (Board.jsx): never zoom, nor pick
+     the words nearby */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: calc(var(--t) * 0.12);
   padding: calc(var(--t) * 0.14);
   color: #fff;
   font-size: calc(var(--t) * 0.3);
+}
+
+/* what's typed in stays selectable: a pasted save code, a total */
+.board :is(input, textarea) {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .head {

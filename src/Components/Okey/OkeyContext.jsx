@@ -13,6 +13,7 @@ import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
 import { signalingServers, peerOpts } from "../../constants";
 import { BUILD, useSiteBuild } from "../../version";
+import { panOf, playKnock } from "./knock";
 
 export const OkeyContext = createContext({});
 const NONE_SPUN = {};
@@ -380,6 +381,39 @@ export function OkeyProvider({ children }) {
     [act, me, picked, laid],
   );
 
+  // a knock on the table (knock.js): passed round as this page's presence,
+  // not the game, and heard once by every page already at the table
+  const knock = useCallback(
+    (x, y) =>
+      provider.awareness.setLocalStateField("knock", {
+        x,
+        y,
+        by: me,
+        at: Date.now(),
+      }),
+    [provider, me],
+  );
+  // as this render has the table and the sound level
+  const hear = React.useRef();
+  hear.current = (k) => playKnock(panOf(k, okeyState.players, me), volume);
+  React.useEffect(() => {
+    const { awareness } = provider;
+    const heard = new Map(
+      [...awareness.getStates()].map(([id, s]) => [id, s?.knock?.at]),
+    );
+    const onChange = ({ added, updated }) => {
+      for (const id of [...added, ...updated]) {
+        const k = awareness.getStates().get(id)?.knock;
+        // a page that has just come keeps its last knock to itself
+        const fresh = heard.has(id) && k && k.at !== heard.get(id);
+        heard.set(id, k?.at);
+        if (fresh) hear.current(k);
+      }
+    };
+    awareness.on("change", onChange);
+    return () => awareness.off("change", onChange);
+  }, [provider]);
+
   const showIndicator = useCallback(
     (tile) => okeyState.rules && act(americano.showIndicator, me, tile.id),
     [act, me, okeyState.rules],
@@ -623,6 +657,7 @@ export function OkeyProvider({ children }) {
       toggleHidden,
       spun,
       spin,
+      knock,
       selected,
       toggleSelected,
       unselectAll,
@@ -669,6 +704,7 @@ export function OkeyProvider({ children }) {
       toggleHidden,
       spun,
       spin,
+      knock,
       selected,
       toggleSelected,
       unselectAll,
