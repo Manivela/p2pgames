@@ -10,17 +10,20 @@ import { t } from "../../i18n";
 
 const PRESETS = [AMERICANO, ONE_O_ONE];
 
-// Every device keeps the latest game it saw, in any room, so it can be
-// picked up again after a reset, a closed tab or another night. One is
-// enough: a new game replaces it. It's kept as a save code, so the hands
-// aren't sitting in plain sight in the browser's storage either.
+// Every device keeps the latest two games it saw, in any room, so they can
+// be picked up again after a reset, a closed tab or another night: each as
+// it last was, a third game pushing out the oldest. They're kept as save
+// codes, so the hands aren't sitting in plain sight in the browser's
+// storage either.
 const SAVE = "okey-save";
+const SAVES = 2;
 
-function readSave() {
+function readSaves() {
   try {
-    return JSON.parse(localStorage.getItem(SAVE));
+    // a single save, as kept before
+    return [JSON.parse(localStorage.getItem(SAVE)) ?? []].flat();
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -33,11 +36,13 @@ function useAutoSave() {
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const code = await game.encodeSave(okeyState);
+      const { gameId } = okeyState;
+      const saves = [
+        { room: roomId, at: Date.now(), game: gameId, code },
+        ...readSaves().filter((s) => s.game !== gameId),
+      ].slice(0, SAVES);
       try {
-        localStorage.setItem(
-          SAVE,
-          JSON.stringify({ room: roomId, at: Date.now(), code }),
-        );
+        localStorage.setItem(SAVE, JSON.stringify(saves));
       } catch {
         // storage full or blocked: the save code still works
       }
@@ -127,15 +132,14 @@ function LoadDialog({ onClose }) {
   useEffect(() => {
     game.encodeSave(okeyState).then(setCode);
   }, [okeyState]);
-  // undefined until read: null is "no save"
+  // undefined until read
   const [saved, setSaved] = useState();
   useEffect(() => {
-    const s = readSave();
-    if (!s) {
-      setSaved(null);
-      return;
-    }
-    game.decodeSave(s.code).then((state) => setSaved(state && { ...s, state }));
+    Promise.all(
+      readSaves().map((s) =>
+        game.decodeSave(s.code).then((state) => state && { ...s, state }),
+      ),
+    ).then((saves) => setSaved(saves.filter(Boolean)));
   }, []);
   // kept with the text it came from, so typing doesn't flash an error
   const [decoded, setDecoded] = useState({});
@@ -150,10 +154,10 @@ function LoadDialog({ onClose }) {
   return (
     <Dialog title={t("Saved games")} onClose={onClose}>
       <h4>{t("On this device")}</h4>
-      {saved === null && <p>{t("No saved games on this device yet.")}</p>}
+      {saved?.length === 0 && <p>{t("No saved games on this device yet.")}</p>}
       <ul className="saves">
-        {[saved].filter(Boolean).map((s) => (
-          <li key={s.room}>
+        {saved?.map((s) => (
+          <li key={s.at}>
             <Confirm label={summary(s.state)} onConfirm={() => load(s.state)}>
               <small>
                 {s.room === roomId ? t("this room") : s.room} ·{" "}

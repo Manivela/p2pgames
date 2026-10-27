@@ -238,7 +238,13 @@ export function startGame(state, deal) {
   if (players.length < 2) {
     return { ...state, message: "not enough players to start the game" };
   }
-  return dealRound({ ...cloneDeep(state), players }, state.drawPile, deal);
+  // the game's own id, kept through its rounds and saves (TableMenu.jsx)
+  const gameId = Math.random().toString(36).slice(2);
+  return dealRound(
+    { ...cloneDeep(state), players, gameId },
+    state.drawPile,
+    deal,
+  );
 }
 
 export const roundOver = (state) =>

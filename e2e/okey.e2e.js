@@ -749,6 +749,25 @@ test("between rounds a seat can be freed and taken", async ({
   expect(total(4)).toBe(Math.max(total(1), total(2)));
 });
 
+test("this device keeps the last two games", async ({ page }) => {
+  await sitDown(page);
+  const kept = () =>
+    page.evaluate(() =>
+      JSON.parse(localStorage.getItem("okey-save") ?? "[]").map((s) => s.game),
+    );
+  const games = [];
+  for (let i = 0; i < 3; i++) {
+    if (i) await confirm(page, NEW_GAME);
+    await table(page, "start", 4);
+    games.unshift((await state(page)).gameId);
+    // autosave waits a second
+    await expect.poll(kept).toEqual(games.slice(0, 2));
+  }
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: SAVED }).click();
+  await expect(page.locator(".saves > li")).toHaveCount(2);
+});
+
 test("a save code brings the game back, and can't be read", async ({
   page,
 }) => {
