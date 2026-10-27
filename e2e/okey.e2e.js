@@ -668,6 +668,25 @@ test("another player's move flies across the table", async ({ page }) => {
   await expect.poll(flights).toBeGreaterThan(before);
 });
 
+test("tiles taken out of turn fly into their slots on my rack", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora
+  await table(page, "claim", 1); // Bora's discard
+  const extra = (await state(page)).drawPile.at(-2).id; // under Can's draw
+  // Can draws and discards: Bora's discard and the extra tile come to me,
+  // each slot hidden while its tile flies there
+  const hidden = await page.evaluate(async (id) => {
+    (await import("/e2e/table.js")).play(1);
+    const tile = () => document.querySelector(`.rack [data-tile-id="${id}"]`);
+    while (!tile()) await new Promise(requestAnimationFrame);
+    return tile().style.visibility;
+  }, extra);
+  expect(hidden).toBe("hidden");
+});
+
 test("a discard during the others' wait is held, then thrown", async ({
   page,
 }) => {

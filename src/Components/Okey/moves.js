@@ -242,6 +242,8 @@ export function useMoves() {
   const { okeyState, me, dragged } = useContext(OkeyContext);
   const last = useRef(null);
   const glass = useRef(null);
+  // where tiles won into my inbox came from, to fly from once they're racked
+  const won = useRef(new Map());
   useEffect(() => () => layer?.remove(), []);
 
   // after Melds' layout effect (AmericanoTable.jsx), which rescales them
@@ -267,6 +269,7 @@ export function useMoves() {
 
     // a new deal: the next one reuses tile ids, so there's nothing to compare
     if (next.deal !== prev.deal) {
+      won.current.clear();
       const fresh =
         next.gameState === "play" &&
         !next.lastDiscard &&
@@ -302,8 +305,11 @@ export function useMoves() {
 
       if (to.in === "hand" && to.p === me) {
         const el = slotEl(to.i)?.querySelector(".tile");
-        if (!el || from.in === "inbox") continue; // won tiles already flew
-        if (id === drop) land(el);
+        if (!el) continue;
+        if (from.in === "inbox") {
+          fly(won.current.get(id), el, {});
+          won.current.delete(id);
+        } else if (id === drop) land(el);
         else if (from.in === "hand") {
           // a tile moving along my rack slides there
           const a = slotEl(from.i)?.getBoundingClientRect();
@@ -317,6 +323,9 @@ export function useMoves() {
             { duration: 220, easing: EASE },
           );
         } else fly(fromRect, el, {});
+      } else if (to.in === "inbox" && to.p === me) {
+        // they fly once my rack takes them, into their slots
+        won.current.set(id, fromRect);
       } else if (to.in === "hand" || to.in === "inbox") {
         if (from.in === "inbox" || from.in === "hand") continue;
         const target = to.p === me ? q(".rack") : seatEl(to.p);
