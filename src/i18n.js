@@ -86,8 +86,8 @@ const TR = [
   [/^Nothing to catch$/, "Yakalanacak taş yok"],
   [/^Already caught$/, "Zaten yakalandı"],
   [
-    /^That tile doesn't fit a meld on the table$/,
-    "Bu taş yerdekilere işlemiyor",
+    /^That tile didn't fit a meld when it was thrown$/,
+    "Bu taş atıldığında yerdekilere işlemiyordu",
   ],
   [/^(.+) caught (.+)'s tile: \+(\d+)$/, "$1 yakaladı: $2 +$3"],
   [

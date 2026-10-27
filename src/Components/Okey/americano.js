@@ -739,6 +739,8 @@ function throwTile(state, player, tile, now = Date.now()) {
   if (s.rules.okeyDiscardPenalty && isOkey(tile, s.okeyTile)) {
     penalize(s, player, s.rules.okeyDiscardPenalty);
   }
+  // whether it can be caught, by the table as it lies now (catchDiscard)
+  s.discardFits = fitsTable(s, tile);
   resolveOffer(s, player);
   if (!s.drawPile.length) return endRound(s, null);
   return s;
@@ -821,6 +823,17 @@ export function cantCatch(state, player, from) {
   if (state.rules.catchUntilDraw && state.drawn) return "Too late to catch it";
 }
 
+// `tile` could go on the table as it is: added without moving an okey, or in
+// place of the okey that stands for it; a 1 after 13 doesn't count
+function fitsTable(state, tile) {
+  const ind = state.okeyTile;
+  return state.melds.some((m) => {
+    const j = okeyFor(m, tile, ind);
+    const after13 = m.type === "seri" && j > 0 && rankOf(tile, ind) === 1;
+    return withTile(state, m, tile, false) || (j >= 0 && !after13);
+  });
+}
+
 // The latest discard, while it's still on top of its pile, can be caught by
 // anyone else if it fits a meld on the table.
 export function catchDiscard(state, player) {
@@ -837,15 +850,11 @@ export function catchDiscard(state, player) {
   if (state.rules.okeyDiscardPenalty && isOkey(tile, state.okeyTile)) {
     return "The okey's penalty is already written";
   }
-  // it could go on the table as it is: added without moving an okey, or in
-  // place of the okey that stands for it; a 1 after 13 doesn't count
-  const ind = state.okeyTile;
-  const fits = state.melds.some((m) => {
-    const j = okeyFor(m, tile, ind);
-    const after13 = m.type === "seri" && j > 0 && rankOf(tile, ind) === 1;
-    return withTile(state, m, tile, false) || (j >= 0 && !after13);
-  });
-  if (!fits) return "That tile doesn't fit a meld on the table";
+  // the table as it lay when the tile was thrown: melds laid since (the
+  // next player opening) don't count; a game from before kept no record
+  if (!(state.discardFits ?? fitsTable(state, tile))) {
+    return "That tile didn't fit a meld when it was thrown";
+  }
   const s = cloneDeep(state);
   const me = seat(s, player);
   me.caught = [...(me.caught ?? []), tile.id];

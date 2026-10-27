@@ -656,10 +656,13 @@ test("a catch counts what could go on the table as it lies", () => {
     const players = s.players.map((p) =>
       p.id === 1 ? { ...p, discardPile: [lying(id, "discard-1")] } : p,
     );
-    const next = americano.catchDiscard({ ...s, players, lastDiscard: id }, 2);
+    // thrown by hand: judged by the table as it lies, as a game from before
+    // that kept no record of it at the throw
+    const thrown = { ...s, players, lastDiscard: id, discardFits: undefined };
+    const next = americano.catchDiscard(thrown, 2);
     return typeof next === "string" ? next : player(next, 2).caught;
   };
-  const no = "That tile doesn't fit a meld on the table";
+  const no = "That tile didn't fit a meld when it was thrown";
   const sixTo9 = ["black6-1", "black7-1", "black8-1", "blue1-1"];
   // the 4 fits only with the okey moved from the 9 to the 5
   assert.equal(catchOf(sixTo9, "black4-1"), no);
@@ -827,7 +830,7 @@ test("a discard that fits a table meld can be caught: +20, and nobody takes it",
   s = americano.discardTile(s, 2, tileIn(s, 2, "red11-0"));
   assert.equal(
     americano.catchDiscard(s, 3),
-    "That tile doesn't fit a meld on the table",
+    "That tile didn't fit a meld when it was thrown",
   );
 
   while (s.gameState === "play") {
@@ -984,6 +987,29 @@ test("picked tiles open and lay down wherever they sit on the rack", () => {
   assert.deepEqual(
     s.melds.slice(2).map((m) => m.type),
     ["seri", "kut"],
+  );
+});
+
+test("a discard that fits only melds laid after it can't be caught", () => {
+  const swap = (hand, from, to) => hand.map((x) => (x === from ? to : x));
+  const kut7 = ["red7-1", "blue7-1", "black7-1"];
+  let s = americano.startGame(seated(3), {
+    ...deal,
+    hands: [
+      swap(deal.hands[0], "yellow11-0", "yellow7-1"),
+      p2Hand.map(
+        (x) =>
+          ({ "blue6-0": kut7[0], "blue7-0": kut7[1], "blue8-0": kut7[2] })[x] ??
+          x,
+      ),
+    ],
+  });
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow7-1"));
+  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = americano.openHand(s, 2, [kut7]); // yellow 7 fits it now
+  assert.equal(
+    americano.catchDiscard(s, 3),
+    "That tile didn't fit a meld when it was thrown",
   );
 });
 
