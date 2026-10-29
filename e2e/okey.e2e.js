@@ -62,6 +62,19 @@ const slot = (page, i) =>
     .locator(":scope > *")
     .nth(i % 13);
 
+// The held tile moved there. A browser repeats dragover while the mouse
+// rests, and react-dnd takes one hover a frame, dropping those in between;
+// Playwright sends none at rest, so a move once that frame has passed
+// settles it.
+async function holdAt(page, x, y) {
+  await page.mouse.move(x, y, { steps: 8 });
+  await page.evaluate(
+    () =>
+      new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
+  await page.mouse.move(x, y + 1);
+}
+
 async function drag(page, from, to) {
   const [a, b] = [await from.boundingBox(), await to.boundingBox()];
   await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
@@ -644,9 +657,7 @@ test("a tile held over the rack shows the others sliding aside", async ({
   const to = await slot(page, 3).boundingBox();
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
-    steps: 8,
-  });
+  await holdAt(page, to.x + to.width / 2, to.y + to.height / 2);
   await expect(slot(page, 3)).toHaveCSS("--dx", "-1");
   await expect(slot(page, 1)).toHaveCSS("--dx", "-1");
   await expect(slot(page, 4)).not.toHaveCSS("--dx", /./);
@@ -680,9 +691,7 @@ test("a tile held over a gap drops into it, past the tile slid there", async ({
   const held = before.findIndex((t, i) => i >= 13 && t);
   const at = async (i) => {
     const b = await slot(page, i).boundingBox();
-    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, {
-      steps: 8,
-    });
+    await holdAt(page, b.x + b.width / 2, b.y + b.height / 2);
   };
   const from = await slot(page, held).locator(".tile").boundingBox();
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);

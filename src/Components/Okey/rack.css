@@ -1282,12 +1282,15 @@ div.flights > * {
     translate 0.15s ease-out;
 }
 
-/* Slid over another slot, a tile leaves the pointer to that slot: the touch
-   backend finds drop targets under the finger with their parents, so the
-   tile would keep holding its own slot and a gap it slid into couldn't be
-   dropped in */
 .rack .slot.aside > .tile {
   translate: calc(var(--t) * var(--dx)) calc(var(--t) * 1.72 * var(--dy));
+}
+
+/* While a tile is held over the rack, its tiles leave the pointer to the
+   slots: drop targets are found under the pointer with their parents, so a
+   tile slid into a gap, or sliding back out of it, would hold its own slot
+   there, and a tile held over the gap would flip between the two */
+.rack.holding .slot > .tile {
   pointer-events: none;
 }
 

@@ -188,7 +188,7 @@ function Rack({ player, hands }) {
   const turn = turnOf(okeyState, player);
   return (
     <div
-      className={`rack ${turn ? "turn" : ""}`}
+      className={`rack ${turn ? "turn" : ""} ${preview ? "holding" : ""}`}
       style={{ "--row": width }}
       data-seat={player}
     >
