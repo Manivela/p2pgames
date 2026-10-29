@@ -184,8 +184,8 @@ export const initialState = {
       hand: [],
       discardPile: [],
     },
-    // Americano's fifth (rulesets.js): any game refuses to start with more
-    // than its ruleset seats
+    // a fifth (rulesets.js): any game refuses to start with more than its
+    // ruleset seats
     {
       id: 5,
       user: null,
@@ -196,6 +196,10 @@ export const initialState = {
   ],
   message: "",
 };
+
+// A ruleset with rounds plays them, scored (americano.js); one without
+// (classic), or a game from before rulesets, plays one hand (game.js).
+export const hasRounds = (state) => !!state.rules?.rounds;
 
 // the most players a game takes: four, or what its ruleset seats
 export const seatsOf = (state) => state.rules?.seats ?? 4;
@@ -298,7 +302,10 @@ export function startGame(state, deal) {
     return { ...state, message: "not enough players to start the game" };
   }
   if (players.length > seatsOf(state)) {
-    return { ...state, message: "Only Americano takes five players" };
+    return {
+      ...state,
+      message: `Up to ${seatsOf(state)} players with these rules`,
+    };
   }
   // the game's own id, kept through its rounds and saves (TableMenu.jsx)
   const gameId = Math.random().toString(36).slice(2);

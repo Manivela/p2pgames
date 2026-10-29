@@ -1,5 +1,21 @@
+import { sum } from "lodash";
+
 // Rulesets: a game's numbers and switches, stored in its state (`rules`),
-// so a game keeps the rules it was started with. A classic game has none.
+// so a game keeps the rules it was started with. The three here are the
+// presets; the editor (GameSettings.jsx) makes others from them, kept on the
+// device that made them or kept from a game played with them.
+
+// Classic: one hand, finished from the hand, unscored; a pile that runs out
+// is shuffled in again or ends the game. A ruleset without rounds plays it
+// (game.js), as does a game from before rulesets, which has none.
+export const CLASSIC = {
+  id: "classic",
+  name: "Okey",
+  handSize: 14,
+  rowSlots: 13,
+  seats: 4,
+  wrapRuns: true, // 12-13-1 is a run
+};
 
 // Americano: 13 rounds, each with its own opening (el açma) requirement.
 export const AMERICANO = {
@@ -89,6 +105,7 @@ export const AMERICANO = {
   outOfTurnTakes: true, // anyone may claim the discard (maxTakes a round)
   swapOkeys: true, // a table okey can be traded for the tile it stands for
   buildWhenOpening: false, // lay more and add to melds only from next turn
+  doubling: true, // the okey thrown last doubles the others' scores
 };
 
 // 101 Okey, as pagat.com has it (pagat.com/rummy/okey101.html): open with
@@ -138,3 +155,100 @@ export const ONE_O_ONE = {
   okeySwapFromRound: null,
   buildWhenOpening: true,
 };
+
+export const PRESETS = [CLASSIC, AMERICANO, ONE_O_ONE];
+
+// Turkish "3'lü", "5'li", "6'lı", "9'lu": by how the number ends
+const SUFFIX = ["lu", "li", "li", "lü", "lü", "li", "lı", "li", "li", "lu"];
+const KIND = { kut: "küt", seri: "seri" };
+
+// a round's name from the melds that open it, as Americano's read
+// ("2 × 3'lü küt", "3'lü küt + 3'lü seri", "4 çift"); Elden without any
+export function roundName(melds) {
+  const runs = [];
+  for (const [type, size] of melds ?? []) {
+    const last = runs.at(-1);
+    if (last?.type === type && last.size === size) last.n++;
+    else runs.push({ type, size, n: 1 });
+  }
+  return (
+    runs
+      .map(({ type, size, n }) =>
+        type === "pair"
+          ? `${n} çift`
+          : `${n > 1 ? `${n} × ` : ""}${size}'${SUFFIX[size % 10]} ${KIND[type]}`,
+      )
+      .join(" + ") || "Elden"
+  );
+}
+
+// the sizes a meld an opening asks for can be: a küt has four colours
+export const SIZES = { kut: [3, 4], seri: [3, 13], pair: [2, 2] };
+const whole = (n, lo, hi = Infinity) =>
+  Number.isInteger(n) && n >= lo && n <= hi;
+
+// What keeps a ruleset made in the editor from being played, or nothing:
+// the rules read it without checking, at every table it's played at.
+export function invalid(r) {
+  // what game.js reads when a ruleset has none
+  const { seats = 4, handSize = 14, rowSlots = 13 } = r;
+  if (!r.name?.trim()) return "Give the rules a name";
+  if (!whole(seats, 2, 5)) return "2 to 5 players";
+  // every hand, the starter's extra tile and the indicator
+  if (!whole(handSize, 2) || seats * handSize + 2 > 106) {
+    return "Not enough tiles for those hands";
+  }
+  if (r.outOfTurnTakes && !whole(r.maxTakes, 1)) return "Fill in every number";
+  // the hand, a draw and two tiles a take, with a gap to spare
+  const most = handSize + 2 + (r.outOfTurnTakes ? 2 * r.maxTakes : 0);
+  if (!whole(rowSlots, 2, 20) || most > 2 * rowSlots) {
+    return "Make the rack's rows longer";
+  }
+  if (!r.rounds) return; // classic: one hand
+  if (!whole(r.rounds.length, 1, 50)) return "1 to 50 rounds";
+  const from = r.okeySwapFromRound;
+  if (from != null && !whole(from, 1)) return "Fill in every number";
+  if (r.opening) {
+    const { points, pairs } = r.opening;
+    if (!whole(points, 1) || !whole(pairs, 1, handSize / 2)) {
+      return "Fill in every number";
+    }
+    return;
+  }
+  const bad = r.rounds.findIndex(
+    ({ melds }) =>
+      melds &&
+      (!melds.length ||
+        melds.some(
+          ([type, size]) => !SIZES[type] || !whole(size, ...SIZES[type]),
+        ) ||
+        sum(melds.map(([, size]) => size)) > handSize),
+  );
+  if (bad >= 0) return `Round ${bad + 1} asks for more than a hand holds`;
+}
+
+// rulesets kept on this device (localStorage), in the order they were made
+const KEPT = "okey-rulesets";
+export function keptRulesets() {
+  try {
+    return JSON.parse(localStorage.getItem(KEPT)) ?? [];
+  } catch {
+    return [];
+  }
+}
+function keep(list) {
+  try {
+    localStorage.setItem(KEPT, JSON.stringify(list));
+  } catch {
+    // blocked: not kept
+  }
+}
+// a ruleset kept, or one of the same id replaced
+export function keepRuleset(rules) {
+  const list = keptRulesets();
+  const i = list.findIndex((r) => r.id === rules.id);
+  keep(i < 0 ? [...list, rules] : list.map((r, j) => (j === i ? rules : r)));
+}
+export const dropRuleset = (id) =>
+  keep(keptRulesets().filter((r) => r.id !== id));
+export const allRulesets = () => [...PRESETS, ...keptRulesets()];

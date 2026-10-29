@@ -9,9 +9,9 @@ import { LastTurn, Melds, RoundInfo, Scores } from "./AmericanoTable";
 import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
-import { AMERICANO, ONE_O_ONE } from "./rulesets";
+import { Lobby } from "./GameSettings";
 import { useMoves } from "./moves";
-import { ended, pileOut, rowOf, tableSeats } from "./game";
+import { ended, hasRounds, pileOut, rowOf, tableSeats } from "./game";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -130,7 +130,6 @@ function NextStep() {
   const {
     okeyState,
     me,
-    startGame,
     newGame,
     nextRound,
     shuffleDiscards,
@@ -141,40 +140,11 @@ function NextStep() {
     openAll,
     layMelds,
   } = useContext(OkeyContext);
-  // 101's options: four in pairs, doubling (katlamalı)
-  const [partners, setPartners] = useState(false);
-  const [doubling, setDoubling] = useState(false);
-  const option = (label, on, set) => (
-    <label>
-      <input
-        type="checkbox"
-        checked={on}
-        onChange={(e) => set(e.target.checked)}
-      />
-      {t(label)}
-    </label>
-  );
   switch (okeyState.gameState) {
     case "start":
-      return (
-        <>
-          <button onClick={() => startGame()}>{t("Start Okey")}</button>
-          <button onClick={() => startGame(AMERICANO)}>
-            {t("Start Americano")}
-          </button>
-          <button
-            onClick={() => startGame({ ...ONE_O_ONE, partners, doubling })}
-          >
-            {t("Start 101")}
-          </button>
-          <span className="options">
-            {option("Partners", partners, setPartners)}
-            {option("Doubling", doubling, setDoubling)}
-          </span>
-        </>
-      );
+      return <Lobby />;
     case "play": {
-      if (!okeyState.rules) {
+      if (!hasRounds(okeyState)) {
         return (
           pileOut(okeyState, me) && (
             <button onClick={shuffleDiscards}>
@@ -263,7 +233,7 @@ function OnTheTable({ pile }) {
   return (
     <>
       {pile}
-      {okeyState.rules && <Melds underPile={!!pile} />}
+      {hasRounds(okeyState) && <Melds underPile={!!pile} />}
     </>
   );
 }
@@ -416,7 +386,7 @@ function Board() {
           </div>
           <div className="end">
             <NewVersion />
-            {okeyState.rules && <Scores />}
+            {hasRounds(okeyState) && <Scores />}
             <TableMenu />
           </div>
         </div>

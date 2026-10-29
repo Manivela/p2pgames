@@ -172,7 +172,7 @@ function Example({ melds }) {
 export function RoundInfo() {
   const { okeyState, me } = useContext(OkeyContext);
   const { round, message, players, rules, gameState, opened } = okeyState;
-  if (!rules) {
+  if (!rules?.rounds) {
     const said =
       message ||
       (gameState === "play" && !okeyState.drawPile.length && "No tiles left");

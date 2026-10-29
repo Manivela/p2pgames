@@ -3,7 +3,11 @@
 // elements that overlap or fall off the screen.
 import * as game from "../src/Components/Okey/game.js";
 import * as americano from "../src/Components/Okey/americano.js";
-import { AMERICANO, ONE_O_ONE } from "../src/Components/Okey/rulesets.js";
+import {
+  AMERICANO,
+  CLASSIC,
+  ONE_O_ONE,
+} from "../src/Components/Okey/rulesets.js";
 
 const NAMES = { 2: "Bora", 3: "Can", 4: "Deniz", 5: "Ece" };
 // seat 1 holds these from the deal: a küt that opens round 1
@@ -34,9 +38,9 @@ export function seatBots(n) {
 // "101" or "classic"; options: 101's (partners, doubling)
 export function start(n, mode = "americano", options = {}) {
   seatBots(n);
-  const preset = { americano: AMERICANO, 101: ONE_O_ONE }[mode];
-  const rules = preset && { ...preset, ...options };
-  const size = rules?.handSize ?? 14;
+  const preset = { americano: AMERICANO, 101: ONE_O_ONE, classic: CLASSIC };
+  const rules = { ...preset[mode], ...options };
+  const size = rules.handSize;
   const drawPile = game.tiles.map((_, i) => ({
     ...game.tiles[(i * 37) % game.tiles.length],
     hidden: true,
@@ -47,13 +51,17 @@ export function start(n, mode = "americano", options = {}) {
   const deal = { okeyTile: rest.find((id) => !id.includes("👌")), hands };
   const s = { ...window.okey.get(), drawPile };
   window.okey.set(
-    ok(rules ? americano.startGame(s, deal, rules) : game.startGame(s, deal)),
+    ok(
+      rules.rounds
+        ? americano.startGame(s, deal, rules)
+        : game.startGame({ ...s, rules }, deal),
+    ),
   );
 }
 
 // whoever's turn it is draws from the pile and throws their last tile
 function turn(s) {
-  const rules = s.rules ? americano : game;
+  const rules = game.hasRounds(s) ? americano : game;
   const id = s.currentPlayer;
   if (!s.drawn) {
     const slot = seat(s, id).hand.indexOf(null);

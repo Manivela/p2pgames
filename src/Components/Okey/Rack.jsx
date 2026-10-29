@@ -7,7 +7,7 @@ import { t } from "../../i18n";
 import { pairRound, rackPoints, upForClaim } from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-import { ended, partner, placeTiles, rowOf } from "./game";
+import { ended, hasRounds, partner, placeTiles, rowOf } from "./game";
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -23,7 +23,7 @@ const Timer = ({ okeyState }) => (
 // (classic hands don't shrink)
 function TilesLeft({ player }) {
   const { okeyState, myHand } = useContext(OkeyContext);
-  if (!okeyState.rules || okeyState.gameState !== "play") return null;
+  if (!hasRounds(okeyState) || okeyState.gameState !== "play") return null;
   const left = myHand(player).filter(Boolean).length;
   return (
     <span className={`tilesLeft ${left === 1 ? "last" : ""}`}>{left}</span>
@@ -68,7 +68,7 @@ function Name({ player, children }) {
         {playing && turn && okeyState.drawn && (
           <span className="badge drew">{t("drew")}</span>
         )}
-        {playing && okeyState.rules && okeyState.opened[player] && (
+        {playing && hasRounds(okeyState) && okeyState.opened[player] && (
           <span className="badge">{t("opened")}</span>
         )}
         {playing &&
@@ -246,7 +246,7 @@ function Hands({ players }) {
             <span className="avatar" style={{ "--c": seatColors[player] }}>
               {name && [...name][0].toLocaleUpperCase()}
             </span>
-            {okeyState.rules && (
+            {hasRounds(okeyState) && (
               <b className="score">{score > 0 ? `+${score}` : score}</b>
             )}
             <div className="tiles">
@@ -314,7 +314,7 @@ export function DiscardPile({ player, small }) {
   const ghost = held && player === me && myHand(me).find((t) => t?.id === held);
   // whether it fits a meld is for them to see
   const canCatch =
-    okeyState.rules &&
+    hasRounds(okeyState) &&
     okeyState.gameState === "play" &&
     me &&
     me !== player &&

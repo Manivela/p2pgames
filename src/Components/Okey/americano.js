@@ -22,7 +22,7 @@ const wrap = (state) => state.rules.wrapRuns;
 const pairsOf = (tiles) => Array(tiles.length / 2).fill(["pair", 2]);
 // a round that opens with pairs (Americano's 4 çift)
 export const pairRound = (state) =>
-  !!state.rules?.rounds[state.round - 1]?.melds?.some(
+  !!state.rules?.rounds?.[state.round - 1]?.melds?.some(
     ([type]) => type === "pair",
   );
 
@@ -776,7 +776,8 @@ export function penaltiesSoFar(state, player) {
   const caught = state.players.flatMap((p) => p.caught ?? []);
   const pile = seat(state, player)?.discardPile ?? [];
   return (
-    state.rules.catchPenalty *
+    // none to catch when no round lays melds
+    (state.rules.catchPenalty ?? 0) *
       pile.filter((t) => caught.includes(t.id)).length +
     (state.penalties?.[player] ?? 0)
   );

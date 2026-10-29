@@ -1,14 +1,12 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { sum } from "lodash";
+import { sum, uniqBy } from "lodash";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
 import * as americano from "./americano";
 import * as game from "./game";
-import { AMERICANO, ONE_O_ONE } from "./rulesets";
+import { allRulesets } from "./rulesets";
 import { t } from "../../i18n";
-
-const PRESETS = [AMERICANO, ONE_O_ONE];
 
 // Every device keeps the latest two games it saw, in any room, so they can
 // be picked up again after a reset, a closed tab or another night: each as
@@ -51,7 +49,7 @@ function useAutoSave() {
 }
 
 // a destructive or replacing action takes a second tap within 3s
-function Confirm({ label, onConfirm, children }) {
+export function Confirm({ label, onConfirm, children }) {
   const [armed, setArmed] = useState(false);
   const timer = useRef();
   return (
@@ -81,9 +79,11 @@ function summary(s) {
     .map((p) => `${p.user.name} ${sum(s.scores?.[p.id] ?? [])}`)
     .join(", ");
   return [
-    s.rules ? t(`Round ${s.round}/${s.rules.rounds.length}`) : "Okey",
+    game.hasRounds(s)
+      ? `${s.rules.name} · ${t(`Round ${s.round}/${s.rules.rounds.length}`)}`
+      : (s.rules?.name ?? "Okey"),
     turn && t(`${turn}'s turn`),
-    s.rules && scores,
+    game.hasRounds(s) && scores,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -105,10 +105,13 @@ function Seats({ saved }) {
   );
 }
 
-function Dialog({ title, onClose, children }) {
+export function Dialog({ title, className = "", onClose, children }) {
   return (
     <div className="dialog-backdrop" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`dialog ${className}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="close" aria-label={t("Close")} onClick={onClose}>
           ✕
         </button>
@@ -212,8 +215,15 @@ function LoadDialog({ onClose }) {
 // starts
 function SetUpDialog({ onClose }) {
   const { okeyState, loadGame } = useContext(OkeyContext);
-  const [id, setId] = useState(okeyState.rules?.id ?? AMERICANO.id);
-  const rules = PRESETS.find((r) => r.id === id);
+  // the game's own rules and the lobby's first, over a preset of their id
+  const list = uniqBy(
+    [okeyState.rules, okeyState.setup, ...allRulesets()].filter(
+      (r) => r?.rounds,
+    ),
+    "id",
+  );
+  const [id, setId] = useState(list[0].id);
+  const rules = list.find((r) => r.id === id);
   const seated = okeyState.players.filter((p) => p.user);
   const [picked, setRound] = useState(okeyState.round ?? 1);
   const round = Math.min(picked, rules.rounds.length);
@@ -238,7 +248,7 @@ function SetUpDialog({ onClose }) {
           value={id}
           onChange={(e) => setId(e.target.value)}
         >
-          {PRESETS.map((r) => (
+          {list.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
             </option>
@@ -430,7 +440,7 @@ export default function TableMenu() {
                 />
               ))}
           <button onClick={() => show("load")}>{t("Saved games")}</button>
-          {(okeyState.gameState === "start" || okeyState.rules) && (
+          {(okeyState.gameState === "start" || game.hasRounds(okeyState)) && (
             <button onClick={() => show("setup")}>{t("Set up a game")}</button>
           )}
           <label className="volume">
@@ -445,11 +455,11 @@ export default function TableMenu() {
             />
           </label>
           {/* classic: the pile ran out, and whoever's turn it is calls it */}
-          {!okeyState.rules && game.pileOut(okeyState, me) && (
+          {!game.hasRounds(okeyState) && game.pileOut(okeyState, me) && (
             <Confirm label={t("End the game")} onConfirm={then(endGame)} />
           )}
           {/* someone stands or sits mid-round: back to before the deal */}
-          {okeyState.rules && okeyState.gameState === "play" && (
+          {game.hasRounds(okeyState) && okeyState.gameState === "play" && (
             <Confirm
               label={t("Deal this round again")}
               onConfirm={then(redealRound)}

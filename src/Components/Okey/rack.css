@@ -944,7 +944,51 @@ html:has(.fit) {
   color: #3a2600;
 }
 
-/* 101's options, under its Start */
+/* the lobby: the rules the next game starts with, and their settings (⚙) */
+.side .pick {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--t) * 0.15);
+  max-width: 100%;
+}
+
+.side .pick select {
+  min-width: 0;
+  height: calc(var(--t) * 0.8);
+  padding: 0 calc(var(--t) * 0.3);
+  border: none;
+  border-radius: 999px;
+  font-size: calc(var(--t) * 0.34);
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.38);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.side .pick select option {
+  color: #222;
+}
+
+.side .pick button {
+  flex: none;
+  width: calc(var(--t) * 0.8);
+  padding: 0;
+  font-size: calc(var(--t) * 0.45);
+}
+
+/* switches on that no game opened that way was played with (GameSettings.jsx) */
+.side .untested {
+  color: #ffd54f;
+  font-size: calc(var(--t) * 0.28);
+  font-weight: 600;
+}
+
+.settings .untested {
+  margin: 6px 0 0;
+  color: #a15c00;
+}
+
+/* a few of them, under Start */
 .side .options {
   display: flex;
   flex-wrap: wrap;
@@ -1105,21 +1149,22 @@ html:has(.fit) {
 }
 
 /* a second tap confirms */
-.table-menu button.armed {
+:is(.table-menu, .dialog) button.armed {
   background-color: #e53935;
   color: #fff;
 }
 
 /* Bootstrap 3 (index.html) sets the root font to 10px, so 1rem is tiny */
 .table-menu .menu button,
-.table-menu .dialog :is(button, input, select, textarea) {
+.dialog :is(button, input, select, textarea) {
   font-size: 15px;
 }
 
 .dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  /* over the site's corner buttons (index.css), from the settings on body */
+  z-index: 202;
   display: grid;
   place-items: center;
   background-color: rgba(0, 0, 0, 0.4);
@@ -1191,6 +1236,102 @@ html:has(.fit) {
 .dialog th {
   text-align: left;
   padding-right: 8px;
+}
+
+/* the next game's settings (GameSettings.jsx) */
+.dialog.settings {
+  width: min(640px, 92vw);
+  padding-bottom: 0;
+}
+
+.settings .inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.settings .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings .chips label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.settings .chips label:has(:checked) {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+}
+
+.settings .chips input {
+  margin: 0;
+}
+
+.settings .numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 4px 16px;
+}
+
+.settings .numbers label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-weight: normal;
+}
+
+.settings .rounds {
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.settings .rounds b {
+  min-width: 2em;
+  text-align: right;
+}
+
+.settings .rounds li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 3px 0;
+}
+
+/* Start stays in sight while the rest scrolls */
+.settings .actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  margin: 8px -16px 0;
+  padding: 10px 16px;
+  border-top: 1px solid #eee;
+  background: #fff;
+}
+
+.settings .start {
+  height: 34px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #fff;
+  background: #2e7d32;
 }
 
 /* there's no room for 13 tiles across a phone held upright */

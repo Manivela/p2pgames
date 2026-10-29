@@ -4,6 +4,10 @@ import { expect, test } from "@playwright/test";
 const GO = /^(Go|Gir)$/;
 const SIT = /^(Sit|Otur)$/;
 const MENU = /^(Table menu|Masa menüsü)$/;
+// the lobby's rules, their settings, and Start
+const RULES = /^(Rules|Kurallar)$/;
+const SETTINGS = /^(Game settings|Oyun ayarları)$/;
+const START = /^(Start|Başlat)$/;
 const RESET = /^(Reset Game|Oyunu sıfırla)$/;
 const SAVED = /^(Saved games|Kayıtlı oyunlar)$/;
 const CLOSE = /^(Close|Kapat)$/;
@@ -112,6 +116,10 @@ const stages = {
   101: async (page) => {
     await table(page, "start", 4, "101");
     await table(page, "toMyTurn");
+  },
+  settings: async (page) => {
+    await page.getByLabel(RULES).selectOption("americano");
+    await page.getByRole("button", { name: SETTINGS }).click();
   },
 };
 
@@ -398,16 +406,17 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
   await expect(page.locator(".meld .ghost")).toHaveCount(0);
 });
 
-// 101's options go into the game it starts; in pairs it takes four
-test("101 starts with its options, and in pairs with four at the table", async ({
+// what's ticked in the lobby goes into the game it starts, without saving
+// anything; in pairs it takes four
+test("101 starts with what's ticked, and in pairs with four at the table", async ({
   page,
 }) => {
   await sitDown(page);
+  await page.getByLabel(RULES).selectOption("101");
   await page.getByLabel(/^(Partners|Eşli)$/).check();
   await page.getByLabel(/^(Doubling|Katlamalı)$/).check();
-  const start101 = page.getByRole("button", {
-    name: /^(Start 101|101 başlat)$/,
-  });
+  await expect(page.getByLabel(RULES)).toContainText("101 *");
+  const start101 = page.getByRole("button", { name: START });
   await start101.click();
   await expect(
     page.getByText(
@@ -424,6 +433,56 @@ test("101 starts with its options, and in pairs with four at the table", async (
       doubling: true,
     });
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
+// a game played as a preset sets the next one up as that preset, unchanged
+test("after a game of Americano, the next is set up as Americano", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "seatBots", 2);
+  await page.getByLabel(RULES).selectOption("americano");
+  await page.getByRole("button", { name: START }).click();
+  await expect.poll(async () => (await state(page)).gameState).toBe("play");
+  await confirm(page, NEW_GAME);
+  await expect(page.getByLabel(RULES).locator("option:checked")).toHaveText(
+    "Americano",
+  );
+});
+
+// the settings: a game set up any way, started from them and kept on this
+// device under a name, for the next night
+test("a game set up in the settings starts that way, and is kept", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "seatBots", 2);
+  await page.getByRole("button", { name: SETTINGS }).click();
+  await page.locator("#setup-opening").selectOption("melds");
+  await page.getByLabel(/^(Tiles dealt|Dağıtılan taş)$/).fill("12");
+  await page
+    .getByRole("button", { name: /^(Remove the round|Eli kaldır)$/ })
+    .first()
+    .click();
+  await page.getByLabel(/^(Name|Ad)$/).fill("Short Americano");
+  await page.getByRole("button", { name: /^(Save|Kaydet)$/ }).click();
+  await page.locator(".settings .start").click();
+  await expect
+    .poll(async () => (await state(page)).rules?.name)
+    .toBe("Short Americano");
+  const { rules } = await state(page);
+  expect(rules).toMatchObject({ name: "Short Americano", handSize: 12 });
+  // Americano's rounds, but the first
+  expect(rules.rounds).toHaveLength(12);
+  expect(rules.rounds[0]).toEqual({ name: "3'lü seri", melds: [["seri", 3]] });
+  expect(
+    await page.evaluate(() => JSON.parse(localStorage["okey-rulesets"])),
+  ).toEqual([rules]);
+  // the next game is set up the same, and nothing reads as changed
+  await confirm(page, NEW_GAME);
+  await expect(page.getByLabel(RULES).locator("option:checked")).toHaveText(
+    "Short Americano",
+  );
 });
 
 // a link dragged over the table is the browser's own drag, with no tile in

@@ -223,7 +223,7 @@ test("Americano seats a fifth player; classic and 101 refuse one", () => {
     americano.startGame(seated(5), undefined, ONE_O_ONE),
   ]) {
     assert.equal(refused.gameState, "start");
-    assert.equal(refused.message, "Only Americano takes five players");
+    assert.equal(refused.message, "Up to 4 players with these rules");
   }
   // a 101 game offers four seats between hands
   s = americano.startGame(seated(2), undefined, ONE_O_ONE);

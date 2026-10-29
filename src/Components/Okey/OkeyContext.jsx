@@ -182,7 +182,7 @@ export function OkeyProvider({ children }) {
     [okeyState.players],
   );
 
-  const moves = okeyState.rules ? americano : game;
+  const moves = game.hasRounds(okeyState) ? americano : game;
 
   // the tile you last dragged has already landed: moves.js doesn't fly it
   const dragged = React.useRef(null);
@@ -281,7 +281,10 @@ export function OkeyProvider({ children }) {
   const discardTile = useCallback(
     (player, tile) => {
       dragged.current = tile.id;
-      if (!okeyState.rules || !americano.claimWait(okeyState, player)) {
+      if (
+        !game.hasRounds(okeyState) ||
+        !americano.claimWait(okeyState, player)
+      ) {
         return act(moves.discardTile, player, tile);
       }
       // anything else that would stop it is said now, not when it's thrown
@@ -332,12 +335,12 @@ export function OkeyProvider({ children }) {
     [act, moves, me],
   );
 
-  // rules: a ruleset (rulesets.js), or none for the classic game
+  // rules: a ruleset (rulesets.js); one without rounds is the classic game
   const startGame = useCallback(
     (rules) => {
-      const next = rules
+      const next = rules.rounds
         ? americano.startGame(okeyState, undefined, rules)
-        : game.startGame(okeyState);
+        : game.startGame({ ...okeyState, rules });
       // a failed start would still replace the table, seats and all
       if (next.gameState !== "play") toast(t(next.message));
       else replaceState(map, next);
@@ -438,8 +441,9 @@ export function OkeyProvider({ children }) {
   }, [provider]);
 
   const showIndicator = useCallback(
-    (tile) => okeyState.rules && act(americano.showIndicator, me, tile.id),
-    [act, me, okeyState.rules],
+    (tile) =>
+      game.hasRounds(okeyState) && act(americano.showIndicator, me, tile.id),
+    [act, me, okeyState],
   );
 
   const playOnMeld = useCallback(
@@ -498,6 +502,7 @@ export function OkeyProvider({ children }) {
     replaceState(map, game.initialState);
   }, [map]);
 
+  // the next game set up as this one was played
   const newGame = useCallback(() => {
     replaceState(map, {
       ...game.initialState,
@@ -506,8 +511,15 @@ export function OkeyProvider({ children }) {
         discardPile: [],
         hand: [],
       })),
+      setup: okeyState.rules ?? okeyState.setup,
     });
-  }, [map, okeyState.players]);
+  }, [map, okeyState.players, okeyState.rules, okeyState.setup]);
+
+  // the lobby's settings, anyone's to change (GameSettings.jsx)
+  const setSetup = useCallback(
+    (setup) => setOkeyState({ ...okeyState, setup }),
+    [okeyState, setOkeyState],
+  );
 
   const sit = useCallback(
     (player) => {
@@ -682,6 +694,7 @@ export function OkeyProvider({ children }) {
       drawTile,
       finishGame,
       startGame,
+      setSetup,
       sit,
       stand,
       isAlreadySitting,
@@ -731,6 +744,7 @@ export function OkeyProvider({ children }) {
       drawTile,
       finishGame,
       startGame,
+      setSetup,
       sit,
       stand,
       isAlreadySitting,
