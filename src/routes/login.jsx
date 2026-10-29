@@ -11,7 +11,7 @@ export default function Login() {
 
   if (currentUser) {
     const from = location.state?.from?.pathname;
-    const roomId = customNanoid(6);
+    const roomId = customNanoid(4);
     const targetPath = from || `/${roomId}/okey`;
 
     setTimeout(() => {
