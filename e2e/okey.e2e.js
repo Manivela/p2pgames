@@ -658,6 +658,45 @@ test("a tile held over the rack shows the others sliding aside", async ({
   await expect(page.locator(".rack .slot.aside")).toHaveCount(0);
 });
 
+// the tile slid aside into a gap doesn't take the gap from the one held:
+// held over its neighbour, then over the gap, it drops into the gap
+test("a tile held over a gap drops into it, past the tile slid there", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  // a gap at slot 3: its tile to the bottom row
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    const hand = [...s.players[0].hand];
+    hand[hand.indexOf(null, 13)] = hand[3];
+    hand[3] = null;
+    window.okey.set({
+      ...s,
+      players: s.players.map((p, i) => (i ? p : { ...p, hand })),
+    });
+  });
+  const before = await handIds(page);
+  const held = before.findIndex((t, i) => i >= 13 && t);
+  const at = async (i) => {
+    const b = await slot(page, i).boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, {
+      steps: 8,
+    });
+  };
+  const from = await slot(page, held).locator(".tile").boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await at(2); // slot 2's tile slides right, into the gap
+  await expect(slot(page, 2)).toHaveCSS("--dx", "1");
+  await at(3);
+  await expect(page.locator(".rack .slot.aside")).toHaveCount(0);
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await handIds(page)).slice(2, 4))
+    .toEqual([before[2], before[held]]);
+});
+
 test("a box drawn on the rack picks the tiles in it", async ({ page }) => {
   await sitDown(page);
   await table(page, "start", 4);
