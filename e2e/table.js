@@ -5,7 +5,7 @@ import * as game from "../src/Components/Okey/game.js";
 import * as americano from "../src/Components/Okey/americano.js";
 import { AMERICANO, ONE_O_ONE } from "../src/Components/Okey/rulesets.js";
 
-const NAMES = { 2: "Bora", 3: "Can", 4: "Deniz" };
+const NAMES = { 2: "Bora", 3: "Can", 4: "Deniz", 5: "Ece" };
 // seat 1 holds these from the deal: a küt that opens round 1
 export const KUT = ["red7-0", "blue7-0", "black7-0"];
 

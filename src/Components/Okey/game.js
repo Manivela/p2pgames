@@ -150,15 +150,40 @@ export const initialState = {
       hand: [],
       discardPile: [],
     },
+    // Americano's fifth (rulesets.js): any game refuses to start with more
+    // than its ruleset seats
+    {
+      id: 5,
+      user: null,
+      userKey: null,
+      hand: [],
+      discardPile: [],
+    },
   ],
   message: "",
 };
 
+// the most players a game takes: four, or what its ruleset seats
+export const seatsOf = (state) => state.rules?.seats ?? 4;
+
 // Every seat, the empty ones too: a started game keeps only the seats that
-// were taken, and between games and rounds anyone can sit down again.
-export const allSeats = (players) =>
-  initialState.players.map(
-    (empty) => players.find((p) => p.id === empty.id) ?? empty,
+// were taken, and between games and rounds anyone can sit down again (in
+// the first `count` of them, during a game).
+export const allSeats = (players, count = initialState.players.length) =>
+  initialState.players
+    .slice(0, count)
+    .map((empty) => players.find((p) => p.id === empty.id) ?? empty);
+
+// The seats at the table: an empty fifth shows only once the other four
+// are taken, so four play at the table they always had.
+export const tableSeats = (players) =>
+  players.filter(
+    (p) =>
+      p.id < 5 ||
+      p.user ||
+      p.away ||
+      p.hand.length ||
+      players.every((o) => o.id === 5 || o.user),
   );
 
 // the player `step` places round the table from `player` (1 next, -1 before)
@@ -237,6 +262,9 @@ export function startGame(state, deal) {
   const players = state.players.filter((p) => p.user !== null);
   if (players.length < 2) {
     return { ...state, message: "not enough players to start the game" };
+  }
+  if (players.length > seatsOf(state)) {
+    return { ...state, message: "Only Americano takes five players" };
   }
   // the game's own id, kept through its rounds and saves (TableMenu.jsx)
   const gameId = Math.random().toString(36).slice(2);

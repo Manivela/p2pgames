@@ -17,4 +17,5 @@ export const seatColors = {
   2: "#7e57c2",
   3: "#e65100",
   4: "#d81b60",
+  5: "#6d4c41",
 };

@@ -1,4 +1,3 @@
-import _ from "lodash";
 import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useDrop } from "react-dnd";
@@ -12,55 +11,48 @@ import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { AMERICANO, ONE_O_ONE } from "./rulesets";
 import { useMoves } from "./moves";
-import { pileOut, rowOf } from "./game";
-
-function rotateArray(array, x) {
-  // Normalize the rotation count
-  const rotations = x % array.length;
-
-  // Handle negative rotations
-  const normalizedRotations =
-    rotations >= 0 ? rotations : array.length + rotations;
-
-  // Handle rotation count of 1 separately
-  if (normalizedRotations === 1) {
-    return _.concat(_.tail(array), _.head(array));
-  }
-
-  // Split the array into two parts based on the rotation count
-  const [head, tail] = _.chunk(array, normalizedRotations);
-
-  // If either head or tail is undefined, return the original array
-  if (head === undefined || tail === undefined) {
-    return array;
-  }
-
-  // Rearrange the array by concatenating the tail with the head
-  return _.concat(tail, head);
-}
+import { pileOut, rowOf, tableSeats } from "./game";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
-// (`across`: a rack row and 3.8 more) and for the whole table (7.4 tiles
-// down), up to 70px.
+// (`across`: a rack row and 3.8 more), for the seats along the top when
+// they're wider (four others: Americano's fifth seat, long names) and for
+// the whole table (7.4 tiles down), up to 70px.
 // It's set on the page, so the tiles that fly or are dragged (outside the
 // table) and the site's corner buttons (index.css) match.
 function useTileSize(across) {
   const ref = useRef(null);
+  // measured every render, like usePileAside: someone sitting down or the
+  // score sheet's button widens the top without resizing the box
   useLayoutEffect(() => {
+    const fit = ref.current;
+    const head = fit.querySelector(".head");
     const page = document.documentElement.style;
-    const observer = new ResizeObserver(([{ contentRect: box }]) =>
-      page.setProperty(
-        "--t",
-        `${Math.min(box.width / across, box.height / 7.4, 70)}px`,
-      ),
-    );
-    observer.observe(ref.current);
-    return () => {
-      observer.disconnect();
-      page.removeProperty("--t");
-    };
-  }, [across]);
+    // set from the observer only: sized in the effect itself as well, a
+    // lobby button's text sat a hair off in the Docker screenshots
+    const observer = new ResizeObserver(() => {
+      // the top at its narrowest, in tiles (all of it is sized in --t): its
+      // three parts, the gaps between them and the board's padding (not
+      // the head's box: the board widens to fit it)
+      const t = parseFloat(page.getPropertyValue("--t"));
+      const css = (el) => getComputedStyle(el);
+      const parts = [...head.children].reduce((w, el) => w + el.offsetWidth, 0);
+      const gaps = 2 * parseFloat(css(head).columnGap);
+      const { paddingLeft, paddingRight } = css(head.parentElement);
+      const sides = parseFloat(paddingLeft) + parseFloat(paddingRight);
+      const top = (parts + gaps + sides) / t || 0;
+      const width = fit.clientWidth / Math.max(across, top);
+      const size = `${Math.min(width, fit.clientHeight / 7.4, 70)}px`;
+      // only when it changes: measured every render, not repainted
+      if (size !== page.getPropertyValue("--t")) page.setProperty("--t", size);
+    });
+    observer.observe(fit);
+    return () => observer.disconnect();
+  });
+  useLayoutEffect(
+    () => () => document.documentElement.style.removeProperty("--t"),
+    [],
+  );
   return ref;
 }
 
@@ -319,10 +311,11 @@ function useKnock() {
 function Board() {
   const { okeyState, myIndex } = useContext(OkeyContext);
   // you first, then round the table: right, across, left
+  const players = tableSeats(okeyState.players);
   const [mine, ...rest] =
     myIndex !== -1
-      ? rotateArray(okeyState.players, myIndex)
-      : okeyState.players;
+      ? [...players.slice(myIndex), ...players.slice(0, myIndex)]
+      : players;
   // left to right: the one before you first
   const others = rest.reverse();
   const fit = useTileSize(rowOf(okeyState) + 3.8);

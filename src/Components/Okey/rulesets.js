@@ -77,6 +77,8 @@ export const AMERICANO = {
   maxTakes: 3,
   // from this round on, a real tile can take an okey's place in a table meld
   okeySwapFromRound: 6,
+  // a fifth player can sit in (14 × 5 + 1 dealt leaves 34 in the pile)
+  seats: 5,
   // after drawing from the pile, the others get this long to take the discard
   claimWaitSeconds: 8,
   // discarding a tile that fits a table meld (işler taş): whoever catches it

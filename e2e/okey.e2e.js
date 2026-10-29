@@ -159,6 +159,44 @@ test("three at the table fit, in play and once the round is over", async ({
   });
 });
 
+// Americano's fifth seat: four others and three piles along the top, five
+// hands on the rack at round end
+test("five at an Americano table fit, in play and once the round is over", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 5);
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  await expect(page).toHaveScreenshot("five-play.png");
+  await table(page, "playToEnd");
+  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(5);
+  expect(await table(page, "check", [".scores"])).toEqual({
+    overlaps: [],
+    offscreen: [],
+  });
+  await expect(page).toHaveScreenshot("five-round-end.png");
+});
+
+// four played a round: someone arriving sees Americano's fifth seat to
+// take, beside the score sheet and the menu
+test("after a round of four, a fifth arriving has a seat, and it fits", async ({
+  page,
+}) => {
+  const room = await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "playToEnd");
+  const fifth = await secondPlayer(page, room);
+  await expect(
+    fifth.locator('.others [data-seat="5"]').getByRole("button", { name: SIT }),
+  ).toBeVisible();
+  expect(await table(fifth, "check", [".scores"])).toEqual({
+    overlaps: [],
+    offscreen: [],
+  });
+});
+
 // classic: once the pile runs out, whoever's turn it is shuffles the
 // discards into a new one, or ends the game from the menu
 test("classic: an empty pile is shuffled again, or ends the game", async ({

@@ -807,6 +807,19 @@ html:has(.fit) {
   width: var(--t);
 }
 
+/* five hands (Americano's fifth seat): smaller, to fit the rack */
+.rack > .hands:has(> :nth-child(5)) {
+  gap: calc(var(--t) * 0.04);
+}
+
+.rack > .hands:has(> :nth-child(5)) .hand {
+  padding-block: calc(var(--t) * 0.03);
+}
+
+.rack > .hands:has(> :nth-child(5)) .tiles {
+  zoom: 0.36;
+}
+
 /* a caught discard (işler taş) can't be taken */
 .caught .tile {
   outline: 3px solid #e53935;

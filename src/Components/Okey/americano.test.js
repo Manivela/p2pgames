@@ -4,7 +4,7 @@ import * as americano from "./americano";
 import * as game from "./game";
 import { isOkey, meldOrder, okeyStandsFor, rankOf } from "./melds";
 import { createTile } from "./utils";
-import { AMERICANO } from "./rulesets";
+import { AMERICANO, ONE_O_ONE } from "./rulesets";
 
 const indicator = createTile("blue", 13, 1); // okey is blue1, fake okey = blue1
 const t = (color, rank, i = 0) => createTile(color, rank, i);
@@ -192,7 +192,7 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
     [1, "finished", "yellow11-0"],
   ]);
 
-  assert.equal(s.players.length, 4); // free seats to sit in
+  assert.equal(s.players.length, 5); // free seats to sit in
 
   s = americano.nextRound(s);
   assert.equal(s.round, 2);
@@ -204,6 +204,30 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
   assert.deepEqual(s.takes, {});
   assert.deepEqual(turn(s), []);
   assertAllTiles(s);
+});
+
+test("Americano seats a fifth player; classic and 101 refuse one", () => {
+  // the fifth seat shows once the other four are taken
+  assert.lengthOf(game.tableSeats(seated(3).players), 4);
+  assert.lengthOf(game.tableSeats(seated(4).players), 5);
+  let s = americano.startGame(seated(5));
+  assert.equal(s.gameState, "play");
+  assert.deepEqual(
+    s.players.map((p) => p.hand.filter(Boolean).length),
+    [15, 14, 14, 14, 14],
+  );
+  assert.equal(s.drawPile.length, 106 - 72);
+  assertAllTiles(s);
+  for (const refused of [
+    game.startGame(seated(5)),
+    americano.startGame(seated(5), undefined, ONE_O_ONE),
+  ]) {
+    assert.equal(refused.gameState, "start");
+    assert.equal(refused.message, "Only Americano takes five players");
+  }
+  // a 101 game offers four seats between hands
+  s = americano.startGame(seated(2), undefined, ONE_O_ONE);
+  assert.lengthOf(americano.redealRound(s).players, 4);
 });
 
 test("between rounds seats can be freed and taken", () => {
@@ -265,7 +289,7 @@ test("a round dealt again: seats change in between, scores stay, its penalties g
   assert.equal(s.gameState, "roundEnd");
   assert.equal(s.message, "Round 3: dealt again");
   // back to before the deal: nothing on the table, every seat to sit in
-  assert.equal(s.players.length, 4);
+  assert.equal(s.players.length, 5);
   assert.isTrue(
     s.players.every((p) => !p.hand.length && !p.discardPile.length),
   );

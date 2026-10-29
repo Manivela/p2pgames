@@ -52,7 +52,7 @@ export function redealRound(state) {
   if (roundOver(state)) return roundOver(state);
   return {
     ...state,
-    players: game.allSeats(state.players).map((p) => ({
+    players: game.allSeats(state.players, game.seatsOf(state)).map((p) => ({
       ...p,
       hand: [],
       discardPile: [],
@@ -943,7 +943,7 @@ function endRound(state, finisher, last, inOne = false) {
   if (s.round < rules.rounds.length || voided) {
     return {
       ...s,
-      players: game.allSeats(s.players), // free seats to sit in
+      players: game.allSeats(s.players, game.seatsOf(s)), // free seats to sit in
       gameState: "roundEnd",
       replay: voided,
       message: finisher

@@ -395,7 +395,8 @@ export function OkeyProvider({ children }) {
   );
   // as this render has the table and the sound level
   const hear = React.useRef();
-  hear.current = (k) => playKnock(panOf(k, okeyState.players, me), volume);
+  hear.current = (k) =>
+    playKnock(panOf(k, game.tableSeats(okeyState.players), me), volume);
   React.useEffect(() => {
     const { awareness } = provider;
     const heard = new Map(
