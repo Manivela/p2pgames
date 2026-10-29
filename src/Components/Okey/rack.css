@@ -55,25 +55,9 @@ html:has(.fit) {
 }
 
 .head {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: start;
-  gap: calc(var(--t) * 0.3);
-}
-
-.head > .end {
   display: flex;
-  align-items: center;
-  gap: calc(var(--t) * 0.14);
-}
-
-/* the site's menu and fullscreen buttons sit here (index.css) */
-.head > .end:first-child {
-  width: calc(var(--t) * 1.54);
-}
-
-.head > .end:last-child {
-  justify-self: end;
+  justify-content: center;
+  align-items: start;
 }
 
 .others {
@@ -93,9 +77,47 @@ html:has(.fit) {
   min-height: 0;
 }
 
-.middle > .draw {
+/* on its left a newer version to reload for, over the draw pile when it's
+   aside */
+.middle > .left {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--t) * 0.2);
+  min-height: 0;
+}
+
+/* the site's menu and fullscreen buttons (index.css) go in the corner left
+   of your rack, under its pile and Catch; the score sheet and the table
+   menu in the right one */
+.foot > .corner-room {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(var(--t) * 1.38);
+  height: calc(var(--t) * 0.64);
+}
+
+/* the score sheet and the table menu, in the corner under your pile (out
+   of the row: they'd widen it); they open upwards */
+.foot {
+  position: relative;
+}
+
+.foot > .controls {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--t) * 0.1);
+}
+
+.left > .draw {
   align-self: center;
-  justify-self: center;
+  margin-block: auto;
 }
 
 /* the draw pile in the middle sits above what's on the table, apart from
@@ -244,6 +266,15 @@ html:has(.fit) {
   zoom: 0.8;
 }
 
+/* along the top the count hangs under the tile, on the felt: on its corner,
+   small tiles (eight at the table, a phone) lose their number under it */
+.discardPile.small .count {
+  top: auto;
+  bottom: calc(var(--t) * -0.2);
+  left: 50%;
+  translate: -50% 0;
+}
+
 /* the pair round: a pile's tiles spread out beside it (DiscardPile), oldest
    first, in small tiles: over the table from the ones at your rack, under
    them from the ones along the top */
@@ -271,7 +302,7 @@ html:has(.fit) {
   left: 0;
 }
 
-.foot > .discardPile:last-child .peek {
+.foot > .rack ~ .discardPile .peek {
   right: 0;
 }
 
@@ -859,42 +890,32 @@ html:has(.fit) {
   width: var(--t);
 }
 
-/* five hands: smaller, to fit the rack */
+/* five hands or more: a list bigger than the rack, in its place and rising
+   from it over the table, each hand as big as four's (a little smaller from
+   seven); the rack gives way to it, its place kept, your name tab too, your
+   hand being in the list */
 .rack > .hands:has(> :nth-child(5)) {
-  gap: calc(var(--t) * 0.04);
+  inset: auto 0 0;
+  justify-content: flex-end;
+  gap: calc(var(--t) * 0.06);
+  padding: calc(var(--t) * 0.14);
+  border-radius: calc(var(--t) * 0.2);
+  background: rgba(45, 22, 6, 0.94);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
-.rack > .hands:has(> :nth-child(5)) .hand {
-  padding-block: calc(var(--t) * 0.03);
+.rack:has(> .hands > :nth-child(5)) {
+  background: none;
+  box-shadow: none;
 }
 
-.rack > .hands:has(> :nth-child(5)) .tiles {
-  zoom: 0.36;
-}
-
-/* six to eight (a bigger table's): smaller again, avatars too */
-.rack > .hands:has(> :nth-child(6)) {
-  gap: calc(var(--t) * 0.02);
-}
-
-.rack > .hands:has(> :nth-child(6)) .hand {
-  padding-block: calc(var(--t) * 0.01);
-  font-size: calc(var(--t) * 0.22);
-}
-
-.rack > .hands:has(> :nth-child(6)) .avatar {
-  width: calc(var(--t) * 0.34);
-  height: calc(var(--t) * 0.34);
-  border-width: 1px;
-  font-size: calc(var(--t) * 0.17);
-}
-
-.rack > .hands:has(> :nth-child(6)) .tiles {
-  zoom: 0.28;
+.rack:has(> .hands > :nth-child(5))::after,
+.rack:has(> .hands > :nth-child(5)) > :is(.top, .bottom, .playerName) {
+  visibility: hidden;
 }
 
 .rack > .hands:has(> :nth-child(7)) .tiles {
-  zoom: 0.24;
+  zoom: 0.36;
 }
 
 /* a caught discard (işler taş) can't be taken */
@@ -947,8 +968,23 @@ html:has(.fit) {
   backdrop-filter: blur(4px);
 }
 
-#root:has(.fit) .corner button {
+/* the corners' round icons, a little smaller than the table's buttons: two
+   side by side fit beside the rack on a phone */
+#root:has(.fit) .corner {
+  gap: calc(var(--t) * 0.1);
+}
+
+#root:has(.fit) .corner button,
+.foot > .controls :is(summary, .dots) {
+  width: calc(var(--t) * 0.64);
+  height: calc(var(--t) * 0.64);
   padding: 0;
+}
+
+/* the score sheet's, an icon (a podium) */
+.scores > summary svg {
+  width: 56%;
+  fill: currentColor;
 }
 
 .side button {
@@ -965,8 +1001,11 @@ html:has(.fit) {
 
 /* a newer version to reload for */
 .board .update {
+  width: calc(var(--t) * 0.7);
+  padding: 0;
   background: #ffb300;
   color: #3a2600;
+  font-size: calc(var(--t) * 0.4);
 }
 
 /* the lobby: the rules the next game starts with, and their settings (⚙) */
@@ -977,17 +1016,24 @@ html:has(.fit) {
   max-width: 100%;
 }
 
+/* its own chevron, white like its text: the browser's is small, dim and
+   tight against the pill's end */
 .side .pick select {
   min-width: 0;
   height: calc(var(--t) * 0.8);
-  padding: 0 calc(var(--t) * 0.3);
+  padding: 0 calc(var(--t) * 0.58) 0 calc(var(--t) * 0.3);
   border: none;
   border-radius: 999px;
   font-size: calc(var(--t) * 0.34);
   font-weight: 600;
   color: #fff;
-  background: rgba(0, 0, 0, 0.38);
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(0, 0, 0, 0.38)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.5 1.5 6 6l4.5-4.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right calc(var(--t) * 0.24) center / calc(var(--t) * 0.22) auto;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
 }
 
 .side .pick select option {
@@ -1011,31 +1057,6 @@ html:has(.fit) {
 .settings .untested {
   margin: 6px 0 0;
   color: #a15c00;
-}
-
-/* a few of them, under Start */
-.side .options {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: calc(var(--t) * 0.1) calc(var(--t) * 0.25);
-  color: #fff;
-  font-size: calc(var(--t) * 0.3);
-}
-
-.side .options label {
-  display: flex;
-  align-items: center;
-  gap: 0.3em;
-  margin: 0;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.side .options input {
-  width: 1em;
-  height: 1em;
-  margin: 0;
 }
 
 .board .playerName button {
@@ -1090,6 +1111,7 @@ html:has(.fit) {
 .scores > summary {
   display: flex;
   align-items: center;
+  justify-content: center;
   list-style: none;
   cursor: pointer;
 }
@@ -1122,7 +1144,7 @@ html:has(.fit) {
 .table-menu .menu {
   position: absolute;
   z-index: 30;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   right: 0;
   white-space: nowrap;
 }
@@ -1301,6 +1323,37 @@ html:has(.fit) {
 
 .settings .chips input {
   margin: 0;
+}
+
+/* a setting changed from its ruleset's, with what it was */
+.settings .changed {
+  outline: 2px solid #e8a33d;
+  outline-offset: 1px;
+}
+
+.settings .numbers .changed {
+  outline: none;
+}
+
+.settings .numbers .changed input,
+.settings .inline.changed select {
+  outline: 2px solid #e8a33d;
+}
+
+.settings .inline.changed {
+  outline: none;
+}
+
+.settings .was {
+  display: block;
+  color: #a15c00;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.settings :is(.chips, h4) .was {
+  display: inline;
+  margin-left: 6px;
 }
 
 .settings .numbers {

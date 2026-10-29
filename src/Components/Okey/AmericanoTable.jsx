@@ -383,7 +383,12 @@ export function Scores() {
     // a tap away: a round's end shows its scores with the hands, the end
     // of the game who won, and an open sheet would cover the next step
     <details className="scores">
-      <summary>{t("Scores")}</summary>
+      {/* an icon: under your pile, where it sits, there's room for little */}
+      <summary aria-label={t("Scores")} title={t("Scores")}>
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M1 8h4.4v6H1zM5.8 3h4.4v11H5.8zM10.6 10H15v4h-4.4z" />
+        </svg>
+      </summary>
       <div className="sheet">
         <table>
           <thead>

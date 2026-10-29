@@ -90,6 +90,127 @@ const TR = [
   ],
   [/^That name is taken$/, "Bu ad alınmış"],
   [/^Saved on this device$/, "Bu cihaza kaydedildi"],
+  // what each setting does (GameSettings.jsx)
+  [
+    /^How a hand opens: finished from the hand \(classic\), each round's melds \(Americano\), or points or pairs \(101\)$/,
+    "El nasıl açılır: elden bitir (klasik), her elin perleri (Americano) ya da sayı veya çift (101)",
+  ],
+  [
+    /^Hands in the game; one hand finished from the hand is classic, unscored$/,
+    "Oyundaki el sayısı; elden bitirmede tek el klasik oyundur, puan tutulmaz",
+  ],
+  [
+    /^Sets and runs worth this much at face value open a hand$/,
+    "Seri ve kütlerin üstündeki sayılar toplamı bu kadarsa el açılır",
+  ],
+  [/^Or this many pairs open it$/, "Ya da bu kadar çiftle açılır"],
+  [
+    /^Four in two pairs across the table: a team scores both partners' totals, and the finisher's partner pays nothing for their hand$/,
+    "Dört kişi, karşılıklı iki takım: takım iki eşin toplamını yazar, bitirenin eşi elindekini yazmaz",
+  ],
+  [
+    /^The okey thrown last doubles everyone else's score; in 101 a win with pairs or in one go does too$/,
+    "Okeyle bitirmek diğerlerinin puanını katlar; 101'de çiftle ya da tek seferde bitirmek de",
+  ],
+  [
+    /^Anyone may take the last discard out of turn, with an extra tile from the pile$/,
+    "Herkes son atılan taşı sırası gelmeden alabilir, desteden bir taş daha alarak",
+  ],
+  [
+    /^A discard taken goes into a meld before that turn's discard, or back on its pile$/,
+    "Yandan alınan taş o tur atmadan önce işlenir, ya da geri bırakılır",
+  ],
+  [
+    /^Lay more melds and add to the table on the turn you open$/,
+    "Açtığın turda başka per açabilir, yerdekilere işleyebilirsin",
+  ],
+  [
+    /^A table okey goes to whoever puts down the tile it stands for$/,
+    "Yerdeki okey, yerine geçtiği taşı koyana geçer",
+  ],
+  [
+    /^A discard that fits a table meld can be caught only until the next player draws$/,
+    "Yerdeki bir pere işleyen atılan taş, sıradaki oyuncu çekene dek yakalanabilir",
+  ],
+  [
+    /^A caught discard can still be taken by the next player$/,
+    "Yakalanan taşı sıradaki oyuncu yine alabilir",
+  ],
+  [
+    /^Once someone opens with pairs, everyone lays pairs$/,
+    "Biri çift açınca herkes çift açar",
+  ],
+  [
+    /^Laying all but one tile at once and finishing opens below the points too$/,
+    "Tek taş hariç hepsini bir seferde açıp bitirmek, açış sayısının altında da açar",
+  ],
+  [
+    /^A pile that runs out ends the hand, scored as usual$/,
+    "Deste bitince el biter, her zamanki gibi yazılır",
+  ],
+  [
+    /^Not opening scores the okeys held too, and doubles with the rest$/,
+    "Açamayana elindeki okeyler de yazılır, katlamada o da katlanır",
+  ],
+  [/^A run can go on from 13 to 1$/, "Seri 13'ten 1'e devam edebilir"],
+  [
+    /^The most players who can sit at the table$/,
+    "Masaya oturabilecek en çok oyuncu",
+  ],
+  [
+    /^Sets of 53 tiles: two as usual, more for a bigger table$/,
+    "53'lük taş takımı sayısı: normali iki, kalabalık masaya daha fazla",
+  ],
+  [
+    /^Tiles dealt to each player; whoever starts gets one more$/,
+    "Her oyuncuya dağıtılan taş; başlayan bir fazla alır",
+  ],
+  [
+    /^Slots in each of the rack's two rows$/,
+    "Istakanın iki sırasının her birindeki yer",
+  ],
+  [
+    /^Out-of-turn takes each player has a round$/,
+    "Her oyuncunun bir elde yandan alma hakkı",
+  ],
+  [
+    /^Seconds the others have to take the discard once the player whose turn it is draws from the pile$/,
+    "Sırası gelen desteden çektikten sonra diğerlerinin taşı alma süresi (sn)",
+  ],
+  [
+    /^From this round a table okey can be taken before opening too; empty: only once you've opened$/,
+    "Bu elden itibaren yerdeki okey açmadan da alınabilir; boşsa yalnız açtıktan sonra",
+  ],
+  [
+    /^Tiles a pairs opener can add to sets and runs a turn; 0: no limit$/,
+    "Çift açanın bir turda seri ve kütlere işleyebileceği taş; 0: sınırsız",
+  ],
+  [/^Written for whoever finishes$/, "Bitirene yazılan"],
+  [/^Written for a player who didn't open$/, "Açamayana yazılan"],
+  [
+    /^Written for each okey left in a hand$/,
+    "Elde kalan her okey için yazılan",
+  ],
+  [
+    /^Written for throwing a tile that fit a table meld, when it's caught$/,
+    "Yerdeki bir pere işleyen taşı atıp yakalanana yazılan",
+  ],
+  [
+    /^Written for throwing the okey, unless it's the last tile; 0: none$/,
+    "Okeyi atana yazılan, son taşı değilse; 0: yok",
+  ],
+  [
+    /^Written for taking the discard and putting it back$/,
+    "Yandan alıp geri bırakana yazılan",
+  ],
+  [
+    /^Written for showing the indicator's twin on your first turn \(a minus takes it off\); 0: none$/,
+    "İlk turunda göstergenin eşini gösterene yazılan (eksi sayı düşer); 0: yok",
+  ],
+  [/^default: (.+)$/, "varsayılan: $1"],
+  [/^on$/, "açık"],
+  [/^off$/, "kapalı"],
+  [/^changed$/, "değişti"],
   [
     /^Never played with (.+): it may break mid-game$/,
     "$1 ile hiç oynanmadı: oyun ortasında bozulabilir",

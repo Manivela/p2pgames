@@ -31,26 +31,38 @@ function useTileSize(across) {
     // set from the observer only: sized in the effect itself as well, a
     // lobby button's text sat a hair off in the Docker screenshots
     const observer = new ResizeObserver(() => {
-      // the top at its narrowest, in tiles (all of it is sized in --t): its
-      // three parts, the gaps between them and the board's padding (not
-      // the head's box: the board widens to fit it)
+      // the top at its narrowest, in tiles (all of it is sized in --t): the
+      // others along it and the board's padding (not the head's box: the
+      // board widens to fit it)
       const t = parseFloat(page.getPropertyValue("--t"));
-      const css = (el) => getComputedStyle(el);
-      const parts = [...head.children].reduce((w, el) => w + el.offsetWidth, 0);
-      const gaps = 2 * parseFloat(css(head).columnGap);
-      const { paddingLeft, paddingRight } = css(head.parentElement);
+      const { paddingLeft, paddingRight } = getComputedStyle(
+        head.parentElement,
+      );
       const sides = parseFloat(paddingLeft) + parseFloat(paddingRight);
-      const top = (parts + gaps + sides) / t || 0;
+      const top = (head.firstElementChild.offsetWidth + sides) / t || 0;
       const width = fit.clientWidth / Math.max(across, top);
-      const size = `${Math.min(width, fit.clientHeight / 7.4, 70)}px`;
+      // whole pixels, and never one more than now: measured at the size it
+      // sets, a crowded top can call for a pixel more and then one less,
+      // and the table would settle either way; more room grows it by two
+      const size = Math.floor(Math.min(width, fit.clientHeight / 7.4, 70));
       // only when it changes: measured every render, not repainted
-      if (size !== page.getPropertyValue("--t")) page.setProperty("--t", size);
+      if (size !== t && size !== t + 1) page.setProperty("--t", `${size}px`);
+      // the site's menu and fullscreen buttons (index.css) go where the
+      // table keeps them a place, at the size just set
+      const room = fit.querySelector(".corner-room").getBoundingClientRect();
+      page.setProperty("--corner-top", `${room.top}px`);
+      page.setProperty("--corner-left", `${room.left}px`);
     });
     observer.observe(fit);
     return () => observer.disconnect();
   });
   useLayoutEffect(
-    () => () => document.documentElement.style.removeProperty("--t"),
+    () => () => {
+      const page = document.documentElement.style;
+      for (const v of ["--t", "--corner-top", "--corner-left"]) {
+        page.removeProperty(v);
+      }
+    },
     [],
   );
   return ref;
@@ -201,8 +213,14 @@ function NewVersion() {
   const { newVersion } = useContext(OkeyContext);
   return (
     newVersion && (
-      <button className="update" onClick={() => location.reload()}>
-        ↻ {t("New version")}
+      // an icon beside the corner buttons, where there's room for little
+      <button
+        className="update"
+        aria-label={t("New version")}
+        title={t("New version")}
+        onClick={() => location.reload()}
+      >
+        ↻
       </button>
     )
   );
@@ -371,8 +389,9 @@ function Board() {
         }}
       >
         {lasso}
+        {/* the others only: the buttons are in the corners beside your
+            rack, so many players fit along the top */}
         <div className="head">
-          <div className="end" />
           <div className="others">
             {others.map((player, i) => (
               <Fragment key={player.id}>
@@ -384,14 +403,12 @@ function Board() {
               </Fragment>
             ))}
           </div>
-          <div className="end">
-            <NewVersion />
-            {hasRounds(okeyState) && <Scores />}
-            <TableMenu />
-          </div>
         </div>
         <div className="middle">
-          {pileAside && <DrawPile />}
+          <div className="left">
+            <NewVersion />
+            {pileAside && <DrawPile />}
+          </div>
           <div className="center" ref={table}>
             <OnTheTable pile={!pileAside && <DrawPile />} />
           </div>
@@ -403,8 +420,16 @@ function Board() {
         </div>
         <div className="foot">
           {others[0] && <DiscardPile player={others[0].id} />}
+          {/* the site's menu and fullscreen buttons sit here (index.css),
+              in the corner left of your rack */}
+          <div className="corner-room" />
           <Rack player={mine.id} hands={[mine, ...others].map((p) => p.id)} />
           <DiscardPile player={mine.id} />
+          {/* under your pile, a thumb away on a phone */}
+          <div className="controls">
+            {hasRounds(okeyState) && <Scores />}
+            <TableMenu />
+          </div>
         </div>
       </div>
     </div>

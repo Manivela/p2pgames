@@ -64,7 +64,61 @@ const SCORES = [
   ["indicatorScore", "Showing the indicator", 0, "hmp"],
 ];
 
+// what each setting does, on its label (a tooltip)
+const ABOUT = {
+  opening:
+    "How a hand opens: finished from the hand (classic), each round's melds (Americano), or points or pairs (101)",
+  hands:
+    "Hands in the game; one hand finished from the hand is classic, unscored",
+  points: "Sets and runs worth this much at face value open a hand",
+  pairs: "Or this many pairs open it",
+  partners:
+    "Four in two pairs across the table: a team scores both partners' totals, and the finisher's partner pays nothing for their hand",
+  doubling:
+    "The okey thrown last doubles everyone else's score; in 101 a win with pairs or in one go does too",
+  outOfTurnTakes:
+    "Anyone may take the last discard out of turn, with an extra tile from the pile",
+  takeMustBeUsed:
+    "A discard taken goes into a meld before that turn's discard, or back on its pile",
+  buildWhenOpening: "Lay more melds and add to the table on the turn you open",
+  swapOkeys: "A table okey goes to whoever puts down the tile it stands for",
+  catchUntilDraw:
+    "A discard that fits a table meld can be caught only until the next player draws",
+  takeCaught: "A caught discard can still be taken by the next player",
+  pairsForAll: "Once someone opens with pairs, everyone lays pairs",
+  finishInOne:
+    "Laying all but one tile at once and finishing opens below the points too",
+  pileOutCounts: "A pile that runs out ends the hand, scored as usual",
+  notOpenedCounts:
+    "Not opening scores the okeys held too, and doubles with the rest",
+  wrapRuns: "A run can go on from 13 to 1",
+  seats: "The most players who can sit at the table",
+  tileSets: "Sets of 53 tiles: two as usual, more for a bigger table",
+  handSize: "Tiles dealt to each player; whoever starts gets one more",
+  rowSlots: "Slots in each of the rack's two rows",
+  maxTakes: "Out-of-turn takes each player has a round",
+  claimWaitSeconds:
+    "Seconds the others have to take the discard once the player whose turn it is draws from the pile",
+  okeySwapFromRound:
+    "From this round a table okey can be taken before opening too; empty: only once you've opened",
+  pairsAddMax:
+    "Tiles a pairs opener can add to sets and runs a turn; 0: no limit",
+  finishScore: "Written for whoever finishes",
+  notOpenedScore: "Written for a player who didn't open",
+  okeyInHandScore: "Written for each okey left in a hand",
+  catchPenalty:
+    "Written for throwing a tile that fit a table meld, when it's caught",
+  okeyDiscardPenalty:
+    "Written for throwing the okey, unless it's the last tile; 0: none",
+  returnPenalty: "Written for taking the discard and putting it back",
+  indicatorScore:
+    "Written for showing the indicator's twin on your first turn (a minus takes it off); 0: none",
+};
+
 const value = (r, [key, , fallback]) => r[key] ?? fallback;
+// a setting as it reads: on or off, a number, or none
+const shownValue = (v) =>
+  typeof v === "boolean" ? t(v ? "on" : "off") : (v ?? "—");
 const field = (key) =>
   [...RULES, ...NUMBERS, ...SCORES].find(([k]) => k === key);
 // the settings a ruleset's opening reads
@@ -141,7 +195,7 @@ const number = (v) => (v === "" ? null : Number(v));
 
 // The lobby: the rules the next game starts with, shared by everyone in the
 // room (`setup`) and anyone's to change; picked from the presets and this
-// device's, a few switches right here, the rest in the settings (⚙).
+// device's, and changed in the settings (⚙).
 export function Lobby() {
   const { okeyState, startGame, setSetup } = useContext(OkeyContext);
   const [open, setOpen] = useState(false);
@@ -180,17 +234,11 @@ export function Lobby() {
       {untested(setup).length > 0 && (
         <small className="untested">{t("Untested rules")}</small>
       )}
-      {setup.rounds && (
-        <span className="options">
-          {RULES.slice(0, 2).map((f) => (
-            <Toggle key={f[0]} f={f} setup={setup} />
-          ))}
-        </span>
-      )}
       {open &&
         createPortal(
           <Settings
-            base={changed && base}
+            base={base}
+            changed={changed}
             start={start}
             onClose={() => setOpen(false)}
           />,
@@ -200,24 +248,64 @@ export function Lobby() {
   );
 }
 
-function Toggle({ f: [key, label, fallback], setup }) {
-  const { setSetup } = useContext(OkeyContext);
+// A setting's label: what it does as its tooltip, and, changed from the
+// ruleset's (`base`), marked with what it was
+function Setting({
+  about,
+  now,
+  was,
+  format = shownValue,
+  className = "",
+  children,
+  input,
+  // a checkbox goes before its words, a field after them
+  inputFirst = false,
+}) {
+  const changed = was !== undefined && !isEqual(now, was);
   return (
-    <label>
-      <input
-        type="checkbox"
-        checked={setup[key] ?? fallback}
-        onChange={(e) => setSetup({ ...setup, [key]: e.target.checked })}
-      />
-      {t(label)}
+    <label
+      className={`${className} ${changed ? "changed" : ""}`}
+      title={t(about)}
+    >
+      {inputFirst && input}
+      <span>
+        {children}
+        {changed && (
+          <small className="was">{t(`default: ${format(was)}`)}</small>
+        )}
+      </span>
+      {!inputFirst && input}
     </label>
+  );
+}
+
+function Toggle({ f, setup, base }) {
+  const { setSetup } = useContext(OkeyContext);
+  const [key, label] = f;
+  return (
+    <Setting
+      about={ABOUT[key]}
+      now={value(setup, f)}
+      was={base && value(base, f)}
+      inputFirst
+      input={
+        <input
+          type="checkbox"
+          checked={value(setup, f)}
+          onChange={(e) => setSetup({ ...setup, [key]: e.target.checked })}
+        />
+      }
+    >
+      {t(label)}
+    </Setting>
   );
 }
 
 // Every setting of the rules the next game starts with, to change for that
 // game or keep on this device as a ruleset of its own. `base`: the ruleset
-// they were changed from, to go back to.
-function Settings({ base, start, onClose }) {
+// they come from (none when it isn't on this device), to mark what changed
+// and go back to.
+function Settings({ base, changed, start, onClose }) {
   const { okeyState, setSetup } = useContext(OkeyContext);
   const setup = okeyState.setup ?? CLASSIC;
   const set = (change) => setSetup({ ...setup, ...change });
@@ -248,16 +336,28 @@ function Settings({ base, start, onClose }) {
     toast(t("Saved on this device"));
   };
   const numberField = (f) => (
-    <label key={f[0]}>
+    <Setting
+      key={f[0]}
+      about={ABOUT[f[0]]}
+      now={value(setup, f)}
+      was={base && value(base, f)}
+      input={
+        <input
+          type="number"
+          placeholder="—"
+          value={setup[f[0]] === undefined ? (f[2] ?? "") : (setup[f[0]] ?? "")}
+          onChange={(e) => set({ [f[0]]: number(e.target.value) })}
+        />
+      }
+    >
       {t(f[1])}
-      <input
-        type="number"
-        placeholder="—"
-        value={setup[f[0]] === undefined ? (f[2] ?? "") : (setup[f[0]] ?? "")}
-        onChange={(e) => set({ [f[0]]: number(e.target.value) })}
-      />
-    </label>
+    </Setting>
   );
+  const MODES = {
+    hand: "From the hand",
+    melds: "Each round's melds",
+    points: "Points or pairs",
+  };
   const setRound = (i, melds) =>
     set({
       rounds: setup.rounds.map((r, j) =>
@@ -266,22 +366,32 @@ function Settings({ base, start, onClose }) {
     });
   return (
     <Dialog title={t("Game settings")} className="settings" onClose={onClose}>
-      <label className="inline">
+      <Setting
+        className="inline"
+        about={ABOUT.opening}
+        now={mode}
+        was={base && modeOf(base)}
+        format={(m) => t(MODES[m])}
+        input={
+          <select
+            id="setup-opening"
+            value={mode}
+            onChange={(e) => setSetup(withMode(setup, e.target.value))}
+          >
+            {Object.entries(MODES).map(([m, label]) => (
+              <option key={m} value={m}>
+                {t(label)}
+              </option>
+            ))}
+          </select>
+        }
+      >
         {t("Opening")}
-        <select
-          id="setup-opening"
-          value={mode}
-          onChange={(e) => setSetup(withMode(setup, e.target.value))}
-        >
-          <option value="hand">{t("From the hand")}</option>
-          <option value="melds">{t("Each round's melds")}</option>
-          <option value="points">{t("Points or pairs")}</option>
-        </select>
-      </label>
+      </Setting>
       <h4>{t("Rules")}</h4>
       <div className="chips">
         {shown(setup, RULES).map((f) => (
-          <Toggle key={f[0]} f={f} setup={setup} />
+          <Toggle key={f[0]} f={f} setup={setup} base={base} />
         ))}
       </div>
       {untested(setup).length > 0 && (
@@ -294,37 +404,53 @@ function Settings({ base, start, onClose }) {
       <h4>{t("Numbers")}</h4>
       <div className="numbers">
         {mode !== "melds" && (
-          <label>
+          <Setting
+            about={ABOUT.hands}
+            now={hands}
+            was={base && (base.rounds?.length ?? 1)}
+            input={
+              <input
+                type="number"
+                value={hands}
+                onChange={(e) => {
+                  const n = Math.max(0, Math.min(50, number(e.target.value)));
+                  setSetup(
+                    withRounds(
+                      setup,
+                      mode === "points" ? numbered(n) : n !== 1 && fromHand(n),
+                    ),
+                  );
+                }}
+              />
+            }
+          >
             {t("Hands")}
-            <input
-              type="number"
-              value={hands}
-              onChange={(e) => {
-                const n = Math.max(0, Math.min(50, number(e.target.value)));
-                setSetup(
-                  withRounds(
-                    setup,
-                    mode === "points" ? numbered(n) : n !== 1 && fromHand(n),
-                  ),
-                );
-              }}
-            />
-          </label>
+          </Setting>
         )}
         {mode === "points" &&
           ["points", "pairs"].map((k) => (
-            <label key={k}>
+            <Setting
+              key={k}
+              about={ABOUT[k]}
+              now={setup.opening[k]}
+              was={base && (base.opening ?? ONE_O_ONE.opening)[k]}
+              input={
+                <input
+                  type="number"
+                  value={setup.opening[k] ?? ""}
+                  onChange={(e) =>
+                    set({
+                      opening: {
+                        ...setup.opening,
+                        [k]: number(e.target.value),
+                      },
+                    })
+                  }
+                />
+              }
+            >
               {t(k === "points" ? "Opening points" : "Opening pairs")}
-              <input
-                type="number"
-                value={setup.opening[k] ?? ""}
-                onChange={(e) =>
-                  set({
-                    opening: { ...setup.opening, [k]: number(e.target.value) },
-                  })
-                }
-              />
-            </label>
+            </Setting>
           ))}
         {shown(setup, NUMBERS).map(numberField)}
       </div>
@@ -336,7 +462,12 @@ function Settings({ base, start, onClose }) {
       )}
       {mode === "melds" && (
         <>
-          <h4>{t("Rounds")}</h4>
+          <h4>
+            {t("Rounds")}
+            {base && !isEqual(base.rounds, setup.rounds) && (
+              <small className="was">{t("changed")}</small>
+            )}
+          </h4>
           <ul className="rounds">
             {setup.rounds.map((r, i) => (
               <li key={i}>
@@ -424,7 +555,7 @@ function Settings({ base, start, onClose }) {
         <button className="start" onClick={start}>
           {t("Start")}
         </button>
-        {base && (
+        {changed && (
           <button onClick={() => setSetup(base)}>{t("Undo changes")}</button>
         )}
       </p>

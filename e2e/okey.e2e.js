@@ -19,7 +19,7 @@ const END = /^(End the game|Oyunu bitir)$/;
 const NEW_GAME = /^(New Game|Yeni oyun)$/;
 const REDEAL = /^(Deal this round again|Bu eli yeniden dağıt)$/;
 const OPEN = /^(Open your hand|El aç)$/;
-const UPDATE = /^↻ (New version|Yeni sürüm)$/;
+const UPDATE = /^(New version|Yeni sürüm)$/;
 const SOUND = /^(Sound|Ses)$/;
 const FIND = /^(Find and open|Bul ve aç)$/;
 const LAY = /^(Lay melds|Per aç)$/;
@@ -215,7 +215,8 @@ test("eight at a table fit, in play and once the round is over", async ({
   await expect(page).toHaveScreenshot("eight-play.png");
   await table(page, "playToEnd");
   await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(8);
-  expect(await table(page, "check", [".scores"])).toEqual({
+  // the hands rise over the table's melds on purpose
+  expect(await table(page, "check", [".scores", ".meld"])).toEqual({
     overlaps: [],
     offscreen: [],
   });
@@ -284,7 +285,7 @@ test("the draw pile makes way as the table fills", async ({ page }) => {
   await expect(inMiddle).toHaveCount(1);
   await table(page, "crowd", 16);
   await expect(inMiddle).toHaveCount(0);
-  await expect(page.locator(".middle > .draw")).toHaveCount(1);
+  await expect(page.locator(".middle > .left > .draw")).toHaveCount(1);
 });
 
 test("dragging picked tiles onto the table opens the hand", async ({
@@ -425,15 +426,17 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
   await expect(page.locator(".meld .ghost")).toHaveCount(0);
 });
 
-// what's ticked in the lobby goes into the game it starts, without saving
+// what's ticked in the settings goes into the game it starts, without saving
 // anything; in pairs it takes four
 test("101 starts with what's ticked, and in pairs with four at the table", async ({
   page,
 }) => {
   await sitDown(page);
   await page.getByLabel(RULES).selectOption("101");
+  await page.getByRole("button", { name: SETTINGS }).click();
   await page.getByLabel(/^(Partners|Eşli)$/).check();
   await page.getByLabel(/^(Doubling|Katlamalı)$/).check();
+  await page.getByRole("button", { name: CLOSE }).click();
   await expect(page.getByLabel(RULES)).toContainText("101 *");
   const start101 = page.getByRole("button", { name: START });
   await start101.click();
@@ -452,6 +455,24 @@ test("101 starts with what's ticked, and in pairs with four at the table", async
       doubling: true,
     });
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
+// four sets of tiles in the settings: the lobby's pile is all of them, and
+// four of a tile isn't taken for a duplicate
+test("four sets of tiles picked in the settings make a pile of 212", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await page.getByRole("button", { name: SETTINGS }).click();
+  await page.getByLabel(/^(Tile sets|Taş takımı)$/).fill("4");
+  await expect.poll(async () => (await state(page)).drawPile.length).toBe(212);
+  // the error would toast as the pile changed: given time to show
+  await page.waitForTimeout(1500);
+  expect(
+    await page
+      .getByText(/Duplicate tile detected|Aynı taştan fazla var/)
+      .count(),
+  ).toBe(0);
 });
 
 // a game played as a preset sets the next one up as that preset, unchanged
@@ -722,6 +743,17 @@ test("picked tiles move together", async ({ page }) => {
   await expect(picked).toHaveCount(3);
   await slot(page, 25).click();
   await expect(picked).toHaveCount(0);
+});
+
+// the pick goes with the round: its end shows the hands unpicked
+test("a pick is dropped when the round ends", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 5);
+  await slot(page, 2).locator(".tile").click();
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(1);
+  await table(page, "playToEnd");
+  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(5);
+  await expect(page.locator(".tile.selected")).toHaveCount(0);
 });
 
 // picked tiles held partly over where they were: every slot they'd land in

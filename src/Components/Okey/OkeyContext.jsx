@@ -112,7 +112,10 @@ export function OkeyProvider({ children }) {
     [okeyState.drawPile, okeyState.okeyTile, okeyState.players],
   );
 
-  const sets = game.setsOf(okeyState);
+  // the lobby's pile is already its settings' sets (setSetup)
+  const sets = game.setsOf(
+    okeyState.gameState === "start" ? { rules: okeyState.setup } : okeyState,
+  );
   const duplicates = useMemo(
     () =>
       _(allTiles)
@@ -230,11 +233,13 @@ export function OkeyProvider({ children }) {
   // El aç pressed once (local too): a tap picks the tile's whole group on
   // the rack, as the opening reads it, until you open
   const [picking, setPicking] = React.useState(false);
-  // a new deal can hand out the same tile ids again
+  // a new deal can hand out the same tile ids again, and a round that's over
+  // has nothing left to pick: its end shows the hands unpicked
+  const playing = okeyState.gameState === "play";
   React.useEffect(() => {
     setSelected([]);
     setPicking(false);
-  }, [okeyState.deal]);
+  }, [okeyState.deal, playing]);
   // El aç left pressed, nothing picked or unpicked for a while: back to
   // normal, the pick dropped
   React.useEffect(() => {

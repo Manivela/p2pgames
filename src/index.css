@@ -9,16 +9,16 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
 html,
@@ -36,7 +36,9 @@ button {
   border: none;
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
-  box-shadow: 0 0px 1px hsla(0, 0%, 0%, 0.2), 0 1px 2px hsla(0, 0%, 0%, 0.2);
+  box-shadow:
+    0 0px 1px hsla(0, 0%, 0%, 0.2),
+    0 1px 2px hsla(0, 0%, 0%, 0.2);
   background-color: white;
   line-height: 1.5;
   margin: 0;
@@ -49,7 +51,9 @@ button {
 textarea:hover,
 input:hover,
 button:hover {
-  box-shadow: 0 0px 1px hsla(0, 0%, 0%, 0.6), 0 1px 2px hsla(0, 0%, 0%, 0.2);
+  box-shadow:
+    0 0px 1px hsla(0, 0%, 0%, 0.6),
+    0 1px 2px hsla(0, 0%, 0%, 0.2);
 }
 
 button:active {
@@ -158,6 +162,13 @@ form[action$="destroy"] button {
   }
 }
 
+/* at the Okey table, in the corner left of your rack it keeps for them
+   (Board.jsx measures it), so the top is all players */
+#root:has(.fit) .corner {
+  top: var(--corner-top, calc(var(--t, 28.6px) * 0.14));
+  left: var(--corner-left, calc(var(--t, 28.6px) * 0.14));
+}
+
 .corner button {
   width: calc(var(--t, 57px) * 0.7);
   height: calc(var(--t, 57px) * 0.7);
@@ -167,8 +178,9 @@ form[action$="destroy"] button {
   line-height: 0;
 }
 
-/* fullscreen gives the game the whole screen, below the corner buttons */
-:fullscreen #detail {
+/* fullscreen gives the game the whole screen, below the corner buttons
+   (the Okey table keeps them a place of its own) */
+:fullscreen #detail:not(:has(.fit)) {
   padding: 56px 0 0;
 }
 
@@ -194,7 +206,9 @@ form[action$="destroy"] button {
   border-radius: 10px;
   background: #ff5f5f;
   color: #fff;
-  font: 24px/1 "Cookie", cursive;
+  font:
+    24px/1 "Cookie",
+    cursive;
   white-space: nowrap;
 }
 
