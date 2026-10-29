@@ -310,19 +310,9 @@ export function useMoves() {
           fly(won.current.get(id), el, {});
           won.current.delete(id);
         } else if (id === drop) land(el);
-        else if (from.in === "hand") {
-          // a tile moving along my rack slides there
-          const a = slotEl(from.i)?.getBoundingClientRect();
-          const b = slotEl(to.i).getBoundingClientRect();
-          if (!a) continue;
-          el.animate(
-            [
-              { translate: `${a.left - b.left}px ${a.top - b.top}px` },
-              { translate: "0 0" },
-            ],
-            { duration: 220, easing: EASE },
-          );
-        } else fly(fromRect, el, {});
+        // only my own drops move tiles along my rack, and the rack showed
+        // where they'd go while the tile was held (Rack.jsx)
+        else if (from.in !== "hand") fly(fromRect, el, {});
       } else if (to.in === "inbox" && to.p === me) {
         // they fly once my rack takes them, into their slots
         won.current.set(id, fromRect);

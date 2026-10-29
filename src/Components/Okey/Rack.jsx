@@ -1,13 +1,13 @@
-import { useContext, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import Slot from "./Slot";
-import Tile from "./Tile";
+import Tile, { TileFace } from "./Tile";
 import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
-import { rackPoints, upForClaim } from "./americano";
+import { pairRound, rackPoints, upForClaim } from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-import { ended, partner, rowOf } from "./game";
+import { ended, partner, placeTiles, rowOf } from "./game";
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -90,25 +90,23 @@ function Name({ player, children }) {
 function Rack({ player, hands }) {
   const {
     myHand,
-    swapTile,
+    moveTile,
+    movedWith,
     drawTile,
     okeyState,
     me,
     claimDiscard,
     held,
-    unselectAll,
   } = useContext(OkeyContext);
   const offer = upForClaim(okeyState);
+  // moving my claim's ghost, or claiming the discard out of turn
+  const claim = (tile) =>
+    tile.source.startsWith("claim-") ||
+    (offer?.tileId === tile.id && me !== okeyState.currentPlayer);
   function onDrop(tile, toIndex) {
-    if (tile.source.startsWith("claim-")) {
-      claimDiscard(toIndex); // move the ghost
-    } else if (tile.source.includes("hand")) {
-      swapTile(player, tile, toIndex);
-    } else if (offer?.tileId === tile.id && me !== okeyState.currentPlayer) {
-      claimDiscard(toIndex); // out-of-turn take
-    } else {
-      drawTile(player, tile, toIndex);
-    }
+    if (claim(tile)) claimDiscard(toIndex);
+    else if (tile.source.includes("hand")) moveTile(player, tile, toIndex);
+    else drawTile(player, tile, toIndex);
   }
   const sittingPlayer = okeyState.players.find((p) => p.id === player);
   // my claim on the discard waits as a ghost in the slot I dropped it on
@@ -123,17 +121,57 @@ function Rack({ player, hands }) {
       slot: sittingPlayer.claim.slot,
       tile: { ...offered, source: `claim-${me}` },
     };
-  // a discard I made before the wait was over sits on my pile meanwhile
-  const slotProps = (tile, index) =>
-    !tile && ghost?.slot === index
-      ? { tile: ghost.tile, className: "ghost" }
-      : { tile: tile?.id === held ? null : tile };
   // a row's slots (13; 101's 15), empty before a deal, on someone else's
   // rack (watched from outside the game), and once the round ends: the
   // hands are shown
   const over = ended(okeyState);
   const hand = me === player && !over ? myHand(player) : [];
   const width = rowOf(okeyState);
+
+  // A tile held over a slot shows what dropping it there would do
+  // (placeTiles): the tiles in its way slide aside, the moved ones leave
+  // their slots, and the slots they'd land in are marked.
+  // (a drag layer here too would race the drag preview's: a quick drag on
+  // a phone could end before it rendered and leave the tile in the air)
+  const [hover, setHover] = useState(null);
+  const onOver = useCallback(
+    (index, tile) =>
+      setHover((h) => (tile ? { index, tile } : h?.index === index ? null : h)),
+    [],
+  );
+  const dragging = hover && hand.length > 0 && hover.tile;
+  const moved =
+    !dragging || claim(dragging)
+      ? []
+      : dragging.source === `hand-${me}`
+        ? hand.filter((t) => t && movedWith(dragging).includes(t.id))
+        : okeyState.currentPlayer === me
+          ? [dragging]
+          : [];
+  const ids = moved.map((t) => t.id);
+  const preview =
+    moved.length > 0 &&
+    placeTiles(hand, width, moved, hover.index, dragging.id);
+  function slotProps(tile, index) {
+    // a discard I made before the wait was over sits on my pile meanwhile
+    if (!tile && ghost?.slot === index) {
+      return { tile: ghost.tile, className: "ghost" };
+    }
+    const props = { tile: tile?.id === held ? null : tile };
+    if (!preview) return props;
+    if (tile && ids.includes(tile.id)) return { ...props, className: "moving" };
+    const landing = ids.includes(preview[index]?.id);
+    const to = tile ? preview.findIndex((t) => t?.id === tile.id) : index;
+    if (to === index) return { ...props, className: landing ? "over" : "" };
+    return {
+      ...props,
+      className: landing ? "aside over" : "aside",
+      style: {
+        "--dx": (to % width) - (index % width),
+        "--dy": Math.floor(to / width) - Math.floor(index / width),
+      },
+    };
+  }
   const row = (from) =>
     Array.from({ length: width }, (_, i) => hand[from + i] ?? null).map(
       (tile, i) => (
@@ -141,16 +179,11 @@ function Rack({ player, hands }) {
           key={from + i}
           index={from + i}
           onDrop={onDrop}
+          onOver={onOver}
           {...slotProps(tile, from + i)}
         />
       ),
     );
-
-  // a tap on the rack off the tiles drops the pick; a mouse drag that ends
-  // elsewhere clicks what's under both ends, which isn't a tap
-  const pressed = useRef();
-  const tap = (e) =>
-    e.target === pressed.current && !e.target.closest(".tile") && unselectAll();
 
   const turn = turnOf(okeyState, player);
   return (
@@ -158,8 +191,6 @@ function Rack({ player, hands }) {
       className={`rack ${turn ? "turn" : ""}`}
       style={{ "--row": width }}
       data-seat={player}
-      onPointerDown={(e) => (pressed.current = e.target)}
-      onClick={tap}
     >
       {turn && <Timer okeyState={okeyState} />}
       <div className="top">{row(0)}</div>
@@ -267,6 +298,17 @@ export function DiscardPile({ player, small }) {
   }
   const pile = myDiscardPile(player);
   const top = pile.at(-1);
+  // the pair round: a tap on a pile spreads all its tiles beside it, to
+  // look through; another tap, there or anywhere, puts them back
+  const [peek, setPeek] = useState(false);
+  const pileRef = useRef();
+  const canPeek = pairRound(okeyState) && pile.length > 1;
+  useEffect(() => {
+    if (!peek) return;
+    const away = (e) => !pileRef.current?.contains(e.target) && setPeek(false);
+    addEventListener("pointerdown", away);
+    return () => removeEventListener("pointerdown", away);
+  }, [peek]);
   const caught = okeyState.players.some((p) => p.caught?.includes(top?.id));
   // my discard, waiting for the others' time to take the last one to end
   const ghost = held && player === me && myHand(me).find((t) => t?.id === held);
@@ -280,8 +322,20 @@ export function DiscardPile({ player, small }) {
     top?.id === okeyState.lastDiscard &&
     !caught;
   return (
-    <div className={`discardPile ${small ? "small" : ""}`} data-pile={player}>
+    <div
+      ref={pileRef}
+      className={`discardPile ${small ? "small" : ""}`}
+      data-pile={player}
+      onClick={(e) => canPeek && !e.target.closest("button") && setPeek(!peek)}
+    >
       <span className="count">{pile.length}</span>
+      {peek && canPeek && (
+        <div className="peek">
+          {pile.map((tile) => (
+            <TileFace key={tile.id} id={tile.id} />
+          ))}
+        </div>
+      )}
       <Slot
         type="DISCARD"
         showBorder

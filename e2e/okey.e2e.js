@@ -618,15 +618,165 @@ test("picked tiles move together", async ({ page }) => {
   await table(page, "start", 4);
   const before = await handIds(page);
   for (const i of [3, 6, 9]) await slot(page, i).locator(".tile").click();
+  // held by the middle one, dropped on 20: they land on 19, 20 and 21
   await drag(page, slot(page, 6).locator(".tile"), slot(page, 20));
   await expect
-    .poll(async () => (await handIds(page)).slice(20, 23))
+    .poll(async () => (await handIds(page)).slice(19, 22))
     .toEqual([before[3], before[6], before[9]]);
   // they stay picked; a tap on the rack off the tiles drops the pick
   const picked = page.locator(".rack .tile.selected");
   await expect(picked).toHaveCount(3);
   await slot(page, 25).click();
   await expect(picked).toHaveCount(0);
+});
+
+test("a tile held over the rack shows the others sliding aside", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  const before = await handIds(page);
+  // slot 0's tile over slot 3: 1 2 3 would close up to its left
+  const from = await slot(page, 0).locator(".tile").boundingBox();
+  const to = await slot(page, 3).boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+    steps: 8,
+  });
+  await expect(slot(page, 3)).toHaveCSS("--dx", "-1");
+  await expect(slot(page, 1)).toHaveCSS("--dx", "-1");
+  await expect(slot(page, 4)).not.toHaveCSS("--dx", /./);
+  await expect(slot(page, 0)).toHaveClass(/moving/);
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await handIds(page)).slice(0, 5))
+    .toEqual([before[1], before[2], before[3], before[0], before[4]]);
+  await expect(page.locator(".rack .slot.aside")).toHaveCount(0);
+});
+
+test("a box drawn on the rack picks the tiles in it", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  const hand = await handIds(page);
+  // from an empty slot in the bottom row, up and across to slot 2's middle
+  const empty = hand.findIndex((t, i) => i >= 13 && !t);
+  const a = await slot(page, empty).boundingBox();
+  const b = await slot(page, 2).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
+  await expect(page.locator(".lasso")).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator(".lasso")).toHaveCount(0);
+  const picked = await page
+    .locator(".rack .tile.selected")
+    .evaluateAll((els) => els.map((el) => el.dataset.tileId));
+  const lo = Math.min(empty % 13, 2);
+  const hi = Math.max(empty % 13, 2);
+  const inBox = hand.filter((t, i) => t && i % 13 >= lo && i % 13 <= hi);
+  expect(picked.sort()).toEqual(inBox.sort());
+});
+
+test("a box drawn from the felt picks the tiles it reaches, a tap there drops them", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  const hand = await handIds(page);
+  const b = await slot(page, 2).boundingBox();
+  // bare felt straight above slot 2, clear of the tiles that lift once
+  // picked: nothing there to press
+  const x = b.x + b.width / 2;
+  const rack = await page.locator(".rack").boundingBox();
+  const y = await page.evaluate(
+    ([x, top]) => {
+      for (let y = top; y > 0; y--) {
+        const el = document.elementFromPoint(x, y);
+        if (!el.closest(".rack, .tile, button, details, .discardPile"))
+          return y;
+      }
+    },
+    [x, rack.y - b.height / 2],
+  );
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  // down and left to slot 0's middle
+  const a = await slot(page, 0).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2, { steps: 8 });
+  await expect(page.locator(".lasso")).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator(".lasso")).toHaveCount(0);
+  const picked = await page
+    .locator(".rack .tile.selected")
+    .evaluateAll((els) => els.map((el) => el.dataset.tileId));
+  // the top row's slots 0 to 2 lie under the box
+  expect(picked.sort()).toEqual([hand[0], hand[1], hand[2]].sort());
+  // a tap on the felt drops the pick
+  await page.mouse.click(x, y);
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
+});
+
+test("a finger draws a box from the middle of the table", async ({
+  page,
+  context,
+}, info) => {
+  test.skip(info.project.name === "desktop", "touch only");
+  // real touches, which the browser can take over to scroll or zoom
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+  await sitDown(page);
+  await table(page, "start", 4);
+  const touch = (type, x, y) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: type === "touchEnd" ? [] : [{ x, y }],
+    });
+  // from the melds band above the rack down to slot 0's middle
+  const rack = await page.locator(".rack").boundingBox();
+  const a = await slot(page, 0).boundingBox();
+  const [x, y] = [rack.x + rack.width / 2, rack.y - a.height];
+  const [toX, toY] = [a.x + a.width / 2, a.y + a.height / 2];
+  await touch("touchStart", x, y);
+  for (let i = 1; i <= 8; i++) {
+    await touch("touchMove", x + ((toX - x) * i) / 8, y + ((toY - y) * i) / 8);
+  }
+  await expect(page.locator(".lasso")).toBeVisible();
+  await touch("touchEnd");
+  await expect(page.locator(".rack .tile.selected")).not.toHaveCount(0);
+  // a tap there drops the pick
+  await page.touchscreen.tap(x, y);
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
+});
+
+test("on the pair round a tap spreads a discard pile out", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 40); // ten tiles on each pile
+  const piles = page.locator("[data-pile]");
+  await expect(piles).toHaveCount(4);
+  // round 1: a tap on a pile does nothing
+  await piles.first().locator(".slot").click();
+  await expect(page.locator(".peek")).toHaveCount(0);
+  // 4 çift: each pile spreads out, all of it on the screen, and a tap on
+  // another closes the one before
+  await page.evaluate(() =>
+    window.okey.set({ ...window.okey.get(), round: 12 }),
+  );
+  const { width, height } = page.viewportSize();
+  for (const pile of await piles.all()) {
+    await pile.locator(".slot").click();
+    await expect(page.locator(".peek")).toHaveCount(1);
+    await expect(pile.locator(".peek .tile")).toHaveCount(10);
+    const box = await pile.locator(".peek").boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    expect(box.y + box.height).toBeLessThanOrEqual(height);
+  }
+  // a tap anywhere else puts it back
+  await page.mouse.click(4, height / 2);
+  await expect(page.locator(".peek")).toHaveCount(0);
 });
 
 test("the sound level is set in the menu and kept", async ({ page }) => {

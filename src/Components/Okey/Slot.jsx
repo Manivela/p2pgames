@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useDrop } from "react-dnd";
 import "./slot.css";
 import Tile from "./Tile";
@@ -6,6 +7,7 @@ function Slot({
   type = "HAND",
   tile,
   onDrop,
+  onOver,
   index,
   showBorder,
   className,
@@ -13,7 +15,7 @@ function Slot({
   disabled,
   ...props
 }) {
-  const [{ isOver }, drop] = useDrop(
+  const [{ isOver, held }, drop] = useDrop(
     () => ({
       accept: "TILE",
       drop: (e) => {
@@ -24,10 +26,13 @@ function Slot({
       //   (type === "DISCARD" ? canDiscard : true),
       collect: (monitor) => ({
         isOver: !!monitor.isOver(),
+        held: monitor.isOver() ? monitor.getItem()?.tile : null,
       }),
     }),
     [index, canDiscard, onDrop],
   );
+  // your rack shows what the tile held over one of its slots would do
+  useEffect(() => onOver?.(index, held), [onOver, index, held]);
   return (
     <div
       ref={drop}
@@ -42,7 +47,9 @@ function Slot({
         .join(" ")}
       {...props}
     >
-      {tile && <Tile tile={tile} disabled={disabled} />}
+      {/* a tile of its own per tile: one that moves to another slot doesn't
+          carry over the slide shown before it was dropped (rack.css) */}
+      {tile && <Tile key={tile.id} tile={tile} disabled={disabled} />}
     </div>
   );
 }

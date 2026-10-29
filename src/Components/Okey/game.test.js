@@ -173,25 +173,89 @@ test("a save code hides the state and loads it back", async () => {
   assert.isNull(await game.decodeSave(JSON.stringify(s)));
 });
 
-test("picked tiles move together, side by side in rack order", () => {
+// a rack row from a picture: letters are tiles, _ a gap
+const rack = (row) =>
+  [...row].map((c) => (c === "_" ? null : { id: c, source: "hand-1" }));
+const picture = (hand) => hand.map((t) => t?.id ?? "_").join("");
+const place = (row, ids, at, held) =>
+  picture(
+    game
+      .placeTiles(
+        rack(row),
+        row.length / 2,
+        [...ids].map((id) => ({ id, source: "hand-1" })),
+        at,
+        held,
+      )
+      .slice(0, row.length / 2),
+  );
+
+test("a tile dropped on a rack slot pushes what's there aside", () => {
+  // two rows of 8; only the top one matters here
+  const top = (row) => row + "_".repeat(8);
+  // dropped on B, it lands there; B and C slide right into the nearest gap
+  assert.equal(place(top("_AB_C__D"), "X", 2), "_AXBC__D");
+  // the nearest gap is on the left
+  assert.equal(place(top("AB_CDEF_"), "X", 4), "ABCDXEF_");
+  // tied: to the right
+  assert.equal(place(top("_ABC_DE_"), "X", 2), "_AXBCDE_");
+  // never into the other row: the gap to the left is used
+  assert.equal(place(top("_ABCDEFG"), "X", 6), "ABCDEFXG");
+});
+
+test("a tile moved within its group closes the gap it left", () => {
+  const top = (row) => row + "_".repeat(8);
+  // A to D's slot: B C D close up behind it, the gap before F stays
+  assert.equal(place(top("_ABCD_FG"), "A", 4), "_BCDA_FG");
+  // D to B's slot: B C move right into D's old slot
+  assert.equal(place(top("_ABCD_FG"), "D", 2), "_ADBC_FG");
+  // onto itself: nothing moves
+  assert.equal(place(top("_ABCD_FG"), "C", 3), "_ABCD_FG");
+});
+
+test("picked tiles land together around the one held", () => {
+  const top = (row) => row + "_".repeat(8);
+  // X Y held by Y, dropped on slot 4: X on 3, Y on 4, C D slide right
+  assert.equal(place(top("_ABCD___"), "XY", 4, "Y"), "_ABXYCD_");
+  // the tiles in the way part to both sides when that slides fewer
+  assert.equal(place(top("__ABCD__"), "XY", 3), "_ABXYCD_");
+  // dropped near the end of the row, they stay in it
+  assert.equal(place(top("A_______"), "XYZ", 7), "A____XYZ");
+  // from this row: the group closes up towards where they were
+  assert.equal(place(top("XY_ABCD_"), "XY", 4, "X"), "_ABCXYD_");
+});
+
+test("a full row swaps instead", () => {
+  // X from the bottom row onto a full top row: B takes X's old slot
+  const hand = rack("ABCD" + "X___");
+  const moved = game.placeTiles(hand, 4, [hand[4]], 1);
+  assert.equal(picture(moved), "AXCD" + "B___");
+  // a new tile: what's in the way takes the first gap
+  const drawn = game.placeTiles(hand, 4, [{ id: "N" }], 1);
+  assert.equal(picture(drawn), "ANCD" + "XB__");
+});
+
+test("picked tiles move together through the rules", () => {
   let s = game.startGame(seated(2));
   const hand = () => player(s, 1).hand;
   const at = (i) => hand()[i]?.id;
   const [a, b, c] = [hand()[0], hand()[4], hand()[9]].map((t) => t.id);
-  const inTheWay = [at(14), at(15)];
 
-  s = game.moveTiles(s, 1, [c, a, b], 14);
-  assert.deepEqual([at(14), at(15), at(16)], [a, b, c]);
-  // what sat in 14 and 15 took the picked tiles' old slots
-  assert.sameMembers(
-    inTheWay.filter(Boolean),
-    [at(0), at(4), at(9)].filter(Boolean),
-  );
+  // held by b, dropped on 20: a b c on 19 20 21
+  s = game.moveTiles(s, 1, [c, a, b], 20, b);
+  assert.deepEqual([at(19), at(20), at(21)], [a, b, c]);
   assertAllTiles(s);
 
-  // dropped near the end of a row, the group stays in that row
-  s = game.moveTiles(s, 1, [a, b, c], 12);
-  assert.deepEqual([at(10), at(11), at(12)], [a, b, c]);
+  // a drawn tile dropped on a tile lands there; that one slides aside in
+  // its row
+  s = game.discardTile(s, 1, hand().find(Boolean));
+  const theirs = () => player(s, 2).hand;
+  const bottom = () => theirs().slice(13).filter(Boolean).length;
+  const [before, drawn] = [bottom(), s.drawPile.at(-1).id];
+  assert.isNotNull(theirs()[13]);
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 13);
+  assert.equal(theirs()[13].id, drawn);
+  assert.equal(bottom(), before + 1);
   assertAllTiles(s);
 });
 
@@ -216,7 +280,7 @@ test("moves two players make at the same moment both survive sync", () => {
   const p1Tile = player(s, 1).hand.find(Boolean);
   const p2Tile = player(s, 2).hand.find(Boolean);
   writeState(mapA, s, game.discardTile(s, 1, p1Tile));
-  writeState(mapB, s, game.swapTile(s, 2, p2Tile, 25));
+  writeState(mapB, s, game.moveTiles(s, 2, [p2Tile.id], 25));
   sync();
 
   for (const merged of [readState(mapA), readState(mapB)]) {
@@ -305,7 +369,11 @@ test("a claim made while the current player moves survives sync", () => {
 
   // P2 tidies their rack on one peer while P3 claims on the other
   const s = readState(mapA);
-  writeState(mapA, s, game.swapTile(s, 2, player(s, 2).hand.find(Boolean), 24));
+  writeState(
+    mapA,
+    s,
+    game.moveTiles(s, 2, [player(s, 2).hand.find(Boolean).id], 24),
+  );
   writeState(mapB, s, americano.claimDiscard(s, 3, 25));
   sync();
 

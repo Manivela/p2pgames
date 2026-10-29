@@ -20,6 +20,11 @@ const tableTile = (tile) => ({ ...tile, source: "table", hidden: false });
 const isElden = (state) => state.rules.rounds[state.round - 1].melds === null;
 const wrap = (state) => state.rules.wrapRuns;
 const pairsOf = (tiles) => Array(tiles.length / 2).fill(["pair", 2]);
+// a round that opens with pairs (Americano's 4 çift)
+export const pairRound = (state) =>
+  !!state.rules?.rounds[state.round - 1]?.melds?.some(
+    ([type]) => type === "pair",
+  );
 
 export function startGame(state, deal, rules = AMERICANO) {
   if (rules.partners && state.players.filter((p) => p.user).length !== 4) {
@@ -378,7 +383,7 @@ export function layMelds(state, player, groups) {
     return s;
   }
   const pairs =
-    s.rules.rounds[s.round - 1].melds?.some(([type]) => type === "pair") ||
+    pairRound(s) ||
     (s.rules.pairsForAll && Object.values(s.openedWithPairs).some(Boolean));
   const melds = splitMelds(flat, s.okeyTile, undefined, wrap(s), false, pairs);
   if (!melds) {
@@ -534,7 +539,16 @@ export function playOnMeld(state, player, tileId, meldIndex, atEnd) {
 // previous discard as their draw. If they draw from the pile instead, the
 // discard is on offer to everyone else until they discard; the claimant
 // earliest in turn order after them gets it plus a penalty tile from the pile.
-export function drawTile(state, player, tile, toIndex, now = Date.now()) {
+// Their time to take it (claimWait) runs from when the turn reached the
+// player, `turnStart` on their own clock: a late draw doesn't make them wait.
+export function drawTile(
+  state,
+  player,
+  tile,
+  toIndex,
+  now = Date.now(),
+  turnStart = now,
+) {
   const caught = isCaught(state, tile.id);
   if (caught && !state.rules.takeCaught) return "That tile was caught";
   const s = game.drawTile(state, player, tile, toIndex);
@@ -556,7 +570,12 @@ export function drawTile(state, player, tile, toIndex, now = Date.now()) {
   const top = from.discardPile.at(-1);
   s.offer =
     tile.source === "draw-pile" && top && !isCaught(s, top.id)
-      ? { id: offerId(s), from: from.id, tileId: top.id, at: now }
+      ? {
+          id: offerId(s),
+          from: from.id,
+          tileId: top.id,
+          at: Math.min(now, turnStart),
+        }
       : null;
   return s;
 }

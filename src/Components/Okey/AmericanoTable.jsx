@@ -309,6 +309,9 @@ export function Melds({ underPile }) {
         hint.hidden = true;
         if (shrink() === scale) hint.hidden = false;
       }
+      // still too many: a finger scrolls the band (rack.css)
+      el.style.touchAction =
+        el.scrollHeight > el.clientHeight ? "pan-y pinch-zoom" : "";
     };
     fit();
     // the table's size, not the band's: under the pile the band is as tall

@@ -14,60 +14,94 @@ function removeItem(array, tile) {
   return newArray;
 }
 
-function swapItems(array, fromIndex, toIndex) {
-  const newArray = [...array];
-  [newArray[fromIndex], newArray[toIndex]] = [
-    newArray[toIndex],
-    newArray[fromIndex],
+// Tiles dropped on a rack slot, moved along the rack or new to it (a draw):
+// they land side by side in rack order, the one under the finger (`held`)
+// on the slot it was dropped on, all in that slot's row. The tiles in their
+// way slide aside into the row's nearest gaps; back towards the slots the
+// moved tiles left in this row when those have room, so a group being
+// reordered closes up behind them instead of running into the next one. A
+// row too full to make room: what's in the way takes the moved tiles' old
+// slots, or the first gaps.
+export function placeTiles(hand, row, tiles, toIndex, held = tiles[0]?.id) {
+  const h = Array.from(
+    { length: Math.max(hand.length, 2 * row) },
+    (_, i) => hand[i] ?? null,
+  );
+  const ids = tiles.map((t) => t.id);
+  const from = h.flatMap((t, i) => (t && ids.includes(t.id) ? [i] : []));
+  const moving = [
+    ...from.map((i) => h[i]),
+    ...tiles.filter((t) => !h.some((x) => x?.id === t.id)),
   ];
-
-  return newArray;
+  from.forEach((i) => (h[i] = null));
+  const k = moving.length;
+  const rowStart = toIndex - (toIndex % row);
+  const [lo, hi] = k <= row ? [rowStart, rowStart + row] : [0, h.length];
+  const offset = Math.max(
+    0,
+    moving.findIndex((t) => t.id === held),
+  );
+  const start = Math.min(Math.max(toIndex - offset, lo), hi - k);
+  const to = moving.map((_, j) => start + j);
+  const room = k <= row && makeRoom(h, lo, hi, start, k, from);
+  const out = room || h;
+  const inWay = room ? [] : to.map((i) => h[i]).filter(Boolean);
+  to.forEach((i, j) => (out[i] = moving[j]));
+  const vacated = from.filter((i) => !to.includes(i));
+  for (const t of inWay) out[vacated.shift() ?? out.indexOf(null)] = t;
+  return out;
 }
 
-function insertItem(array, toIndex, item) {
-  const newArray = [...array];
-  if (newArray[toIndex] === null) {
-    // if the target is null just insert
-    newArray[toIndex] = item;
-    return newArray;
+// the hand with slots start..start+k-1 of the row [lo, hi) emptied: the
+// tiles there pushed out to either side, each side's tiles sliding into its
+// nearest gaps; null when the row has no room
+function makeRoom(h, lo, hi, start, k, from) {
+  const end = start + k;
+  const inWay = h.slice(start, end).filter(Boolean);
+  const was = new Map(h.map((t, i) => [t?.id, i]));
+  const back = from.find((i) => i >= lo && i < hi);
+  let best;
+  // the first m tiles in the way go out the left side, the rest the right
+  for (let m = 0; m <= inWay.length; m++) {
+    const left = squeeze(
+      [...h.slice(lo, start), ...inWay.slice(0, m)],
+      m,
+      true,
+    );
+    const right = squeeze(
+      [...inWay.slice(m), ...h.slice(end, hi)],
+      inWay.length - m,
+      false,
+    );
+    if (!left || !right) continue;
+    const row = [...left, ...Array(k).fill(null), ...right];
+    const slid = row.reduce(
+      (n, t, j) => n + (t ? Math.abs(lo + j - was.get(t.id)) : 0),
+      0,
+    );
+    const away =
+      back !== undefined && m !== (back < start ? inWay.length : 0) ? 1 : 0;
+    if (!best || away < best.away || (away === best.away && slid < best.slid))
+      best = { row, slid, away };
   }
+  if (!best) return null;
+  const out = [...h];
+  out.splice(lo, hi - lo, ...best.row);
+  return out;
+}
 
-  // Find the first null index after target
-  const rightNull = newArray.indexOf(null, toIndex);
-  const leftNull = newArray.lastIndexOf(null, toIndex);
-  const firstNull = newArray.indexOf(null);
-
-  // If no null is found on the right or left insert at the first available place
-  if (rightNull === -1 && leftNull === -1) {
-    newArray[firstNull] = item;
-    return newArray;
+// part of a row with n tiles pushed in from one end (`atEnd`: its right
+// end): the n gaps nearest that end close up; null without n gaps
+function squeeze(part, n, atEnd) {
+  const p = atEnd ? [...part].reverse() : [...part];
+  for (let i = 0; n > 0 && i < p.length;) {
+    if (p[i] === null) {
+      p.splice(i, 1);
+      n--;
+    } else i++;
   }
-
-  if (rightNull !== -1) {
-    // Shift the objects to the right
-    for (let i = rightNull; i > toIndex; i--) {
-      newArray[i] = newArray[i - 1];
-    }
-
-    // Insert the new object
-    newArray[toIndex] = item;
-
-    return newArray;
-  }
-
-  if (leftNull !== -1) {
-    // Shift the objects to the left
-    for (let i = leftNull; i < toIndex; i++) {
-      newArray[i] = newArray[i + 1];
-    }
-
-    // Insert the new object
-    newArray[toIndex] = item;
-
-    return newArray;
-  }
-
-  return newArray;
+  if (n) return null;
+  return atEnd ? p.reverse() : p;
 }
 
 const handTile = (tile, player) => ({
@@ -295,7 +329,12 @@ export function drawTile(state, player, tile, toIndex) {
   const myPlayer = seat(newState, player);
   if (!myPlayer) return;
 
-  myPlayer.hand = insertItem(myPlayer.hand, toIndex, handTile(tile, player));
+  myPlayer.hand = placeTiles(
+    myPlayer.hand,
+    rowOf(state),
+    [handTile(tile, player)],
+    toIndex,
+  );
   newState.drawn = true;
   if (tile.source.startsWith("discard"))
     logMove(newState, player, "took", [tile]);
@@ -310,18 +349,6 @@ export function drawTile(state, player, tile, toIndex) {
       );
     }
   }
-  return newState;
-}
-
-export function swapTile(state, player, tile, toIndex) {
-  if (roundOver(state)) return roundOver(state);
-  if (tile.source !== `hand-${player}`) return "Can't move other players tiles";
-  const newState = cloneDeep(state);
-  const myPlayer = seat(newState, player);
-  if (!myPlayer) return;
-
-  const oldIndex = myPlayer.hand.findIndex((t) => t?.id === tile.id);
-  myPlayer.hand = swapItems(myPlayer.hand, oldIndex, toIndex);
   return newState;
 }
 
@@ -367,32 +394,16 @@ export async function decodeSave(code) {
   }
 }
 
-// Moves several picked tiles at once: they land side by side, in rack order,
-// from toIndex on (within one row when they fit), and tiles already in
-// those slots take the picked tiles' old ones, like a single tile's swap.
-export function moveTiles(state, player, ids, toIndex) {
+// Moves tiles along the player's rack (placeTiles): one, or the picked
+// ones together, `held` the one under the finger.
+export function moveTiles(state, player, ids, toIndex, held) {
   if (roundOver(state)) return roundOver(state);
   const newState = cloneDeep(state);
   const myPlayer = seat(newState, player);
   if (!myPlayer) return;
-  const hand = [...myPlayer.hand];
-  const from = hand.flatMap((t, i) => (t && ids.includes(t.id) ? [i] : []));
-  if (!from.length) return;
-  const row = rowOf(state);
-  const rowStart = toIndex - (toIndex % row);
-  const start =
-    from.length <= row
-      ? Math.min(toIndex, rowStart + row - from.length)
-      : Math.min(toIndex, hand.length - from.length);
-  const to = from.map((_, j) => start + j);
-
-  const moving = from.map((i) => hand[i]);
-  from.forEach((i) => (hand[i] = null));
-  const displaced = to.map((i) => hand[i]).filter(Boolean);
-  to.forEach((i, j) => (hand[i] = moving[j]));
-  const vacated = from.filter((i) => !to.includes(i));
-  displaced.forEach((t, j) => (hand[vacated[j]] = t));
-  myPlayer.hand = hand;
+  const tiles = myPlayer.hand.filter((t) => t && ids.includes(t.id));
+  if (!tiles.length) return;
+  myPlayer.hand = placeTiles(myPlayer.hand, rowOf(state), tiles, toIndex, held);
   return newState;
 }
 

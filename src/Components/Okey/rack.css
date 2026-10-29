@@ -32,8 +32,12 @@ html:has(.fit) {
 .board {
   height: 100%;
   /* two quick taps knock on the table (Board.jsx): never zoom, nor pick
-     the words nearby */
+     the words nearby; and a finger drawing a box (useTablePick) doesn't pan
+     the page. Two fingers still zoom; the melds, menus and dialogs scroll
+     on their own (touch-action stops at a scroller). A browser without
+     pinch-zoom keeps manipulation. */
   touch-action: manipulation;
+  touch-action: pinch-zoom;
   -webkit-user-select: none;
   user-select: none;
   display: grid;
@@ -238,6 +242,44 @@ html:has(.fit) {
 
 .discardPile.small .slot {
   zoom: 0.8;
+}
+
+/* the pair round: a pile's tiles spread out beside it (DiscardPile), oldest
+   first, in small tiles: over the table from the ones at your rack, under
+   them from the ones along the top */
+.discardPile {
+  --small-t: max(18px, calc(var(--t) * 0.45));
+}
+
+.discardPile .peek {
+  --t: var(--small-t);
+  position: absolute;
+  z-index: 22;
+  bottom: calc(100% + var(--t) * 0.4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--t) * 0.12);
+  width: max-content;
+  max-width: calc(var(--t) * 8.5);
+  padding: calc(var(--t) * 0.25);
+  border-radius: calc(var(--t) * 0.25);
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.foot > .discardPile:first-child .peek {
+  left: 0;
+}
+
+.foot > .discardPile:last-child .peek {
+  right: 0;
+}
+
+.discardPile.small .peek {
+  top: calc(100% + var(--t) * 0.4);
+  bottom: auto;
+  left: 50%;
+  translate: -50% 0;
 }
 
 /* a pile's count stays on top, even of the tiles flying in and out */
@@ -694,6 +736,11 @@ html:has(.fit) {
   justify-content: center;
   gap: calc(var(--t) * 0.16);
   overflow-y: auto;
+  /* a finger draws a box from here too (Board.jsx); the band takes it to
+     scroll only while its melds overflow even at their smallest
+     (AmericanoTable.jsx) */
+  touch-action: manipulation;
+  touch-action: pinch-zoom;
 }
 
 .meld {
@@ -1208,4 +1255,32 @@ div.flights > * {
 
 .flights .score.fine {
   color: #ff8a80;
+}
+
+/* a box drawn on the table picks your tiles (Board.jsx, useTablePick) */
+.lasso {
+  position: fixed;
+  z-index: 25;
+  border: 2px solid rgba(30, 144, 255, 0.9);
+  border-radius: 4px;
+  background: rgba(30, 144, 255, 0.15);
+  pointer-events: none;
+}
+
+/* a tile held over your rack: the tiles in its way slide aside to where it
+   would push them, --dx slots across and --dy rows down, and the ones it
+   moves leave their slots (Rack.jsx). Only those get a translate: on every
+   tile it would paint a picked tile's ring under its neighbour's. */
+.rack .slot > .tile {
+  transition:
+    transform 0.12s ease-out,
+    translate 0.15s ease-out;
+}
+
+.rack .slot.aside > .tile {
+  translate: calc(var(--t) * var(--dx)) calc(var(--t) * 1.72 * var(--dy));
+}
+
+.rack .slot.moving > .tile {
+  visibility: hidden;
 }

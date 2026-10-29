@@ -201,10 +201,23 @@ export function OkeyProvider({ children }) {
     },
     [okeyState, me, setOkeyState],
   );
+  // when the turn last reached this device: the others' time to take the
+  // discard runs from then (americano.drawTile), as the turn timer does
+  const turnStart = React.useRef(Infinity);
+  React.useEffect(() => {
+    if (okeyState.currentPlayer === me) turnStart.current = Date.now();
+  }, [okeyState.currentPlayer, okeyState.deal, me]);
   const drawTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
-      return act(moves.drawTile, player, tile, toIndex);
+      return act(
+        moves.drawTile,
+        player,
+        tile,
+        toIndex,
+        Date.now(),
+        turnStart.current,
+      );
     },
     [act, moves],
   );
@@ -250,15 +263,19 @@ export function OkeyProvider({ children }) {
   // rack, and is thrown when the wait ends. Dragging it back cancels it.
   const [held, setHeld] = React.useState(null);
 
-  const swapTile = useCallback(
+  // the tiles a drag along my rack moves: the picked ones, or just it
+  const movedWith = useCallback(
+    (tile) =>
+      selected.length > 1 && selected.includes(tile.id) ? selected : [tile.id],
+    [selected],
+  );
+  const moveTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
       if (tile.id === held) setHeld(null);
-      return selected.length > 1 && selected.includes(tile.id)
-        ? act(game.moveTiles, player, selected, toIndex)
-        : act(game.swapTile, player, tile, toIndex);
+      return act(game.moveTiles, player, movedWith(tile), toIndex, tile.id);
     },
-    [act, selected, held],
+    [act, movedWith, held],
   );
 
   const discardTile = useCallback(
@@ -345,6 +362,11 @@ export function OkeyProvider({ children }) {
     [picking, myHand, me, okeyState],
   );
   const unselectAll = useCallback(() => setSelected([]), []);
+  // exactly these picked (a box drawn on the rack)
+  const select = useCallback(
+    (ids) => setSelected((old) => (old.join() === ids.join() ? old : ids)),
+    [],
+  );
 
   const picked = useCallback(
     () => [
@@ -642,7 +664,8 @@ export function OkeyProvider({ children }) {
       myHand,
       myDiscardPile,
       discardTile,
-      swapTile,
+      moveTile,
+      movedWith,
       drawTile,
       finishGame,
       startGame,
@@ -662,6 +685,7 @@ export function OkeyProvider({ children }) {
       selected,
       toggleSelected,
       unselectAll,
+      select,
       picking,
       startPicking,
       held,
@@ -689,7 +713,8 @@ export function OkeyProvider({ children }) {
       myHand,
       myDiscardPile,
       discardTile,
-      swapTile,
+      moveTile,
+      movedWith,
       drawTile,
       finishGame,
       startGame,
@@ -709,6 +734,7 @@ export function OkeyProvider({ children }) {
       selected,
       toggleSelected,
       unselectAll,
+      select,
       picking,
       startPicking,
       held,

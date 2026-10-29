@@ -17,16 +17,18 @@ How each part works is in its code comments; this file holds the conventions, de
 ## Table
 
 - Show what everyone at a real table sees and leave the thinking to the player: no hints about what to lay, no auto-sort. Make hands faster, not smarter. The one exception, asked for: El aç's first press picks what the rules would lay down (the opening they find, then the sets and runs as they lie on the rack; never pairs, those are picked on purpose), for the player to change or lay.
+- On the pair round (Americano's 4 çift), anyone can look through the discard piles, the user's house rule: a tap spreads a pile out (`DiscardPile`).
 - Gestures over buttons wherever one fits. Moves that end or replace the game live in the ⋯ menu (`TableMenu.jsx`) behind a second tap (`Confirm`).
 - The turn timer only reminds: it loops, turns red after the first lap, and the turn waits for the player.
 - One layout for every screen (`Board.jsx`, a CSS grid), sized in tile widths `--t` (`useTileSize`); only the size changes. Anything that comes and goes (badges, Sit, the tea glass, Catch) is placed absolutely, so its row never shifts.
 - Bootstrap 3's CSS is global: give table parts names of their own (`.half`, `.seat`), clear of its classes (`.row`, `.hidden`, `.label`, `.open`, `.fade`, `.table`…).
 - A face-down tile renders only `.back`, its colour and number out of the page: inspecting the pile would show the next tile.
+- One `useDragLayer`, the drag preview's (`index.jsx`): a second one races it, and a drag that starts and ends before React renders (a quick flick on a phone) leaves the preview in the air. What a drop target needs of the held tile comes from its own `useDrop` collect (`Slot.jsx`).
 - Animations (`moves.js`) find tiles and places by `data-tile-id`, `data-seat`, `data-pile`, `data-meld`, `data-hand`: a new place a tile can be needs its attribute; a picture of a tile (`TileFace`) carries none, so nothing flies to it. Flights measure screen rects, which Chrome and WebKit both report right inside `zoom` (small piles, melds, shown hands).
 
 ## Verify
 
-1. Rules: `npx vitest run` from the repo root (from this folder it skips test files). Deal a known position with `seated(n)` (`game.test.js`) and `game.startGame(state, { okeyTile, hands })`, or `americano.startGame(state, deal, rules)`. Americano's claim wait: `drawTile` / `discardTile` take an optional `now`; tests discard at `afterWait(s)`, scripts pass `Infinity`.
+1. Rules: `npx vitest run` from the repo root (from this folder it skips test files). Deal a known position with `seated(n)` (`game.test.js`) and `game.startGame(state, { okeyTile, hands })`, or `americano.startGame(state, deal, rules)`. Americano's claim wait: `drawTile` / `discardTile` take an optional `now`, and `drawTile` a `turnStart` the wait runs from when it's earlier; tests discard at `afterWait(s)`, scripts pass `Infinity`.
 2. `npm run lint`: no errors (prettier runs inside it).
 3. End to end: `npm run test:e2e` runs `e2e/okey.e2e.js` in Playwright's Linux image (`e2e/docker.sh`; the first run pulls ~1 GB), so screenshots match on every machine; `npx playwright test` on the Mac runs the same tests in ~15 s without the screenshot comparisons. Positions come from `e2e/table.js`: the real rules on a fixed deal, written with `window.okey`. A new table stage gets the fit check (`check()`: nothing overlaps or falls off-screen) and a reference screenshot. After an intended visual change: `npm run test:e2e -- --update-snapshots`, look at each new PNG in `e2e/okey.e2e.js-snapshots/`, commit them (a change within the per-pixel tolerance keeps the old image; `=all` rewrites every one).
 4. A layout change, by eye: 1348×870, 1024×768, 820×1180, 844×390 and 667×320, each in the lobby, mid-game, at round end and watching without a seat, in English and Turkish.

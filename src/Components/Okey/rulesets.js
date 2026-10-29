@@ -79,7 +79,8 @@ export const AMERICANO = {
   okeySwapFromRound: 6,
   // a fifth player can sit in (14 × 5 + 1 dealt leaves 34 in the pile)
   seats: 5,
-  // after drawing from the pile, the others get this long to take the discard
+  // the others get this long to take the discard, from when the turn reached
+  // the player who drew from the pile instead
   claimWaitSeconds: 8,
   // discarding a tile that fits a table meld (işler taş): whoever catches it
   // adds this to the discarder's round score, and nobody can take the tile

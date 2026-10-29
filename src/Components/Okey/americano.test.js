@@ -423,6 +423,18 @@ test("Elden: no opening, finish from hand, lowest total wins the game", () => {
   assert.equal(s.scores[2][elden - 1], p2Sum * 2);
 });
 
+test("the others' time to take a discard runs from the turn, not the draw", () => {
+  let s = americano.startGame(seated(4));
+  s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  const turn = 1_000_000;
+  const draw = (at) =>
+    americano.drawTile(s, 2, s.drawPile.at(-1), 25, at, turn);
+  // drawn 5 s into the turn: 3 s left of the 8
+  assert.equal(americano.claimWait(draw(turn + 5000), 2, turn + 5000), 3);
+  // drawn after the others had their 8 s: no wait
+  assert.equal(americano.claimWait(draw(turn + 9000), 2, turn + 9000), 0);
+});
+
 test("the others' time to take a discard before the next one", () => {
   let s = americano.startGame(seated(4));
   s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));

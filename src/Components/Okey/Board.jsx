@@ -4,14 +4,14 @@ import { useDrop } from "react-dnd";
 import { OkeyContext } from "./OkeyContext";
 import Rack, { DiscardPile, Seat } from "./Rack";
 import Slot from "./Slot";
-import Tile from "./Tile";
+import Tile, { SLOP } from "./Tile";
 import { LastTurn, Melds, RoundInfo, Scores } from "./AmericanoTable";
 import "./rack.css";
 import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { AMERICANO, ONE_O_ONE } from "./rulesets";
 import { useMoves } from "./moves";
-import { pileOut, rowOf, tableSeats } from "./game";
+import { ended, pileOut, rowOf, tableSeats } from "./game";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -276,19 +276,82 @@ function OnTheTable({ pile }) {
 // the round stands (once it's over, how it finished) and the next step on
 // the right. Along the bottom: the pile you take from, your rack (every
 // hand once the round ends), the pile you throw to.
+// what a press on the table works instead of the felt under it
+const CONTROLS =
+  ".tile, button, input, label, a, details, select, textarea, .dialog-backdrop";
+
+// Picking your tiles from anywhere on the table off the tiles and
+// controls: a tap drops the pick; a box drawn picks the tiles of your rack
+// it touches instead (their slots: a tile lifts once picked, its slot
+// stays put). One finger draws it; the browser doesn't pan under it
+// (rack.css).
+function useTablePick() {
+  const { okeyState, me, myHand, select, unselectAll } =
+    useContext(OkeyContext);
+  const [box, setBox] = useState(null);
+  const from = useRef(null);
+  // where a tap would have to end: what it pressed, until a box is drawn
+  const pressed = useRef(null);
+  const hand = me && !ended(okeyState) ? myHand(me) : [];
+  function onPointerDown(e) {
+    pressed.current = e.target;
+    const off = e.isPrimary && e.button === 0 && !e.target.closest(CONTROLS);
+    from.current =
+      off && hand.some(Boolean) ? { x: e.clientX, y: e.clientY } : null;
+  }
+  function onPointerMove(e) {
+    const { clientX: x, clientY: y } = e;
+    const start = from.current;
+    if (!start || (!box && Math.hypot(x - start.x, y - start.y) <= SLOP)) {
+      return;
+    }
+    // drawing: no tap, and the click at its end goes to the table, not
+    // what's under it
+    if (!box) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      pressed.current = null;
+    }
+    const [left, right] = [Math.min(start.x, x), Math.max(start.x, x)];
+    const [top, bottom] = [Math.min(start.y, y), Math.max(start.y, y)];
+    setBox({ left, top, width: right - left, height: bottom - top });
+    const tiles = document.querySelectorAll(".rack .slot > .tile");
+    select(
+      [...tiles]
+        .filter((el) => {
+          const r = el.parentElement.getBoundingClientRect();
+          return (
+            r.left < right && r.right > left && r.top < bottom && r.bottom > top
+          );
+        })
+        .map((el) => el.dataset.tileId)
+        .filter((id) => hand.some((t) => t?.id === id)),
+    );
+  }
+  function end() {
+    from.current = null;
+    pressed.current = null;
+    setBox(null);
+  }
+  // let go where it was pressed, no box drawn: a tap. Not a click: Linux
+  // Chrome (the e2e's) sent none after a finger tap on the felt.
+  function onPointerUp(e) {
+    const tap = e.target === pressed.current && !e.target.closest(CONTROLS);
+    end();
+    if (tap) unselectAll();
+  }
+  return [
+    box && <div className="lasso" style={box} />,
+    { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: end },
+  ];
+}
+
 // two quick taps on the felt, off anything to pick up or press, knock on
 // the table (knock.js) where they land: x and y from -1 to 1 across it
 function useKnock() {
   const { knock } = useContext(OkeyContext);
   const last = useRef(null);
   return (e) => {
-    if (
-      e.target.closest(
-        ".tile, .rack, button, input, label, a, details, .dialog-backdrop",
-      )
-    ) {
-      return;
-    }
+    if (e.target.closest(`${CONTROLS}, .rack`)) return;
     const tap = { at: e.timeStamp, x: e.clientX, y: e.clientY };
     const before = last.current;
     last.current = tap;
@@ -322,13 +385,22 @@ function Board() {
   const [table, pileAside] = usePileAside(okeyState.deal);
   useMoves();
   const onKnock = useKnock();
+  const [lasso, pick] = useTablePick();
   return (
     <div
       className="fit"
       ref={fit}
       data-rotate={t("Turn your phone sideways to play")}
     >
-      <div className="board" onPointerDown={onKnock}>
+      <div
+        className="board"
+        {...pick}
+        onPointerDown={(e) => {
+          onKnock(e);
+          pick.onPointerDown(e);
+        }}
+      >
+        {lasso}
         <div className="head">
           <div className="end" />
           <div className="others">
