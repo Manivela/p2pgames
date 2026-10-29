@@ -641,6 +641,11 @@ html:has(.fit) {
   line-height: 1.3;
 }
 
+/* your out-of-turn takes, quieter than the round's name */
+.round small.takes {
+  color: rgba(255, 255, 255, 0.6);
+}
+
 /* the round's opening, made up, in small tiles: a third of a tile, but
    never too small to read on a phone */
 .round {

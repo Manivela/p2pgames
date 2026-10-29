@@ -170,7 +170,7 @@ function Example({ melds }) {
 // where the round stands, on the table's right: which round and what opens
 // it (or how it ended), and who wants the last discard
 export function RoundInfo() {
-  const { okeyState } = useContext(OkeyContext);
+  const { okeyState, me } = useContext(OkeyContext);
   const { round, message, players, rules, gameState, opened } = okeyState;
   if (!rules) {
     const said =
@@ -206,6 +206,12 @@ export function RoundInfo() {
         !players.every((p) => opened?.[p.id]) && (
           <Example melds={rounds[round - 1].melds} />
         )}
+      {/* Americano: your out-of-turn takes this round, of the most allowed */}
+      {gameState === "play" && okeyState.takes?.[me] > 0 && (
+        <small className="takes">
+          {t(`taken ${okeyState.takes[me]}/${rules.maxTakes}`)}
+        </small>
+      )}
       {message && <small>{t(message)}</small>}
       {wanting.length > 0 && offered && (
         <small className="claims">

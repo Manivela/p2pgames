@@ -963,6 +963,25 @@ test("tiles taken out of turn fly into their slots on my rack", async ({
   expect(hidden).toBe("hidden");
 });
 
+// Americano's out-of-turn takes: yours this round, beside the round's name;
+// the others' aren't shown
+test("your takes out of turn are counted beside the round", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora
+  await table(page, "claim", 1); // Bora's discard
+  await table(page, "play", 1); // Can discards: it's mine
+  await table(page, "claim", 2); // Can's discard
+  await table(page, "play", 1); // Deniz discards: it's Bora's
+  await expect(page.locator(".round .takes")).toHaveText(
+    /^(taken|yandan) 1\/3$/,
+  );
+  await expect(page.locator(".round .takes")).toHaveCount(1);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
 test("a discard during the others' wait is held, then thrown", async ({
   page,
 }) => {
