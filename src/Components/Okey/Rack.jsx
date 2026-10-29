@@ -159,8 +159,11 @@ function Rack({ player, hands }) {
     }
     const props = { tile: tile?.id === held ? null : tile };
     if (!preview) return props;
-    if (tile && ids.includes(tile.id)) return { ...props, className: "moving" };
+    // a moved tile may land where one of them was: its slot is marked too
     const landing = ids.includes(preview[index]?.id);
+    if (tile && ids.includes(tile.id)) {
+      return { ...props, className: landing ? "moving over" : "moving" };
+    }
     const to = tile ? preview.findIndex((t) => t?.id === tile.id) : index;
     if (to === index) return { ...props, className: landing ? "over" : "" };
     return {

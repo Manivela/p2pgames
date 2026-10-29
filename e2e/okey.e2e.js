@@ -705,6 +705,25 @@ test("picked tiles move together", async ({ page }) => {
   await expect(picked).toHaveCount(0);
 });
 
+// picked tiles held partly over where they were: every slot they'd land in
+// is marked, theirs too
+test("picked tiles held near where they were mark every slot they'd land in", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  for (const i of [2, 3, 4]) await slot(page, i).locator(".tile").click();
+  const from = await slot(page, 3).locator(".tile").boundingBox();
+  const to = await slot(page, 5).boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await holdAt(page, to.x + to.width / 2, to.y + to.height / 2);
+  // they'd land on 4, 5 and 6
+  await expect(slot(page, 4)).toHaveClass(/moving over/);
+  await expect(page.locator(".rack .slot.over")).toHaveCount(3);
+  await page.mouse.up();
+});
+
 test("a tile held over the rack shows the others sliding aside", async ({
   page,
 }) => {
