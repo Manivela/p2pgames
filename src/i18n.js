@@ -199,6 +199,7 @@ const TR = [
   [/^Connected:$/, "Bağlı:"],
   [/^Sound Effects from$/, "Ses efektleri:"],
   [/^User:$/, "Kullanıcı:"],
+  [/^Your name$/, "Adın"],
   [/^Go$/, "Gir"],
   // the report form (Sentry's)
   [/^Report a problem$/, "Sorun bildir"],

@@ -38,9 +38,12 @@ const sitInSeat1 = (page) =>
     .getByRole("button", { name: SIT })
     .click();
 
-// a fresh room each time: rooms with the same name sync over the internet
+// a fresh room each time: rooms with the same name sync over the internet.
+// Each page a device of its own, asked for a name: pages of one test share
+// the name a page remembers (useStore.js)
 async function sitDown(page, { name = "Ayşe", room, sit = true } = {}) {
   room ??= `e2e-${Math.random().toString(36).slice(2, 10)}`;
+  await page.addInitScript(() => localStorage.removeItem("name"));
   await page.goto(`/${room}/okey`);
   await page.getByRole("textbox").fill(name);
   await page.getByRole("button", { name: GO }).click();
@@ -815,11 +818,37 @@ test("a reload keeps you logged in and in your seat", async ({
   await secondPlayer(page, room);
   await table(page, "start", 2);
   await page.reload();
-  await expect(page.getByRole("textbox")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: GO })).toHaveCount(0);
   await expect
     .poll(async () => (await state(page))?.players[0].user?.name)
     .toBe("Ayşe");
   await expect(page.locator(".rack:not(.mini) .tile")).toHaveCount(15);
+});
+
+// a new tab on this device goes in with the name it remembers, a player of
+// its own; a name changed in the sidebar shows on your seat for everyone
+test("your name is remembered, and changed from the sidebar", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  const room = await sitDown(page);
+  const tab = await page.context().newPage();
+  await tab.goto(`/${room}/okey`);
+  await expect(tab.getByLabel(/^(Your name|Adın)$/)).toHaveValue("Ayşe");
+  await expect(tab.getByRole("button", { name: SIT })).not.toHaveCount(0);
+  await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
+  const field = page.getByLabel(/^(Your name|Adın)$/);
+  await field.fill("Ayşe K");
+  await field.press("Enter");
+  await expect(tab.locator(".rack > .playerName")).toHaveText("Ayşe K");
+  await expect(
+    tab.locator("#sidebar main li", { hasText: "Ayşe K" }),
+  ).toHaveCount(1);
+  expect(await tab.evaluate(() => localStorage.getItem("name"))).toBe("Ayşe K");
+  // emptied, it keeps the name it had
+  await field.fill("");
+  await field.blur();
+  await expect(field).toHaveValue("Ayşe K");
 });
 
 test("a page leaving the table keeps it till it's gone", async ({

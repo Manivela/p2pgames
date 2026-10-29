@@ -177,6 +177,13 @@ form[action$="destroy"] button {
   padding-right: 2rem;
 }
 
+/* your name, above who's here (root.jsx), the sidebar's width */
+.your-name label,
+.your-name input {
+  display: block;
+  width: 100%;
+}
+
 /* Buy me a coffee's own button, sized to the sidebar */
 .bmc-btn {
   display: inline-flex;

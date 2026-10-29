@@ -3,8 +3,40 @@ import { NavLink, Outlet } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Awareness from "../Components/Awareness";
 import Credits from "../Components/Credits";
+import { useAuthStore } from "../hooks/useStore";
 import coffee from "../assets/coffee.svg";
 import { t } from "../i18n";
+
+// your name as the others see it: this device remembers it, and a new one
+// goes on your seat (OkeyContext). Enter, or leaving the box, keeps it.
+function YourName() {
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const rename = useAuthStore((state) => state.rename);
+  if (!currentUser) return null;
+  return (
+    <form
+      key={currentUser.name}
+      className="your-name"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const input = e.target.username;
+        const name = input.value.trim();
+        if (!name) input.value = currentUser.name;
+        else if (name !== currentUser.name) rename(name);
+        input.blur();
+      }}
+    >
+      <label>
+        {t("Your name")}
+        <input
+          name="username"
+          defaultValue={currentUser.name}
+          onBlur={(e) => e.target.form.requestSubmit()}
+        />
+      </label>
+    </form>
+  );
+}
 
 // wide screens show the sidebar beside the game, small ones lay it over it
 // (index.css)
@@ -115,6 +147,7 @@ export default function Root() {
           </a>
         </div>
         <Credits />
+        <YourName />
         <Awareness />
       </div>
       {/* top left on every page, beside the sidebar while it's open */}

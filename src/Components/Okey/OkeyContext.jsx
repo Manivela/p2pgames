@@ -550,6 +550,19 @@ export function OkeyProvider({ children }) {
     if (seat) sit(seat.id);
   }, [currentUser, okeyState.players, states, sit]);
 
+  // a new name (the sidebar) goes on your seat, and nothing else changes
+  React.useEffect(() => {
+    if (!currentUser) return;
+    const mine = okeyState.players.find((p) => p.user?.id === currentUser.id);
+    if (!mine || mine.user.name === currentUser.name) return;
+    setOkeyState({
+      ...okeyState,
+      players: okeyState.players.map((p) =>
+        p === mine ? { ...p, user: currentUser } : p,
+      ),
+    });
+  }, [currentUser, okeyState, setOkeyState]);
+
   // everyone at the table says which build they run (awareness): a newer
   // one there, or on the site, is offered (Board.jsx). Between hands the
   // table's is picked up by itself: whoever runs it keeps the game while

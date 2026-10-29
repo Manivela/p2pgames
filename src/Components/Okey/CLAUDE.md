@@ -37,7 +37,7 @@ Done when vitest, lint and the Docker e2e are green and every layout change has 
 
 Driving the table (Playwright MCP or a script, against the dev server):
 
-- Tabs of one browser on the same `/<room>/okey` sync over BroadcastChannel, almost instantly; for real network sync, open the second player in `browser.newContext()`. Login is per tab (sessionStorage): a reload keeps it and sits you back down, a new tab is a new player. A tab reloaded while alone in its room comes back to an empty table: the game lives only in the open pages.
+- Tabs of one browser on the same `/<room>/okey` sync over BroadcastChannel, almost instantly; for real network sync, open the second player in `browser.newContext()`. Login is per tab (sessionStorage): a reload keeps it and sits you back down, a new tab is a new player, let in without asking under the name the browser remembers (localStorage `name`; remove it before the page loads to be asked, as `sitDown()` in the e2e does). A tab reloaded while alone in its room comes back to an empty table: the game lives only in the open pages.
 - A tab plays a newer build in development with `sessionStorage.setItem("build", n)` before it loads (`secondPlayer()` in the e2e).
 - Dev-only `window.okey` reads and writes the shared state; to play any seat: `g = await import("/src/Components/Okey/game.js")`, then `okey.set(g.drawTile(okey.get(), seat, tile, slot))`. Dev-only `window.okeyFlights` counts animation flights.
 - `dragTo` works with react-dnd once source and target carry a `data-*` to find them by. Your own rack is the only `.rack`.

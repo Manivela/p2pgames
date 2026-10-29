@@ -50,8 +50,11 @@ export default function Awareness() {
     if (!userData) return;
 
     setLocalState((prevState) => {
+      // the same player, or a new name for them (the sidebar)
       if (prevState?.user?.id === userData.id) {
-        return prevState;
+        return prevState.user.name === userData.name
+          ? prevState
+          : { ...prevState, user: userData };
       }
       return {
         color: colors[Math.floor(Math.random() * colors.length)],
