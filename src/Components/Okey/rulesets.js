@@ -191,11 +191,12 @@ const whole = (n, lo, hi = Infinity) =>
 // the rules read it without checking, at every table it's played at.
 export function invalid(r) {
   // what game.js reads when a ruleset has none
-  const { seats = 4, handSize = 14, rowSlots = 13 } = r;
+  const { seats = 4, handSize = 14, rowSlots = 13, tileSets = 2 } = r;
   if (!r.name?.trim()) return "Give the rules a name";
-  if (!whole(seats, 2, 5)) return "2 to 5 players";
-  // every hand, the starter's extra tile and the indicator
-  if (!whole(handSize, 2) || seats * handSize + 2 > 106) {
+  if (!whole(seats, 2, 8)) return "2 to 8 players";
+  if (!whole(tileSets, 1, 4)) return "1 to 4 sets of tiles";
+  // every hand, the starter's extra tile and the indicator, of 53 a set
+  if (!whole(handSize, 2) || seats * handSize + 2 > 53 * tileSets) {
     return "Not enough tiles for those hands";
   }
   if (r.outOfTurnTakes && !whole(r.maxTakes, 1)) return "Fill in every number";

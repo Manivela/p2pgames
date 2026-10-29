@@ -859,7 +859,7 @@ html:has(.fit) {
   width: var(--t);
 }
 
-/* five hands (Americano's fifth seat): smaller, to fit the rack */
+/* five hands: smaller, to fit the rack */
 .rack > .hands:has(> :nth-child(5)) {
   gap: calc(var(--t) * 0.04);
 }
@@ -870,6 +870,31 @@ html:has(.fit) {
 
 .rack > .hands:has(> :nth-child(5)) .tiles {
   zoom: 0.36;
+}
+
+/* six to eight (a bigger table's): smaller again, avatars too */
+.rack > .hands:has(> :nth-child(6)) {
+  gap: calc(var(--t) * 0.02);
+}
+
+.rack > .hands:has(> :nth-child(6)) .hand {
+  padding-block: calc(var(--t) * 0.01);
+  font-size: calc(var(--t) * 0.22);
+}
+
+.rack > .hands:has(> :nth-child(6)) .avatar {
+  width: calc(var(--t) * 0.34);
+  height: calc(var(--t) * 0.34);
+  border-width: 1px;
+  font-size: calc(var(--t) * 0.17);
+}
+
+.rack > .hands:has(> :nth-child(6)) .tiles {
+  zoom: 0.28;
+}
+
+.rack > .hands:has(> :nth-child(7)) .tiles {
+  zoom: 0.24;
 }
 
 /* a caught discard (işler taş) can't be taken */

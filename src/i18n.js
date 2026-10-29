@@ -78,7 +78,8 @@ const TR = [
   ],
   // the next game's settings (rulesets.js, GameSettings.jsx)
   [/^Give the rules a name$/, "Kurallara bir ad ver"],
-  [/^2 to 5 players$/, "2 ile 5 arası oyuncu"],
+  [/^2 to 8 players$/, "2 ile 8 arası oyuncu"],
+  [/^1 to 4 sets of tiles$/, "1 ile 4 arası taş takımı"],
   [/^Not enough tiles for those hands$/, "Bu eller için taş yetmez"],
   [/^Fill in every number$/, "Her sayıyı doldur"],
   [/^Make the rack's rows longer$/, "Istaka sıralarını uzat"],
@@ -185,6 +186,7 @@ const TR = [
   [/^12-13-1 is a run$/, "12-13-1 seri sayılır"],
   [/^Most players$/, "En çok oyuncu"],
   [/^Tiles dealt$/, "Dağıtılan taş"],
+  [/^Tile sets$/, "Taş takımı"],
   [/^Rack row$/, "Istaka sırası"],
   [/^Takes a round$/, "Yandan alma hakkı"],
   [/^Seconds to take$/, "Alma süresi (sn)"],

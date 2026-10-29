@@ -46,6 +46,7 @@ const RULES = [
 ];
 const NUMBERS = [
   ["seats", "Most players", 4],
+  ["tileSets", "Tile sets", 2],
   ["handSize", "Tiles dealt", 14],
   ["rowSlots", "Rack row", 13],
   ["maxTakes", "Takes a round", 3, "hmp", "outOfTurnTakes"],

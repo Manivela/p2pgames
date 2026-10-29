@@ -138,17 +138,23 @@ export function pickOkeyTile(drawPile, id) {
   return { ...okeyTile, hidden: false };
 }
 
-export const tiles = [];
-// create the tiles
-for (let i = 0; i < 2; i++) {
-  colors.forEach((color) =>
-    ranks.forEach((rank) => tiles.push(createTile(color, rank, i))),
-  );
-  tiles.push(createTile("yellow", "👌", i));
-}
+// The tiles of `sets` sets, two unless a ruleset says (up to four, for
+// eight players): each a tile of every colour and rank and a fake okey,
+// the copy in its id (red7-0, red7-1…)
+export const tileSet = (sets = 2) =>
+  Array.from({ length: sets }, (_, i) => [
+    ...colors.flatMap((color) =>
+      ranks.map((rank) => createTile(color, rank, i)),
+    ),
+    createTile("yellow", "👌", i),
+  ]).flat();
+export const tiles = tileSet();
 
-export const shuffledPile = () =>
-  _.shuffle(tiles).map((t) => ({ ...t, hidden: true }));
+// sets of tiles a game is played with
+export const setsOf = (state) => state.rules?.tileSets ?? 2;
+
+export const shuffledPile = (sets = 2) =>
+  _.shuffle(tileSet(sets)).map((t) => ({ ...t, hidden: true }));
 
 export const initialState = {
   gameState: "start",
@@ -184,10 +190,31 @@ export const initialState = {
       hand: [],
       discardPile: [],
     },
-    // a fifth (rulesets.js): any game refuses to start with more than its
-    // ruleset seats
+    // more (rulesets.js), up to eight: any game refuses to start with more
+    // than its ruleset seats
     {
       id: 5,
+      user: null,
+      userKey: null,
+      hand: [],
+      discardPile: [],
+    },
+    {
+      id: 6,
+      user: null,
+      userKey: null,
+      hand: [],
+      discardPile: [],
+    },
+    {
+      id: 7,
+      user: null,
+      userKey: null,
+      hand: [],
+      discardPile: [],
+    },
+    {
+      id: 8,
       user: null,
       userKey: null,
       hand: [],
@@ -212,8 +239,9 @@ export const allSeats = (players, count = initialState.players.length) =>
     .slice(0, count)
     .map((empty) => players.find((p) => p.id === empty.id) ?? empty);
 
-// The seats at the table: an empty fifth shows only once the other four
-// are taken, so four play at the table they always had.
+// The seats at the table: an empty seat past the fourth shows only once
+// every seat before it is taken, so four play at the table they always had
+// and a bigger one grows a seat at a time.
 export const tableSeats = (players) =>
   players.filter(
     (p) =>
@@ -221,7 +249,7 @@ export const tableSeats = (players) =>
       p.user ||
       p.away ||
       p.hand.length ||
-      players.every((o) => o.id === 5 || o.user),
+      players.every((o) => o.id >= p.id || o.user),
   );
 
 // the player `step` places round the table from `player` (1 next, -1 before)
@@ -309,11 +337,13 @@ export function startGame(state, deal) {
   }
   // the game's own id, kept through its rounds and saves (TableMenu.jsx)
   const gameId = Math.random().toString(36).slice(2);
-  return dealRound(
-    { ...cloneDeep(state), players, gameId },
-    state.drawPile,
-    deal,
-  );
+  // the lobby's pile, unless the rules play another number of sets
+  const sets = setsOf(state);
+  const pile =
+    state.drawPile.length === tileSet(sets).length
+      ? state.drawPile
+      : shuffledPile(sets);
+  return dealRound({ ...cloneDeep(state), players, gameId }, pile, deal);
 }
 
 export const roundOver = (state) =>

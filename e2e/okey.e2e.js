@@ -203,6 +203,25 @@ test("five at an Americano table fit, in play and once the round is over", async
   await expect(page).toHaveScreenshot("five-round-end.png");
 });
 
+// eight, with four sets of tiles: a phone too can play it
+test("eight at a table fit, in play and once the round is over", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 8, "americano", { seats: 8, tileSets: 4 });
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  await expect(page).toHaveScreenshot("eight-play.png");
+  await table(page, "playToEnd");
+  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(8);
+  expect(await table(page, "check", [".scores"])).toEqual({
+    overlaps: [],
+    offscreen: [],
+  });
+  await expect(page).toHaveScreenshot("eight-round-end.png");
+});
+
 // four played a round: someone arriving sees Americano's fifth seat to
 // take, beside the score sheet and the menu
 test("after a round of four, a fifth arriving has a seat, and it fits", async ({

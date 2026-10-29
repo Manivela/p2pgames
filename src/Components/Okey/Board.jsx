@@ -16,7 +16,7 @@ import { ended, hasRounds, pileOut, rowOf, tableSeats } from "./game";
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
 // (`across`: a rack row and 3.8 more), for the seats along the top when
-// they're wider (four others: Americano's fifth seat, long names) and for
+// they're wider (four others or more, up to seven, long names) and for
 // the whole table (7.4 tiles down), up to 70px.
 // It's set on the page, so the tiles that fly or are dragged (outside the
 // table) and the site's corner buttons (index.css) match.

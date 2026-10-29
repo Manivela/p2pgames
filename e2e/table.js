@@ -9,7 +9,15 @@ import {
   ONE_O_ONE,
 } from "../src/Components/Okey/rulesets.js";
 
-const NAMES = { 2: "Bora", 3: "Can", 4: "Deniz", 5: "Ece" };
+const NAMES = {
+  2: "Bora",
+  3: "Can",
+  4: "Deniz",
+  5: "Ece",
+  6: "Ferhat",
+  7: "Gül",
+  8: "Hakan",
+};
 // seat 1 holds these from the deal: a küt that opens round 1
 export const KUT = ["red7-0", "blue7-0", "black7-0"];
 
@@ -34,15 +42,17 @@ export function seatBots(n) {
 }
 
 // n players dealt the same tiles every run: a fixed shuffle (tile i goes
-// to i * 37 mod 106), seat 1's hand starting with KUT. mode: "americano",
-// "101" or "classic"; options: 101's (partners, doubling)
+// to i * 37 mod the pile's size), seat 1's hand starting with KUT. mode:
+// "americano", "101" or "classic"; options: changes to its rules (101's
+// partners, doubling; seats and tileSets for more players)
 export function start(n, mode = "americano", options = {}) {
   seatBots(n);
   const preset = { americano: AMERICANO, 101: ONE_O_ONE, classic: CLASSIC };
   const rules = { ...preset[mode], ...options };
   const size = rules.handSize;
-  const drawPile = game.tiles.map((_, i) => ({
-    ...game.tiles[(i * 37) % game.tiles.length],
+  const tiles = game.tileSet(rules.tileSets);
+  const drawPile = tiles.map((_, i) => ({
+    ...tiles[(i * 37) % tiles.length],
     hidden: true,
   }));
   const rest = drawPile.map((t) => t.id).filter((id) => !KUT.includes(id));

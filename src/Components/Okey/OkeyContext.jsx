@@ -112,13 +112,14 @@ export function OkeyProvider({ children }) {
     [okeyState.drawPile, okeyState.okeyTile, okeyState.players],
   );
 
+  const sets = game.setsOf(okeyState);
   const duplicates = useMemo(
     () =>
       _(allTiles)
         .groupBy("name")
-        .filter((group) => group.length > 2)
+        .filter((group) => group.length > sets)
         .value(),
-    [allTiles],
+    [allTiles, sets],
   );
 
   if (duplicates.length > 0) {
@@ -515,9 +516,16 @@ export function OkeyProvider({ children }) {
     });
   }, [map, okeyState.players, okeyState.rules, okeyState.setup]);
 
-  // the lobby's settings, anyone's to change (GameSettings.jsx)
+  // the lobby's settings, anyone's to change (GameSettings.jsx), and a pile
+  // of as many sets as they play
   const setSetup = useCallback(
-    (setup) => setOkeyState({ ...okeyState, setup }),
+    (setup) => {
+      const sets = game.setsOf({ rules: setup });
+      const pile = okeyState.drawPile.length !== game.tileSet(sets).length && {
+        drawPile: game.shuffledPile(sets),
+      };
+      setOkeyState({ ...okeyState, setup, ...pile });
+    },
     [okeyState, setOkeyState],
   );
 

@@ -69,7 +69,7 @@ export function redealRound(state) {
     turnMoves: [],
     finishTile: null,
     offer: null,
-    drawPile: game.shuffledPile(),
+    drawPile: game.shuffledPile(game.setsOf(state)),
     okeyTile: null,
     gameState: "roundEnd",
     replay: true,
@@ -115,7 +115,7 @@ export function nextRound(state, deal) {
       discards: 0,
       indicatorShown: null,
     },
-    game.shuffledPile(),
+    game.shuffledPile(game.setsOf(state)),
     deal,
     (round - 1) % players.length,
   );
@@ -135,7 +135,7 @@ export function setUp(state, round, totals, starter, rules = AMERICANO) {
       round,
       scores: Object.fromEntries(s.players.map((p) => [p.id, carried(p.id)])),
     },
-    game.shuffledPile(),
+    game.shuffledPile(game.setsOf(s)),
     undefined,
     Math.max(
       0,

@@ -39,7 +39,10 @@ test("the presets can be played, and Americano's rounds are named by their melds
 test("a ruleset that would break a game isn't played", () => {
   const no = (change, base = AMERICANO) => invalid({ ...base, ...change });
   assert.equal(no({ name: " " }), "Give the rules a name");
-  assert.equal(no({ seats: 6 }), "2 to 5 players");
+  assert.equal(no({ seats: 9 }), "2 to 8 players");
+  assert.equal(no({ tileSets: 5 }), "1 to 4 sets of tiles");
+  assert.equal(no({ seats: 8 }), "Not enough tiles for those hands");
+  assert.isUndefined(no({ seats: 8, tileSets: 4 }));
   assert.equal(no({ seats: 5 }, ONE_O_ONE), "Not enough tiles for those hands");
   assert.equal(no({ rowSlots: 10 }), "Make the rack's rows longer");
   assert.equal(no({ maxTakes: null }), "Fill in every number");
@@ -78,6 +81,30 @@ test("classic is a ruleset: one unscored hand, up to its seats", () => {
   assert.isFalse(game.hasRounds(s));
   // a game from before rulesets has none, and plays the same
   assert.isFalse(game.hasRounds(game.startGame(seated(4))));
+});
+
+test("eight play with four sets of tiles, every tile dealt once", () => {
+  const rules = { ...AMERICANO, seats: 8, tileSets: 4 };
+  const s = americano.startGame(seated(8), undefined, rules);
+  assert.equal(s.gameState, "play");
+  assert.equal(s.players.length, 8);
+  assert.deepEqual(
+    s.players.map((p) => p.hand.filter(Boolean).length),
+    [15, 14, 14, 14, 14, 14, 14, 14],
+  );
+  const ids = [
+    ...s.drawPile,
+    s.okeyTile,
+    ...s.players.flatMap((p) => p.hand.filter(Boolean)),
+  ].map((t) => t.id);
+  assert.equal(ids.length, 4 * 53);
+  assert.equal(new Set(ids).size, 4 * 53);
+  // the next round deals from four sets again
+  const next = americano.nextRound(americano.redealRound(s));
+  assert.equal(next.drawPile.length, s.drawPile.length);
+  // and a table of eight shows every seat once they're all taken
+  assert.lengthOf(game.tableSeats(seated(8).players), 8);
+  assert.lengthOf(game.tableSeats(seated(5).players), 6);
 });
 
 test("finishing from the hand over several hands is scored", () => {
