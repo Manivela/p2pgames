@@ -24,6 +24,8 @@ const SOUND = /^(Sound|Ses)$/;
 const FIND = /^(Find and open|Bul ve aç)$/;
 const LAY = /^(Lay melds|Per aç)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
+const STAND = /^(Stand|Kalk)$/;
+const LEAVE = /^(Leave the round|Elden çekil)$/;
 const SEAT_1 = /(Player|Oyuncu) 1(?!\d)/;
 
 // a helper from e2e/table.js, run in the page
@@ -1254,6 +1256,48 @@ test("mid-round, the round is dealt again once the seats are right", async ({
     .poll(async () => (await state(page)).players.map((p) => p.user?.name))
     .toEqual(["Ayşe", "Bora", "Deniz"]);
   expect((await state(page)).round).toBe(round);
+});
+
+test("mid-round a seat is freed and the round plays on", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  const { round, deal } = await state(page);
+  await confirm(page, FREE("Bora"));
+  await expect
+    .poll(async () => (await state(page)).players.map((p) => p.user?.name))
+    .toEqual(["Ayşe", "Can", "Deniz"]);
+  const s = await state(page);
+  expect([s.gameState, s.round, s.currentPlayer]).toEqual(["play", round, 1]);
+  expect(s.deal).not.toBe(deal);
+  await expect(page.locator('[data-seat="2"]')).toHaveCount(0);
+  // my discard goes to Can, next round the table now
+  await table(page, "play", 1);
+  expect((await state(page)).currentPlayer).toBe(3);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
+test("mid-round, standing leaves my hand; leaving takes it out", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  const hand = await handIds(page);
+  // stood up from, my seat keeps its hand for whoever sits down: me again
+  await confirm(page, STAND);
+  await expect.poll(async () => (await state(page)).players[0].user).toBeNull();
+  await page.getByRole("button", { name: SIT }).click();
+  await expect
+    .poll(async () => (await state(page)).players[0].user?.name)
+    .toBe("Ayşe");
+  expect(await handIds(page)).toEqual(hand);
+  // leaving: out of the round, the turn passing on
+  await confirm(page, LEAVE);
+  await expect
+    .poll(async () => (await state(page)).players.map((p) => p.user?.name))
+    .toEqual(["Bora", "Can", "Deniz"]);
+  expect((await state(page)).currentPlayer).toBe(2);
 });
 
 test("this device keeps the last two games", async ({ page }) => {

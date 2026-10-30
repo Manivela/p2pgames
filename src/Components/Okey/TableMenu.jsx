@@ -375,6 +375,7 @@ export default function TableMenu() {
     okeyState,
     me,
     stand,
+    freeSeat,
     resetGame,
     newGame,
     redealRound,
@@ -386,6 +387,7 @@ export default function TableMenu() {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState(null);
   useAutoSave();
+  const playing = okeyState.gameState === "play";
   const show = (name) => {
     setOpen(false);
     setDialog(name);
@@ -422,20 +424,28 @@ export default function TableMenu() {
               {t("Report a problem")}
             </button>
           )}
+          {/* standing leaves your hand to whoever sits down; leaving takes
+              it out of the round */}
           {me && (
             <Confirm label={t("Stand")} onConfirm={then(() => stand(me))} />
           )}
-          {/* mid-round, an empty seat would hold up its turn */}
-          {okeyState.gameState !== "play" &&
-            okeyState.players
-              .filter((p) => p.user && p.id !== me)
-              .map((p) => (
-                <Confirm
-                  key={p.id}
-                  label={t(`Free seat: ${p.user.name}`)}
-                  onConfirm={then(() => stand(p.id))}
-                />
-              ))}
+          {me && playing && (
+            <Confirm
+              label={t("Leave the round")}
+              onConfirm={then(() => freeSeat(me))}
+            />
+          )}
+          {/* anyone's, gone or still here: mid-round every seat is in the
+              round, stood up from or not, and leaves it (americano.freeSeat) */}
+          {okeyState.players
+            .filter((p) => (p.user || p.away || playing) && p.id !== me)
+            .map((p) => (
+              <Confirm
+                key={p.id}
+                label={t(`Free seat: ${p.user?.name ?? t(`Player ${p.id}`)}`)}
+                onConfirm={then(() => freeSeat(p.id))}
+              />
+            ))}
           <button onClick={() => show("load")}>{t("Saved games")}</button>
           <button onClick={() => show("setup")}>{t("Set up a game")}</button>
           <label className="volume">
@@ -454,7 +464,7 @@ export default function TableMenu() {
             <Confirm label={t("End the round")} onConfirm={then(endGame)} />
           )}
           {/* someone stands or sits mid-round: back to before the deal */}
-          {okeyState.gameState === "play" && (
+          {playing && (
             <Confirm
               label={t("Deal this round again")}
               onConfirm={then(redealRound)}

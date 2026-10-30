@@ -1,4 +1,4 @@
-import { cloneDeep, sum } from "lodash";
+import { cloneDeep, max, sum } from "lodash";
 import * as game from "./game";
 import {
   colorOf,
@@ -82,27 +82,76 @@ export function redealRound(state) {
   };
 }
 
-// Deals every seat in the game, sat in or not: its player can sit back down
-// (a phone that slept) or a friend take over, and the seat is scored either
-// way. A seat freed from the menu (left) is out until someone sits in it.
-// Someone who sits in a new seat starts level with whoever is losing.
+// Standing up from a seat: empty, and out of the deals until someone sits
+// in it, its scores kept. Mid-round its hand stays in the round, for a
+// friend to sit down to.
+export function standUp(state, player) {
+  if (!seat(state, player)) return;
+  const s = cloneDeep(state);
+  const leaver = seat(s, player);
+  s.message = `${leaver.user?.name ?? "Someone"} left`;
+  leaver.user = null;
+  leaver.userKey = null;
+  delete leaver.away; // nobody sits back down in it by themselves
+  return s;
+}
+
+// A seat freed from the menu, or its player leaving the round: stood up
+// from, and mid-round out of the round too, its tiles off the table and the
+// turn passing on if it was theirs, so nobody waits on it.
+export function freeSeat(state, player) {
+  const s = standUp(state, player);
+  if (!s || state.gameState !== "play") return s;
+  if (state.rules.partners) return "Partners take four players";
+  if (state.players.length < 3) return "A round takes two players";
+  if (s.currentPlayer === player) {
+    s.currentPlayer = game.next(s.players, player).id;
+    s.drawn = false;
+    s.turnMoves = [];
+    s.justOpened = null;
+    s.tookOkey = null;
+    s.offer = null;
+  }
+  if (s.offer?.from === player) s.offer = null;
+  if (s.tookDiscard?.player === player || s.tookDiscard?.from === player) {
+    s.tookDiscard = null;
+  }
+  s.players = s.players.filter((p) => p.id !== player);
+  return s;
+}
+
+// Deals every seat sat in, and every seat whose player dropped out (away):
+// they can sit back down (a phone that slept) or a friend take over, and
+// the seat is scored either way. A seat back after rounds without it has
+// each one it missed written as that round's worst, so sitting out never
+// pays; someone who sits in a new seat starts level with whoever is losing.
 export function nextRound(state, deal) {
   if (state.gameState !== "roundEnd") return;
-  const players = state.players.filter(
-    (p) => p.user || (state.scores[p.id] && !p.left),
-  );
+  const players = state.players.filter((p) => p.user || p.away);
   if (players.length < 2) return "not enough players to start the game";
-  const totals = players
-    .filter((p) => state.scores[p.id])
-    .map((p) => sum(state.scores[p.id]));
-  const worst = totals.length ? Math.max(...totals) : 0;
+  // a hand nobody finished is dealt again by the same player
+  const round = state.replay ? state.round : state.round + 1;
   const scores = { ...state.scores };
+  const worstOf = (i) =>
+    max(Object.values(state.scores).map((line) => line[i]));
+  for (const p of players) {
+    const line = [...(scores[p.id] ?? [])];
+    // from its first score to the rounds played before this deal
+    const first = line.findIndex((v) => v != null);
+    for (let i = first + 1; first >= 0 && i < round - 1; i++) {
+      const paid = worstOf(i);
+      if (line[i] == null && paid != null) line[i] = paid;
+    }
+    if (first >= 0) scores[p.id] = line;
+  }
+  const totals = players
+    .filter((p) => scores[p.id])
+    .map((p) => sum(scores[p.id]));
+  const worst = totals.length ? Math.max(...totals) : 0;
   for (const p of players) {
     if (!scores[p.id])
       scores[p.id] = [...Array(state.round - 1).fill(null), worst];
   }
-  // a hand nobody finished is dealt again by the same player
-  const round = state.replay ? state.round : state.round + 1;
   return game.dealRound(
     {
       ...state,

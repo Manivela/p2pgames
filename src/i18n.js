@@ -72,6 +72,7 @@ const TR = [
   [/^That's your partner's tile$/, "Bu eşinin taşı"],
   [/^Too late to catch it$/, "Yakalamak için geç: ortadan çekildi"],
   [/^Partners take four players$/, "Eşli oyun dört kişiyle oynanır"],
+  [/^A round takes two players$/, "Bir el en az iki kişiyle oynanır"],
   [
     /^Up to (\d+) players with these rules$/,
     "Bu kurallarla en fazla $1 oyuncu",
@@ -328,6 +329,7 @@ const TR = [
   [/^Total$/, "Toplam"],
   [/^Sit$/, "Otur"],
   [/^Stand$/, "Kalk"],
+  [/^Leave the round$/, "Elden çekil"],
   [/^Free seat: (.+)$/, "Yeri boşalt: $1"],
   [/^Player (\d+)$/, "Oyuncu $1"],
   [/^opened$/, "açtı"],

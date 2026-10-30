@@ -83,6 +83,16 @@ const player = (s, id) => s.players.find((p) => p.id === id);
 const tileIn = (s, id, tileId) =>
   player(s, id).hand.find((x) => x?.id === tileId);
 
+// every turn drawn from the pile and its first tile thrown, to the round's end
+function playOut(s) {
+  while (s.gameState === "play") {
+    const p = s.currentPlayer;
+    if (!s.drawn) s = game.drawTile(s, p, s.drawPile.at(-1), 25);
+    s = americano.discardTile(s, p, player(s, p).hand.find(Boolean));
+  }
+  return s;
+}
+
 function assertAllTiles(s) {
   const all = [
     ...s.drawPile,
@@ -248,11 +258,13 @@ test("between rounds seats can be freed and taken", () => {
     scores: { 1: [10, 5], 2: [30, 12], 3: [-20, 40] },
   };
   s = { ...s, players: game.allSeats(s.players) };
-  s = sit(s, 3, null); // P3's phone slept
+  // P3's phone slept
+  s.players = s.players.map((p) =>
+    p.id === 3 ? { ...p, user: null, userKey: null, away: "u3" } : p,
+  );
   s = sit(s, 4, "Deniz");
-  // P2 was freed from the menu
-  s = sit(s, 2, null);
-  s.players = s.players.map((p) => (p.id === 2 ? { ...p, left: true } : p));
+  s = americano.freeSeat(s, 2);
+  assert.equal(s.message, "P2 left");
 
   s = americano.nextRound(s);
   // P3's seat is still dealt, waiting for them or someone to sit down; P2's
@@ -269,12 +281,90 @@ test("between rounds seats can be freed and taken", () => {
   assertAllTiles(s);
 
   // nobody sits back down in seat 3: it's scored all the same
-  while (s.gameState === "play") {
-    const p = s.currentPlayer;
-    if (!s.drawn) s = game.drawTile(s, p, s.drawPile.at(-1), 25);
-    s = americano.discardTile(s, p, player(s, p).hand.find(Boolean));
-  }
+  s = playOut(s);
   assert.equal(s.scores[3].length, 3);
+  // a seat whose player is gone (away) is freed for good: nobody sits back
+  // down in it by themselves
+  assert.notProperty(player(americano.freeSeat(s, 3), 3), "away");
+  // and P2's seat, back empty between rounds, stays out of the next deal
+  s = americano.nextRound(s);
+  assert.deepEqual(
+    s.players.map((p) => p.id),
+    [1, 3, 4],
+  );
+});
+
+test("mid-round a freed seat leaves the round, the turn passing on", () => {
+  let s = americano.startGame(seated(4));
+  // P1 starts: freed on their turn, P2 plays on as if P1 had discarded
+  s = americano.freeSeat(s, 1);
+  assert.deepEqual(
+    s.players.map((p) => p.id),
+    [2, 3, 4],
+  );
+  assert.equal(s.currentPlayer, 2);
+  assert.isFalse(s.drawn);
+  assert.equal(s.message, "P1 left");
+  // P3 freed out of turn: after P2 comes P4
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = americano.freeSeat(s, 3);
+  s = americano.discardTile(s, 2, player(s, 2).hand.find(Boolean));
+  assert.equal(s.currentPlayer, 4);
+  assert.equal(americano.freeSeat(s, 4), "A round takes two players");
+  // played out by the two, scored for them alone
+  s = playOut(s);
+  assert.equal(s.gameState, "roundEnd");
+  assert.deepEqual(Object.keys(s.scores), ["2", "4"]);
+  s = americano.nextRound(s);
+  assert.deepEqual(
+    s.players.map((p) => p.id),
+    [2, 4],
+  );
+
+  // partners sit by position: a seat can't leave their round
+  const pairs = americano.startGame(seated(4), undefined, {
+    ...AMERICANO,
+    partners: true,
+  });
+  assert.equal(americano.freeSeat(pairs, 2), "Partners take four players");
+});
+
+test("standing up mid-round leaves the hand for a friend to sit down to", () => {
+  let s = americano.startGame(seated(3));
+  s = americano.standUp(s, 2);
+  assert.equal(s.message, "P2 left");
+  assert.deepEqual(
+    s.players.map((p) => p.id),
+    [1, 2, 3],
+  );
+  assert.isNull(player(s, 2).user);
+  assert.equal(player(s, 2).hand.filter(Boolean).length, 14);
+  // nobody sits down: played out, then out of the next deal
+  s = americano.nextRound(playOut(s));
+  assert.deepEqual(
+    s.players.map((p) => p.id),
+    [1, 3],
+  );
+});
+
+test("a seat back after rounds without it scores each one's worst", () => {
+  let s = {
+    ...americano.startGame(seated(3)),
+    gameState: "roundEnd",
+    round: 4,
+    // P3 was freed after round 1 and sits back down now
+    scores: { 1: [10, 5, 50, 0], 2: [30, 12, 8, 70], 3: [-20] },
+  };
+  s = { ...s, players: game.allSeats(s.players) };
+  s.players = s.players.map((p) =>
+    p.id === 4 ? { ...p, user: { id: "u4", name: "Deniz" }, userKey: 4 } : p,
+  );
+  s = americano.nextRound(s);
+  assert.deepEqual(s.scores[3], [-20, 12, 50, 70]);
+  // a new seat starts level with the worst total, without rounds to fill
+  assert.deepEqual(s.scores[4], [null, null, null, 120]);
+  s = americano.nextRound(playOut(s));
+  assert.deepEqual(s.scores[4].slice(0, 3), [null, null, null]);
 });
 
 test("a round dealt again: seats change in between, scores stay, its penalties go", () => {
@@ -310,15 +400,14 @@ test("a round dealt again: seats change in between, scores stay, its penalties g
 });
 
 test("a round isn't dealt to a table of one", () => {
-  const s = {
-    ...americano.startGame(seated(2)),
-    gameState: "roundEnd",
-    round: 2,
-    scores: { 1: [10, 5], 2: [30, 12] },
-  };
-  // P2 was freed from the menu
-  s.players = s.players.map((p) =>
-    p.id === 2 ? { ...p, user: null, left: true } : p,
+  const s = americano.freeSeat(
+    {
+      ...americano.startGame(seated(2)),
+      gameState: "roundEnd",
+      round: 2,
+      scores: { 1: [10, 5], 2: [30, 12] },
+    },
+    2,
   );
   assert.equal(americano.nextRound(s), "not enough players to start the game");
 });

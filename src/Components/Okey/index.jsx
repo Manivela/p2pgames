@@ -1,5 +1,10 @@
-import { useContext, useEffect } from "react";
-import { DndProvider, useDragDropManager, useDragLayer } from "react-dnd";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
+import { DndProvider, useDragDropManager } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import Board from "./Board";
@@ -11,14 +16,31 @@ import "./rack.css";
 // draws one here), with how many picked tiles come along
 function DragPreview() {
   const { selected } = useContext(OkeyContext);
-  const { item, offset } = useDragLayer((monitor) => ({
-    item: monitor.isDragging() && monitor.getItem(),
-    offset: monitor.getClientOffset(),
-  }));
+  // read from react-dnd's monitor as it is now, not through useDragLayer:
+  // its listener, made again after each render with that render's values,
+  // misses a drag that ends between a render and its effects (a quick flick
+  // on a slow phone) and leaves the tile in the air
+  const manager = useDragDropManager();
+  const monitor = manager.getMonitor();
+  const subscribe = useCallback(
+    (changed) => {
+      const off = [
+        monitor.subscribeToStateChange(changed),
+        monitor.subscribeToOffsetChange(changed),
+      ];
+      return () => off.forEach((f) => f());
+    },
+    [monitor],
+  );
+  const item = useSyncExternalStore(subscribe, () =>
+    monitor.isDragging() ? monitor.getItem() : null,
+  );
+  const offset = useSyncExternalStore(subscribe, () =>
+    monitor.getClientOffset(),
+  );
   // the touch backend ends a drag on touchend only: a touch the phone
   // cancels (its own long press, a system gesture) would leave the tile in
   // the air
-  const manager = useDragDropManager();
   useEffect(() => {
     const cancel = () =>
       manager.getMonitor().isDragging() && manager.getActions().endDrag();

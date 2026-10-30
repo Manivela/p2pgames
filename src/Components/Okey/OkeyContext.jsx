@@ -538,7 +538,6 @@ export function OkeyProvider({ children }) {
 
       seat.user = currentUser;
       seat.userKey = localID;
-      delete seat.left;
       delete seat.away;
 
       setOkeyState({
@@ -605,24 +604,26 @@ export function OkeyProvider({ children }) {
     if (stored("reloadedFor") === String(tableBuild)) location.reload();
   }, [newVersion, shared, okeyState.gameState, tableBuild]);
 
+  // the seat emptied, its hand left for a friend to sit down to; out of the
+  // next deal unless someone does, unlike a phone that slept
   const stand = useCallback(
     (player) => {
-      const newState = cloneDeep(okeyState);
-      const seat = newState.players.find((p) => p.id === player);
-      if (!seat) return;
-
-      const userName = seat.user?.name || "Someone";
-      seat.user = null;
-      seat.userKey = null;
-      seat.left = true; // out of the next deal, unlike a phone that slept
-
-      setOkeyState({
-        ...newState,
-        players: newState.players,
-        message: `${userName} left`,
-      });
+      const next = americano.standUp(okeyState, player);
+      if (next) setOkeyState(next);
     },
     [okeyState, setOkeyState],
+  );
+  // the seat out of the game (americano.freeSeat); mid-round the whole table
+  // changes, as at a deal, so a move racing it can't pass the turn to the
+  // seat that's gone
+  const freeSeat = useCallback(
+    (player) => {
+      const next = americano.freeSeat(okeyState, player);
+      if (typeof next === "string") toast(t(next));
+      else if (next?.gameState === "play") replaceState(map, next);
+      else if (next) setOkeyState(next);
+    },
+    [map, okeyState, setOkeyState],
   );
 
   const playerKeys = useMemo(
@@ -704,6 +705,7 @@ export function OkeyProvider({ children }) {
       setSetup,
       sit,
       stand,
+      freeSeat,
       isAlreadySitting,
       myIndex,
       resetGame,
@@ -754,6 +756,7 @@ export function OkeyProvider({ children }) {
       setSetup,
       sit,
       stand,
+      freeSeat,
       isAlreadySitting,
       myIndex,
       resetGame,

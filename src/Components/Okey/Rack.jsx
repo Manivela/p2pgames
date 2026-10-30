@@ -140,14 +140,22 @@ function Rack({ player, hands }) {
   // A tile held over a slot shows what dropping it there would do
   // (placeTiles): the tiles in its way slide aside, the moved ones leave
   // their slots, and the slots they'd land in are marked.
-  // (a drag layer here too would race the drag preview's: a quick drag on
-  // a phone could end before it rendered and leave the tile in the air)
-  const [hover, setHover] = useState(null);
+  // (not useDragLayer: a quick drag on a phone could end before it
+  // rendered and leave the tile in the air, index.jsx)
+  // Every slot that says the tile is over it, the latest last: a quick drag
+  // from one row to the other can have react-dnd say two at once, and the
+  // one it then leaves mustn't take the other's preview with it.
+  const [hovers, setHovers] = useState([]);
   const onOver = useCallback(
     (index, tile) =>
-      setHover((h) => (tile ? { index, tile } : h?.index === index ? null : h)),
+      setHovers((h) => {
+        const rest = h.filter((x) => x.index !== index);
+        if (tile) return [...rest, { index, tile }];
+        return rest.length === h.length ? h : rest;
+      }),
     [],
   );
+  const hover = hovers.at(-1);
   const dragging = hover && hand.length > 0 && hover.tile;
   const moved =
     !dragging || claim(dragging)

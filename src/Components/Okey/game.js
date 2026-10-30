@@ -254,7 +254,7 @@ const along = (players, player, step) =>
     (players.findIndex((p) => p.id === player) + step + players.length) %
       players.length
   ];
-const next = (players, player) => along(players, player, 1);
+export const next = (players, player) => along(players, player, 1);
 export const previous = (players, player) => along(players, player, -1);
 // across the table: a partner, when four play in pairs
 export const partner = (players, player) => along(players, player, 2);
