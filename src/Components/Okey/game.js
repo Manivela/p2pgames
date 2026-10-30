@@ -235,18 +235,24 @@ export const allSeats = (players, count = initialState.players.length) =>
     .slice(0, count)
     .map((empty) => players.find((p) => p.id === empty.id) ?? empty);
 
-// The seats at the table: an empty seat past the fourth shows only once
-// every seat before it is taken, so four play at the table they always had
-// and a bigger one grows a seat at a time.
-export const tableSeats = (players) =>
-  players.filter(
+// The seats at the table, up to what the rules seat (the lobby's settings
+// before a game): an empty seat past the fourth shows only once every seat
+// before it is taken, so four play at the table they always had and a
+// bigger one grows a seat at a time. A seat someone's in always shows.
+export function tableSeats(state) {
+  const { players } = state;
+  const seats = seatsOf(
+    state.gameState === "start" ? { rules: state.setup } : state,
+  );
+  return players.filter(
     (p) =>
-      p.id < 5 ||
       p.user ||
       p.away ||
       p.hand.length ||
-      players.every((o) => o.id >= p.id || o.user),
+      (p.id <= seats &&
+        (p.id < 5 || players.every((o) => o.id >= p.id || o.user))),
   );
+}
 
 // the player `step` places round the table from `player` (1 next, -1 before)
 const along = (players, player, step) =>

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useLocation, useParams } from "react-router-dom";
+import { uniqBy } from "lodash";
 import { useWebRtc, useAwareness } from "../vendor/y-react";
 import { useAuthStore } from "../hooks/useStore";
 import { signalingServers, peerOpts } from "../constants";
@@ -114,9 +115,12 @@ export default function Awareness() {
       <div>
         {t("Connected:")}
         <ul>
-          {connectedUsers.map(([id, state]) => (
-            <li key={id}>{state?.user?.name}</li>
-          ))}
+          {/* a player's tabs once: a browser is one player */}
+          {uniqBy(connectedUsers, ([id, state]) => state?.user?.id ?? id).map(
+            ([id, state]) => (
+              <li key={id}>{state?.user?.name}</li>
+            ),
+          )}
         </ul>
       </div>
     </main>

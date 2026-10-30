@@ -9,58 +9,43 @@ const initialState = {
 
 const colors = ["red", "green", "blue", "orange", "yellow"];
 
-// a new player: one per tab, so tabs can be players
+// a new player, this browser's from now on
 export const newUser = (name) => ({
   id: customNanoid(),
   name,
   color: colors[Math.floor(Math.random() * colors.length)],
 });
 
-// the name this device remembers (localStorage), for the next tab; none in
-// a private window that won't keep it
-function remember(name) {
-  try {
-    localStorage.setItem("name", name);
-  } catch {
-    // asked again next time
-  }
-}
-function remembered() {
-  try {
-    return localStorage.getItem("name");
-  } catch {
-    return null;
-  }
-}
-
-// kept for this tab (sessionStorage): a reload, say for a new version,
-// keeps you logged in; a new tab goes in with the name this device
-// remembers, as a new player, or asks for one
+// Kept on this browser for good (localStorage): every tab and every visit
+// is the same player, under the name given once. None in a private window
+// that won't keep it: asked again next time.
 export const useAuthStore = create(
   persist(
     (set) => ({
       ...initialState,
-      login: (currentUser) => {
-        remember(currentUser.name);
-        set(() => ({
-          currentUser,
-        }));
-      },
+      login: (currentUser) => set(() => ({ currentUser })),
       // a new name (the sidebar): the same player
-      rename: (name) => {
-        remember(name);
-        set(({ currentUser }) => ({ currentUser: { ...currentUser, name } }));
-      },
-      logout: () => {
-        set(initialState);
-      },
+      rename: (name) =>
+        set(({ currentUser }) => ({ currentUser: { ...currentUser, name } })),
+      logout: () => set(initialState),
     }),
-    { name: "user", storage: createJSONStorage(() => sessionStorage) },
+    { name: "user", storage: createJSONStorage(() => localStorage) },
   ),
 );
 
-// sessionStorage is read as the store is made, so this tab's login is in
-// by now
-if (!useAuthStore.getState().currentUser && remembered()) {
-  useAuthStore.getState().login(newUser(remembered()));
+// another tab's login or new name, here too: one player, one name
+addEventListener("storage", (e) => {
+  if (e.key === "user") useAuthStore.persist.rehydrate();
+});
+
+// the name an older build remembered, for a player kept for each tab: in
+// as that, once
+try {
+  const name = localStorage.getItem("name");
+  if (name && !useAuthStore.getState().currentUser) {
+    useAuthStore.getState().login(newUser(name));
+  }
+  localStorage.removeItem("name");
+} catch {
+  // blocked storage: asked for a name
 }

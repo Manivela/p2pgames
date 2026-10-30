@@ -7,6 +7,7 @@ import { useParams } from "react-router-dom";
 import { useAuthStore } from "../../hooks/useStore";
 import * as game from "./game";
 import * as americano from "./americano";
+import * as bots from "./bot";
 import { readState, replaceState, writeState } from "./sync";
 import { t } from "../../i18n";
 import bell from "./assets/bell.mp3";
@@ -421,7 +422,7 @@ export function OkeyProvider({ children }) {
   // as this render has the table and the sound level
   const hear = React.useRef();
   hear.current = (k) =>
-    playKnock(panOf(k, game.tableSeats(okeyState.players), me), volume);
+    playKnock(panOf(k, game.tableSeats(okeyState), me), volume);
   React.useEffect(() => {
     const { awareness } = provider;
     const heard = new Map(
@@ -555,18 +556,42 @@ export function OkeyProvider({ children }) {
   );
 
   // back after a reload (a new version, a phone that slept): sit down again
-  // in the seat you dropped out of (away) unless someone took it, or in
-  // yours still held by your old page, once it's gone (a tab duplicated
-  // with your login leaves the seat to the first)
+  // in the seat you dropped out of (away) unless someone took it (a bot
+  // playing it meanwhile makes way), or in yours still held by your old
+  // page, once it's gone (a tab duplicated with your login leaves the seat
+  // to the first)
   React.useEffect(() => {
     if (!currentUser) return;
     const seat = okeyState.players.find((p) =>
-      p.user
+      p.user && !p.user.bot
         ? p.user.id === currentUser.id && !states.has(p.userKey)
         : p.away === currentUser.id,
     );
     if (seat) sit(seat.id);
   }, [currentUser, okeyState.players, states, sit]);
+
+  // Joining a table, sit down in its first empty seat, and again if another
+  // page took it first or a reset emptied them all; not once you've stood
+  // up or someone's freed your seat (your seat empty or gone, the same
+  // game). Only once the table has reached this page: an empty one of its
+  // own, written before, would go over everyone's (so the first one in a
+  // new room taps Sit). sessionStorage watch: only watch (the e2e's).
+  const seen = React.useRef(null);
+  const out = React.useRef(false);
+  const table = `${okeyState.gameId}/${okeyState.round}/${okeyState.gameState}`;
+  React.useEffect(() => {
+    const was = seen.current;
+    seen.current = me ? { table, seat: me } : null;
+    if (was && !me && was.table === table) {
+      const seat = okeyState.players.find((p) => p.id === was.seat);
+      if (!seat?.user && seat?.away !== currentUser?.id) out.current = true;
+    }
+    if (me || out.current || !currentUser || stored("watch")) return;
+    if (!shared) return;
+    if (okeyState.players.some((p) => p.away === currentUser.id)) return;
+    const empty = game.tableSeats(okeyState).find((p) => !p.user && !p.away);
+    if (empty) sit(empty.id);
+  }, [me, table, okeyState, currentUser, shared, sit]);
 
   // a new name (the sidebar) goes on your seat, and nothing else changes
   React.useEffect(() => {
@@ -626,48 +651,90 @@ export function OkeyProvider({ children }) {
     [map, okeyState, setOkeyState],
   );
 
-  const playerKeys = useMemo(
-    () => okeyState.players.map((p) => p.userKey).filter(Boolean),
-    [okeyState.players],
-  );
-
+  // Seats whose page has gone (never our own: it drops out of states only
+  // as this page unloads, where marking it away would have the sit-back
+  // effect above take it again, over and over). A player's is left for them
+  // to come back to (away); a bot is played on by the page with the lowest
+  // id in the room.
   React.useEffect(() => {
-    // Seeing no one else means we're the ones offline: a phone waking up
-    // drops everyone it hasn't heard from in 30s, and must not unseat them.
-    if (states.size <= 1) return;
-
-    // and never our own seat: it drops out of states only as this page
-    // unloads (y-webrtc), where marking it away would have the sit-back
-    // effect above take it again, over and over
-    const disconnectedPlayerKeys = playerKeys.filter(
-      (key) => key !== localID && !states.has(key),
+    const gone = okeyState.players.filter(
+      (p) => p.userKey && p.userKey !== localID && !states.has(p.userKey),
     );
-
-    if (disconnectedPlayerKeys.length === 0) return;
-
+    if (!gone.length) return;
+    // Seeing no one else means we're the ones offline: a phone waking up
+    // drops everyone it hasn't heard from in 30s, and must not unseat them,
+    // nor play their bots; alone at a table of bots (a reload), we do
+    const alone = states.size <= 1;
+    const others = okeyState.players.some(
+      (p) => p.user && !p.user.bot && p.user.id !== currentUser?.id,
+    );
+    const adopt = localID === Math.min(...states.keys()) && (!alone || !others);
     const newState = cloneDeep(okeyState);
     let changed = false;
-    let lastLeaverName = "Someone";
-
-    disconnectedPlayerKeys.forEach((key) => {
-      const playerIndex = newState.players.findIndex((p) => p.userKey === key);
-      if (playerIndex >= 0) {
-        const player = newState.players[playerIndex];
-        lastLeaverName = player.user?.name || "Someone";
-        player.away = player.user?.id; // theirs to come back to (sit)
-        player.user = null;
-        player.userKey = null;
-        changed = true;
+    let leaver = null;
+    for (const player of newState.players) {
+      if (!gone.some((p) => p.id === player.id)) continue;
+      if (player.user?.bot) {
+        if (adopt) player.userKey = localID;
+        changed ||= adopt;
+        continue;
       }
-    });
-
+      if (alone) continue;
+      leaver = player.user?.name || "Someone";
+      player.away = player.user?.id; // theirs to come back to (sit)
+      player.user = null;
+      player.userKey = null;
+      changed = true;
+    }
     if (changed) {
       setOkeyState({
         ...newState,
-        message: `${lastLeaverName} left`,
+        ...(leaver && { message: `${leaver} left` }),
       });
     }
-  }, [states, playerKeys, localID, okeyState, setOkeyState]);
+  }, [states, localID, okeyState, currentUser?.id, setOkeyState]);
+
+  // a bot in an empty seat, or in place of one who's gone, played by this
+  // page (bot.js)
+  const seatBot = useCallback(
+    (player) => {
+      const next = bots.seatBot(okeyState, player, localID);
+      if (next) setOkeyState(next);
+    },
+    [okeyState, localID, setOkeyState],
+  );
+  // the bots this page plays, out of turn: a claim on the discard up for
+  // it, and tiles won into the inbox onto the rack, one write a render
+  React.useEffect(() => {
+    if (okeyState.gameState !== "play") return;
+    for (const p of okeyState.players) {
+      if (!p.user?.bot || p.userKey !== localID) continue;
+      const next = p.inbox?.length
+        ? americano.collectInbox(okeyState, p.id)
+        : bots.claim(okeyState, p.id);
+      if (next) {
+        setOkeyState(next);
+        return;
+      }
+    }
+  }, [okeyState, localID, setOkeyState]);
+  // its turn, on the page that plays it: a move at a pace the table can
+  // follow, or another try in a second while the rules say wait (the
+  // others' time to take the discard); sessionStorage botPace in ms
+  const pace = Number(stored("botPace") ?? 900);
+  React.useEffect(() => {
+    const p = okeyState.players.find((x) => x.id === okeyState.currentPlayer);
+    if (okeyState.gameState !== "play" || !p?.user?.bot) return;
+    if (p.userKey !== localID) return;
+    let timer;
+    const move = () => {
+      const next = bots.step(okeyState, p.id);
+      if (next && typeof next !== "string") setOkeyState(next);
+      else timer = setTimeout(move, 1000);
+    };
+    timer = setTimeout(move, pace);
+    return () => clearTimeout(timer);
+  }, [okeyState, localID, pace, setOkeyState]);
 
   const myIndex = useMemo(
     () => okeyState.players.findIndex((p) => p?.user?.id === currentUser?.id),
@@ -706,6 +773,7 @@ export function OkeyProvider({ children }) {
       sit,
       stand,
       freeSeat,
+      seatBot,
       isAlreadySitting,
       myIndex,
       resetGame,
@@ -757,6 +825,7 @@ export function OkeyProvider({ children }) {
       sit,
       stand,
       freeSeat,
+      seatBot,
       isAlreadySitting,
       myIndex,
       resetGame,

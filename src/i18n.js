@@ -330,6 +330,7 @@ const TR = [
   [/^Sit$/, "Otur"],
   [/^Stand$/, "Kalk"],
   [/^Leave the round$/, "Elden çekil"],
+  [/^Add a bot$/, "Bot ekle"],
   [/^Free seat: (.+)$/, "Yeri boşalt: $1"],
   [/^Player (\d+)$/, "Oyuncu $1"],
   [/^opened$/, "açtı"],

@@ -26,7 +26,6 @@ const LAY = /^(Lay melds|Per aç)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const STAND = /^(Stand|Kalk)$/;
 const LEAVE = /^(Leave the round|Elden çekil)$/;
-const SEAT_1 = /(Player|Oyuncu) 1(?!\d)/;
 
 // a helper from e2e/table.js, run in the page
 const table = (page, name, ...args) =>
@@ -40,22 +39,42 @@ const handIds = async (page) =>
 
 const sitInSeat1 = (page) =>
   page
-    .locator(".playerName", { hasText: SEAT_1 })
+    .locator(".playerName", { hasText: /(Player|Oyuncu) 1(?!\d)/ })
     .getByRole("button", { name: SIT })
     .click();
+// seated in seat 1, as a page joining a table sits down by itself
+const inSeat1 = (page, name = "Ayşe") =>
+  expect
+    .poll(() => page.evaluate(() => window.okey?.get()?.players[0].user?.name))
+    .toBe(name);
+
+// a page in another browser first reaching the room: over the network,
+// about a second, longer under load
+const NET = { timeout: 15000 };
+// the game has reached a page in another browser: what it does before then
+// is lost to the table's
+const arrived = (page) =>
+  expect
+    .poll(() => page.evaluate(() => !!window.okey?.get()?.players[0].user), NET)
+    .toBe(true);
 
 // a fresh room each time: rooms with the same name sync over the internet.
-// Each page a device of its own, asked for a name: pages of one test share
-// the name a page remembers (useStore.js)
+// A page asked for a name as it first loads (a reload keeps the login); the
+// first in a new room taps Sit, one joining a table sits down by itself
+// unless `sit: false` (it only watches). A browser is one player
+// (useStore.js): another player is a browser context of its own.
 async function sitDown(page, { name = "Ayşe", room, sit = true } = {}) {
   room ??= `e2e-${Math.random().toString(36).slice(2, 10)}`;
-  await page.addInitScript(() => localStorage.removeItem("name"));
+  await page.addInitScript((watch) => {
+    if (watch) sessionStorage.setItem("watch", "1");
+    if (sessionStorage.getItem("asked")) return;
+    sessionStorage.setItem("asked", "1");
+    localStorage.removeItem("user");
+  }, !sit);
   await page.goto(`/${room}/okey`);
   await page.getByRole("textbox").fill(name);
   await page.getByRole("button", { name: GO }).click();
-  if (sit) {
-    await sitInSeat1(page);
-  }
+  if (sit) await sitInSeat1(page);
   return room;
 }
 
@@ -584,11 +603,12 @@ test("a tile flips during play, and shows once the round is over", async ({
 // player hears it from where it was, as they sit
 test("a knock on the table is heard from where it was", async ({
   page,
-  context,
+  browser,
 }, info) => {
   const room = await sitDown(page);
-  const guest = await context.newPage();
+  const guest = await (await browser.newContext()).newPage();
   await sitDown(guest, { room, name: "Bora", sit: false });
+  await arrived(guest);
   await guest
     .locator(".playerName", { hasText: /(Player|Oyuncu) 2(?!\d)/ })
     .getByRole("button", { name: SIT })
@@ -991,13 +1011,13 @@ test("the sound level is set in the menu and kept", async ({ page }) => {
 // and this one keeps the game while the first reloads, once it has it.
 // build: a newer one it runs
 async function secondPlayer(page, room, build) {
-  const other = await page.context().newPage();
+  const other = await (await page.context().browser().newContext()).newPage();
   if (build) {
     await other.addInitScript((b) => sessionStorage.setItem("build", b), build);
   }
   await sitDown(other, { name: "Bora", room, sit: false });
   await expect
-    .poll(() => other.evaluate(() => !!window.okey?.get()))
+    .poll(() => other.evaluate(() => !!window.okey?.get()), NET)
     .toBe(true);
   return other;
 }
@@ -1007,18 +1027,27 @@ test("a reload keeps you logged in and in your seat", async ({
 }, info) => {
   test.skip(info.project.name !== "desktop", "not about the layout");
   const room = await sitDown(page);
-  await secondPlayer(page, room);
+  const other = await secondPlayer(page, room);
   await table(page, "start", 2);
+  // the game reaches Bora's page, which keeps it while this one reloads
+  await expect
+    .poll(() => other.evaluate(() => window.okey.get().gameState))
+    .toBe("play");
   await page.reload();
   await expect(page.getByRole("button", { name: GO })).toHaveCount(0);
+  // the game back from Bora's page, and Ayşe in her seat in it
   await expect
-    .poll(async () => (await state(page))?.players[0].user?.name)
-    .toBe("Ayşe");
+    .poll(async () => {
+      const s = await state(page);
+      return [s?.gameState, s?.players[0].user?.name];
+    }, NET)
+    .toEqual(["play", "Ayşe"]);
   await expect(page.locator(".rack:not(.mini) .tile")).toHaveCount(15);
 });
 
-// a new tab on this device goes in with the name it remembers, a player of
-// its own; a name changed in the sidebar shows on your seat for everyone
+// a new tab in this browser is the same player, under the name given once;
+// a name changed in the sidebar shows on your seat for everyone, and in
+// your other tabs
 test("your name is remembered, and changed from the sidebar", async ({
   page,
 }, info) => {
@@ -1027,7 +1056,8 @@ test("your name is remembered, and changed from the sidebar", async ({
   const tab = await page.context().newPage();
   await tab.goto(`/${room}/okey`);
   await expect(tab.getByLabel(/^(Your name|Adın)$/)).toHaveValue("Ayşe");
-  await expect(tab.getByRole("button", { name: SIT })).not.toHaveCount(0);
+  await expect(tab.getByRole("button", { name: SIT })).toHaveCount(0);
+  await expect(tab.locator(".rack > .playerName")).toHaveText("Ayşe");
   await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
   const field = page.getByLabel(/^(Your name|Adın)$/);
   await field.fill("Ayşe K");
@@ -1036,7 +1066,10 @@ test("your name is remembered, and changed from the sidebar", async ({
   await expect(
     tab.locator("#sidebar main li", { hasText: "Ayşe K" }),
   ).toHaveCount(1);
-  expect(await tab.evaluate(() => localStorage.getItem("name"))).toBe("Ayşe K");
+  await expect(tab.getByLabel(/^(Your name|Adın)$/)).toHaveValue("Ayşe K");
+  expect(
+    await tab.evaluate(() => JSON.parse(localStorage.user).state.currentUser),
+  ).toMatchObject({ name: "Ayşe K" });
   // emptied, it keeps the name it had
   await field.fill("");
   await field.blur();
@@ -1209,15 +1242,16 @@ test("a discard during the others' wait is held, then thrown", async ({
 
 test("between rounds a seat can be freed and taken", async ({
   page,
-  context,
+  browser,
 }) => {
   const room = await sitDown(page);
   await table(page, "start", 3);
   await table(page, "playToEnd");
 
   // someone new opens the room and sits in the free seat
-  const guest = await context.newPage();
+  const guest = await (await browser.newContext()).newPage();
   await sitDown(guest, { room, name: "Ece", sit: false });
+  await arrived(guest);
   // once the game reaches the new tab, seat 4 is the only one free
   const free = guest.getByRole("button", { name: SIT });
   await expect(free).toHaveCount(1);
@@ -1300,6 +1334,139 @@ test("mid-round, standing leaves my hand; leaving takes it out", async ({
   expect((await state(page)).currentPlayer).toBe(2);
 });
 
+test("someone joining sits down by themselves, in the first free seat", async ({
+  page,
+  browser,
+}) => {
+  const room = await sitDown(page);
+  const other = await (await browser.newContext()).newPage();
+  await sitDown(other, { room, name: "Bora", sit: false });
+  // not one who only watches
+  await other.waitForTimeout(1500);
+  expect((await state(page)).players[1].user).toBeNull();
+  const bora = await (await browser.newContext()).newPage();
+  await bora.goto(`/${room}/okey`);
+  await bora.getByRole("textbox").fill("Bora");
+  await bora.getByRole("button", { name: GO }).click();
+  await expect
+    .poll(async () => (await state(page)).players[1].user?.name, NET)
+    .toBe("Bora");
+});
+
+const BOT = /^(Add a bot|Bot ekle)$/;
+
+test("bots fill the table and play their turns", async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem("botPace", "0"));
+  await sitDown(page);
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole("button", { name: BOT }).first().click();
+  }
+  await expect
+    .poll(async () => (await state(page)).players.filter((p) => p.user?.bot))
+    .toHaveLength(3);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  await page.getByRole("button", { name: START }).click();
+  // my turn first: once I've thrown, the three bots play round to me
+  await table(page, "play", 1);
+  await expect
+    .poll(async () => (await state(page)).currentPlayer, { timeout: 30000 })
+    .toBe(1);
+  // a turn ends with a discard: mine and each bot's (one may take another's)
+  expect((await state(page)).discards).toBe(4);
+});
+
+test("a bot plays for someone gone, and makes way when they're back", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(60000);
+  await page.addInitScript(() => sessionStorage.setItem("botPace", "0"));
+  const room = await sitDown(page);
+  // someone watching, so this page still sees someone once Bora's gone
+  const watcher = await (await browser.newContext()).newPage();
+  await sitDown(watcher, { room, name: "Can", sit: false });
+  const other = await (await browser.newContext()).newPage();
+  await sitDown(other, { room, name: "Bora", sit: false });
+  await arrived(other);
+  await other
+    .locator(".playerName", { hasText: /(Player|Oyuncu) 2(?!\d)/ })
+    .getByRole("button", { name: SIT })
+    .click();
+  await expect
+    .poll(async () => (await state(page)).players[1].user?.name)
+    .toBe("Bora");
+  await page.getByRole("button", { name: START }).click();
+  await expect.poll(async () => (await state(page)).gameState).toBe("play");
+  const bora = (await state(page)).players[1].user.id;
+  // Bora closes the page: their seat waits, and a bot takes it over
+  const back = other.context();
+  await other.close({ runBeforeUnload: true });
+  await expect.poll(async () => (await state(page)).players[1].away).toBe(bora);
+  await page.getByRole("button", { name: BOT }).click();
+  await table(page, "play", 1);
+  await expect
+    .poll(async () => (await state(page)).currentPlayer, { timeout: 20000 })
+    .toBe(1);
+  expect((await state(page)).discards).toBe(2);
+  // Bora's back (the same login): the bot makes way, the hand theirs again
+  const hand = (await state(page)).players[1].hand;
+  const again = await back.newPage();
+  await again.goto(`/${room}/okey`);
+  await expect
+    .poll(async () => (await state(page)).players[1].user?.name, NET)
+    .toBe("Bora");
+  expect((await state(page)).players[1].hand).toEqual(hand);
+});
+
+test("a bot plays on when the page that added it closes", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(60000);
+  const fast = () => sessionStorage.setItem("botPace", "0");
+  await page.addInitScript(fast);
+  const room = await sitDown(page);
+  // Bora joins and sits; Can only watches
+  const can = await (await browser.newContext()).newPage();
+  await can.addInitScript(fast);
+  await sitDown(can, { room, name: "Can", sit: false });
+  const bora = await (await browser.newContext()).newPage();
+  await bora.addInitScript(fast);
+  await bora.goto(`/${room}/okey`);
+  await bora.getByRole("textbox").fill("Bora");
+  await bora.getByRole("button", { name: GO }).click();
+  await expect
+    .poll(async () => (await state(page)).players[1].user?.name, NET)
+    .toBe("Bora");
+  await page
+    .locator(".playerName", { hasText: /(Player|Oyuncu) 3(?!\d)/ })
+    .getByRole("button", { name: BOT })
+    .click();
+  await page.getByRole("button", { name: START }).click();
+  // a lap: Ayşe, Bora, and the bot this page plays
+  await table(page, "play", 1);
+  await expect.poll(async () => (await state(bora)).currentPlayer).toBe(2);
+  await table(bora, "play", 1);
+  await expect.poll(async () => (await state(bora)).currentPlayer).toBe(1);
+  // Ayşe's page closes: her seat waits, a bot takes it, and her bot is
+  // played on by a page still here
+  await page.close({ runBeforeUnload: true });
+  await expect
+    .poll(async () => (await state(bora)).players[0].away)
+    .toBeTruthy();
+  await bora
+    .locator(".playerName", { hasText: /(Player|Oyuncu) 1(?!\d)/ })
+    .getByRole("button", { name: BOT })
+    .click();
+  await expect.poll(async () => (await state(bora)).currentPlayer).toBe(2);
+  await table(bora, "play", 1);
+  await expect
+    .poll(async () => (await state(bora)).currentPlayer, { timeout: 20000 })
+    .toBe(2);
+  // the first lap's three, Ayşe's bot, then Bora and both bots
+  expect((await state(bora)).discards).toBe(7);
+});
+
 test("this device keeps the last two games", async ({ page }) => {
   await sitDown(page);
   const kept = () =>
@@ -1339,7 +1506,7 @@ test("a save code brings the game back, and can't be read", async ({
 
   await confirm(page, RESET);
   await expect.poll(async () => (await state(page)).gameState).toBe("start");
-  await sitInSeat1(page);
+  await inSeat1(page); // sat down again by itself
   await page.getByRole("button", { name: MENU }).click();
   await page.getByRole("button", { name: SAVED }).click();
   await page.getByPlaceholder(PASTE).fill(code);

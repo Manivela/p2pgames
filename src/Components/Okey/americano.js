@@ -749,7 +749,8 @@ function resolveOffer(s, current) {
 
 // Rounds 1–11 end when someone discards their last tile, or the pile runs out
 // (then everyone, opened or not, scores what's left in their hand).
-// someone besides the discarder could still take the tile on offer
+// someone besides the discarder could still take the tile on offer (not
+// a bot: it claims the moment the tile's up, bot.js)
 function claimable(state, player) {
   const { offer } = state;
   return (
@@ -759,6 +760,7 @@ function claimable(state, player) {
     state.players.some(
       (p) =>
         p.user &&
+        !p.user.bot &&
         p.id !== player &&
         p.id !== offer.from &&
         (state.takes?.[p.id] ?? 0) < state.rules.maxTakes,

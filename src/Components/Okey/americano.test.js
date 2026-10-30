@@ -217,9 +217,13 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
 });
 
 test("five play with a fifth seat; the presets refuse one", () => {
-  // the fifth seat shows once the other four are taken
-  assert.lengthOf(game.tableSeats(seated(3).players), 4);
-  assert.lengthOf(game.tableSeats(seated(4).players), 5);
+  // the fifth seat shows once the other four are taken, when the lobby's
+  // settings seat five
+  const five = (n) => ({ ...seated(n), setup: { ...AMERICANO, seats: 5 } });
+  assert.lengthOf(game.tableSeats(five(3)), 4);
+  assert.lengthOf(game.tableSeats(five(4)), 5);
+  // and never with the four the presets seat
+  assert.lengthOf(game.tableSeats({ ...seated(4), setup: AMERICANO }), 4);
   let s = americano.startGame(seated(5), undefined, {
     ...AMERICANO,
     seats: 5,

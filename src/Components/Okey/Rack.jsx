@@ -53,17 +53,24 @@ function RackPoints({ player }) {
 }
 
 // A name and what everyone at the table can see about them, or an empty
-// seat to sit in
+// seat to sit in or put a bot in; a bot's seat is anyone's to take over
 function Name({ player, children }) {
-  const { okeyState, me, sit, isAlreadySitting } = useContext(OkeyContext);
+  const { okeyState, me, sit, seatBot, isAlreadySitting } =
+    useContext(OkeyContext);
   const seat = okeyState.players.find((p) => p.id === player);
+  const sitHere = !isAlreadySitting && (!seat.user || seat.user.bot) && (
+    <button onClick={() => sit(player)}>{t("Sit")}</button>
+  );
   if (!seat.user) {
     return (
       <h1 className="playerName">
         {t(`Player ${player}`)}{" "}
-        {!isAlreadySitting && (
-          <button onClick={() => sit(player)}>{t("Sit")}</button>
-        )}
+        <span className="badges">
+          {sitHere}
+          <button aria-label={t("Add a bot")} onClick={() => seatBot(player)}>
+            🤖
+          </button>
+        </span>
       </h1>
     );
   }
@@ -86,6 +93,7 @@ function Name({ player, children }) {
           partner(okeyState.players, me)?.id === player && (
             <span className="badge">{t("partner")}</span>
           )}
+        {sitHere}
       </span>
       {playing && turn && <TeaGlass />}
       {children}

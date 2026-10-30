@@ -128,8 +128,9 @@ test("eight play with four sets of tiles, every tile dealt once", () => {
   const next = americano.nextRound(americano.redealRound(s));
   assert.equal(next.drawPile.length, s.drawPile.length);
   // and a table of eight shows every seat once they're all taken
-  assert.lengthOf(game.tableSeats(seated(8).players), 8);
-  assert.lengthOf(game.tableSeats(seated(5).players), 6);
+  const eight = (n) => ({ ...seated(n), setup: { ...AMERICANO, seats: 8 } });
+  assert.lengthOf(game.tableSeats(eight(8)), 8);
+  assert.lengthOf(game.tableSeats(eight(5)), 6);
 });
 
 test("finishing from the hand over several hands is scored", () => {
