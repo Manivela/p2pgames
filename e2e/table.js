@@ -60,25 +60,18 @@ export function start(n, mode = "americano", options = {}) {
   for (let i = 1; i < n; i++) hands.push(rest.splice(0, size));
   const deal = { okeyTile: rest.find((id) => !id.includes("👌")), hands };
   const s = { ...window.okey.get(), drawPile };
-  window.okey.set(
-    ok(
-      rules.rounds
-        ? americano.startGame(s, deal, rules)
-        : game.startGame({ ...s, rules }, deal),
-    ),
-  );
+  window.okey.set(ok(americano.startGame(s, deal, rules)));
 }
 
 // whoever's turn it is draws from the pile and throws their last tile
 function turn(s) {
-  const rules = game.hasRounds(s) ? americano : game;
   const id = s.currentPlayer;
   if (!s.drawn) {
     const slot = seat(s, id).hand.indexOf(null);
-    s = ok(rules.drawTile(s, id, s.drawPile.at(-1), slot, 0));
+    s = ok(americano.drawTile(s, id, s.drawPile.at(-1), slot, 0));
   }
   const last = seat(s, id).hand.findLast(Boolean);
-  return ok(rules.discardTile(s, id, last, Infinity));
+  return ok(americano.discardTile(s, id, last, Infinity));
 }
 
 export function play(turns) {

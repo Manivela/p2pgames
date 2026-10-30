@@ -7,6 +7,7 @@ import {
   ONE_O_ONE,
   PRESETS,
   invalid,
+  modern,
   roundName,
 } from "./rulesets";
 
@@ -48,8 +49,13 @@ test("a ruleset that would break a game isn't played", () => {
   assert.equal(no({ maxTakes: null }), "Fill in every number");
   assert.equal(no({ rounds: [] }), "1 to 50 rounds");
   assert.equal(no({ okeySwapFromRound: 0 }), "Fill in every number");
+  const opening = (o) => ({ rounds: [{ name: "", opening: o }] });
   assert.equal(
-    no({ opening: { points: 101, pairs: 11 } }, ONE_O_ONE),
+    no(opening({ points: 101, pairs: 11 }), ONE_O_ONE),
+    "Round 1 asks for more than a hand holds",
+  );
+  assert.equal(
+    no(opening({ points: null, pairs: 5 }), ONE_O_ONE),
     "Fill in every number",
   );
   const big = {
@@ -67,20 +73,67 @@ test("a ruleset that would break a game isn't played", () => {
     no({ rounds: [{ name: "", melds: [["kut", 5]] }] }),
     "Round 1 asks for more than a hand holds",
   );
-  // classic has no rounds to check
   assert.isUndefined(invalid({ ...CLASSIC, seats: 5 }));
 });
 
-test("classic is a ruleset: one unscored hand, up to its seats", () => {
+test("classic is one hand; a pile that runs out is shuffled in, or the hand dealt again", () => {
   assert.equal(
-    game.startGame({ ...seated(5), rules: CLASSIC }).message,
+    americano.startGame(seated(5), undefined, CLASSIC).message,
     "Up to 4 players with these rules",
   );
-  const s = game.startGame({ ...seated(4), rules: CLASSIC });
+  let s = americano.startGame(seated(4), undefined, CLASSIC);
+  const hand = (p) => s.players.find((x) => x.id === p).hand;
+  while (s.drawPile.length || s.currentPlayer === 1) {
+    const p = s.currentPlayer;
+    if (!s.drawn) s = americano.drawTile(s, p, s.drawPile.at(-1), 27);
+    s = americano.discardTile(s, p, hand(p).find(Boolean));
+  }
+  // it waits for the player whose turn it is
   assert.equal(s.gameState, "play");
-  assert.isFalse(game.hasRounds(s));
-  // a game from before rulesets has none, and plays the same
-  assert.isFalse(game.hasRounds(game.startGame(seated(4))));
+  const p = s.currentPlayer;
+  assert.isUndefined(americano.endPile(s, (p % 4) + 1));
+  assert.isAbove(game.shuffleDiscards(s, p).drawPile.length, 0);
+  const over = americano.endPile(s, p);
+  assert.isTrue(over.replay);
+  assert.equal(over.message, "Round 1: no tiles left, dealt again");
+  // without reshuffling, the round ends with the pile
+  s = americano.startGame(seated(4), undefined, {
+    ...CLASSIC,
+    reshuffle: false,
+  });
+  while (s.gameState === "play") {
+    const p = s.currentPlayer;
+    if (!s.drawn) s = americano.drawTile(s, p, s.drawPile.at(-1), 27);
+    s = americano.discardTile(s, p, hand(p).find(Boolean));
+  }
+  assert.equal(s.gameState, "roundEnd");
+});
+
+test("older rules read as they're played now", () => {
+  // a game from before rulesets, and classic before it had rounds
+  assert.deepEqual(modern(null), CLASSIC);
+  assert.deepEqual(
+    modern({ id: "classic", name: "Okey", handSize: 14 }),
+    CLASSIC,
+  );
+  // a whole game's points opening is each round's; its pile and finish
+  // went by 101's then
+  const { rounds, ...old101 } = ONE_O_ONE;
+  const was = modern({
+    ...old101,
+    finishDoubled: undefined,
+    pileOutCounts: undefined,
+    opening: { points: 101, pairs: 5 },
+    rounds: rounds.map((_, i) => ({ name: `${i + 1}` })),
+  });
+  assert.deepEqual(was.rounds, rounds);
+  assert.isTrue(was.finishDoubled);
+  assert.isFalse(was.pileOutCounts);
+  // Americano's pile scored
+  const { pileOutCounts, ...oldAmericano } = AMERICANO;
+  assert.isTrue(pileOutCounts);
+  assert.isTrue(modern(oldAmericano).pileOutCounts);
+  for (const r of PRESETS) assert.deepEqual(modern(r), r);
 });
 
 test("eight play with four sets of tiles, every tile dealt once", () => {
@@ -132,9 +185,17 @@ test("finishing from the hand over several hands is scored", () => {
     { okeyTile: "blue13-1", hands: [winning, other] },
     rules,
   );
-  assert.isTrue(game.hasRounds(s));
   const last = s.players[0].hand.find((t) => t?.id === "yellow2-0");
   s = americano.finishGame(s, 1, last);
   assert.equal(s.gameState, "roundEnd");
   assert.deepEqual(s.scores, { 1: [-20], 2: [118] });
+  // classic's one hand is just won
+  s = americano.startGame(
+    seated(2),
+    { okeyTile: "blue13-1", hands: [winning, other] },
+    CLASSIC,
+  );
+  s = americano.finishGame(s, 1, last);
+  assert.equal(s.gameState, "finish");
+  assert.equal(s.message, "P1 wins!");
 });

@@ -5,6 +5,7 @@ import { OkeyContext } from "./OkeyContext";
 // playOnMeld here is the rule, tried out for the ghost
 import {
   claimants,
+  isElden,
   penaltiesSoFar,
   playOnMeld as onMeld,
   upForClaim,
@@ -171,14 +172,15 @@ function Example({ melds }) {
 // it (or how it ended), and who wants the last discard
 export function RoundInfo() {
   const { okeyState, me } = useContext(OkeyContext);
-  const { round, message, players, rules, gameState, opened } = okeyState;
-  if (!rules?.rounds) {
-    const said =
-      message ||
-      (gameState === "play" && !okeyState.drawPile.length && "No tiles left");
-    return said && <h3 className="round">{t(said)}</h3>;
+  const { round, players, rules, gameState, opened } = okeyState;
+  const message =
+    okeyState.message ||
+    (gameState === "play" && !okeyState.drawPile.length && "No tiles left");
+  if (gameState === "start") {
+    return message && <h3 className="round">{t(message)}</h3>;
   }
   const { rounds } = rules;
+  const { melds } = rounds[round - 1];
   const offer = upForClaim(okeyState);
   // everyone sees who wants the discard, so others can claim it too
   const wanting = claimants(okeyState);
@@ -186,26 +188,17 @@ export function RoundInfo() {
   const offered = from?.discardPile.at(-1);
   return (
     <h3 className="round">
-      {t(`Round ${round}/${rounds.length}`)}
-      {/* 101 has the same opening every hand, and the table's options */}
-      <small>
-        {rules.opening
-          ? [
-              rules.name,
-              rules.partners && t("Partners"),
-              rules.doubling && t("Doubling"),
-            ]
-              .filter(Boolean)
-              .join(" · ")
-          : t(rounds[round - 1].name)}
-      </small>
-      {/* what opens the round, until everyone has (Elden has no opening) */}
-      {!rules.opening &&
-        rounds[round - 1].melds &&
+      {/* a game of one hand is just that hand */}
+      {rounds.length > 1 && (
+        <>
+          {t(`Round ${round}/${rounds.length}`)}
+          <small>{t(rounds[round - 1].name)}</small>
+        </>
+      )}
+      {/* what opens the round, until everyone has */}
+      {melds &&
         gameState === "play" &&
-        !players.every((p) => opened?.[p.id]) && (
-          <Example melds={rounds[round - 1].melds} />
-        )}
+        !players.every((p) => opened?.[p.id]) && <Example melds={melds} />}
       {/* Americano: your out-of-turn takes this round, of the most allowed */}
       {gameState === "play" && okeyState.takes?.[me] > 0 && (
         <small className="takes">
@@ -266,8 +259,7 @@ export function LastTurn() {
 export function Melds({ underPile }) {
   const { okeyState, me, selected, openHand, layMelds } =
     useContext(OkeyContext);
-  const { round, melds, opened, rules } = okeyState;
-  const { rounds } = rules;
+  const { melds, opened } = okeyState;
 
   // Picked tiles open (or, once opened, lay down) when one of them is
   // dragged onto the table; a drop on a meld adds to that meld instead.
@@ -275,7 +267,7 @@ export function Melds({ underPile }) {
     okeyState.gameState === "play" &&
     okeyState.currentPlayer === me &&
     okeyState.drawn &&
-    rounds[round - 1].melds !== null && // not in Elden
+    !isElden(okeyState) &&
     selected.length > 0;
   const [{ over }, drop] = useDrop(
     () => ({
@@ -373,8 +365,10 @@ export function Scores() {
     const values = team.map((p) => line(p, i));
     if (values.every((v) => v === null)) return "";
     const value = sum(values);
-    // Americano's finish is a line; 101's varies
-    return !rules.opening && team.length === 1 && value === rules.finishScore
+    // a finish that doesn't double is a line
+    return !rules.finishDoubled &&
+      team.length === 1 &&
+      value === rules.finishScore
       ? "—"
       : value;
   };

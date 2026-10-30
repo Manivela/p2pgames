@@ -92,12 +92,12 @@ const TR = [
   [/^Saved on this device$/, "Bu cihaza kaydedildi"],
   // what each setting does (GameSettings.jsx)
   [
-    /^How a hand opens: finished from the hand \(classic\), each round's melds \(Americano\), or points or pairs \(101\)$/,
-    "El nasıl açılır: elden bitir (klasik), her elin perleri (Americano) ya da sayı veya çift (101)",
+    /^How the round opens: with these melds, with sets and runs worth the points or with the pairs, or not at all, finished from the hand$/,
+    "El nasıl açılır: bu perlerle, sayısı tutan seri ve kütlerle ya da çiftlerle; ya da hiç açılmaz, elden bitirilir",
   ],
   [
-    /^Hands in the game; one hand finished from the hand is classic, unscored$/,
-    "Oyundaki el sayısı; elden bitirmede tek el klasik oyundur, puan tutulmaz",
+    /^When the pile runs out, the player whose turn it is can shuffle the discards into a new pile and play on, or end the round$/,
+    "Deste bitince sırası gelen, atılan taşları karıştırıp yeni deste yapabilir ve oyun sürer, ya da eli bitirebilir",
   ],
   [
     /^Sets and runs worth this much at face value open a hand$/,
@@ -109,8 +109,12 @@ const TR = [
     "Dört kişi, karşılıklı iki takım: takım iki eşin toplamını yazar, bitirenin eşi elindekini yazmaz",
   ],
   [
-    /^The okey thrown last doubles everyone else's score; in 101 a win with pairs or in one go does too$/,
-    "Okeyle bitirmek diğerlerinin puanını katlar; 101'de çiftle ya da tek seferde bitirmek de",
+    /^The okey thrown last doubles everyone else's score; so does a win with pairs or in one go$/,
+    "Okeyle bitirmek diğerlerinin puanını katlar; çiftle ya da tek seferde bitirmek de",
+  ],
+  [
+    /^Doubling doubles the finisher's score too; off: finishing always scores the same$/,
+    "Katlamada bitirenin puanı da katlanır; kapalıyken bitiren hep aynı puanı yazar",
   ],
   [
     /^Anyone may take the last discard out of turn, with an extra tile from the pile$/,
@@ -141,16 +145,28 @@ const TR = [
     "Biri çift açınca herkes çift açar",
   ],
   [
+    /^Opening with points takes more than the highest opening so far this hand$/,
+    "Sayıyla açmak, bu elde o ana dek açılan en yüksek sayıdan fazlasını ister",
+  ],
+  [
     /^Laying all but one tile at once and finishing opens below the points too$/,
     "Tek taş hariç hepsini bir seferde açıp bitirmek, açış sayısının altında da açar",
   ],
   [
-    /^A pile that runs out ends the hand, scored as usual$/,
-    "Deste bitince el biter, her zamanki gibi yazılır",
+    /^A pile that runs out ends the hand, scored as usual; off: it's dealt again, and only the okeys held score$/,
+    "Deste bitince el biter, her zamanki gibi yazılır; kapalıyken el yeniden dağıtılır, yalnız eldeki okeyler yazılır",
+  ],
+  [
+    /^On a round that opens with pairs, a tap on a discard pile spreads its tiles out to look through$/,
+    "Çiftle açılan elde, atılan taşlara dokununca hepsi açılır, bakılabilir",
   ],
   [
     /^Not opening scores the okeys held too, and doubles with the rest$/,
     "Açamayana elindeki okeyler de yazılır, katlamada o da katlanır",
+  ],
+  [
+    /^A player who didn't open scores their hand like everyone else, in place of the Not opened score$/,
+    "Açamayanın eli, Açamayan puanı yerine herkesinki gibi sayılır",
   ],
   [/^A run can go on from 13 to 1$/, "Seri 13'ten 1'e devam edebilir"],
   [
@@ -252,6 +268,7 @@ const TR = [
   [/^(.+) wins with (-?\d+)$/, "$1 kazandı: $2"],
   [/^(.+) & (.+) win with (-?\d+)$/, "$1 & $2 kazandı: $3"],
   [/^(.+) wins!$/, "$1 kazandı!"],
+  [/^(.+) & (.+) win!$/, "$1 & $2 kazandı!"],
   [/^No tiles left$/, "Taş kalmadı"], // before "(.+) left"
   [/^(.+) left$/, "$1 ayrıldı"],
   // how the round finished (LastTurn)
@@ -280,10 +297,9 @@ const TR = [
   [/^Game settings$/, "Oyun ayarları"],
   [/^Opening$/, "Açış"],
   [/^From the hand$/, "Elden bitir"],
-  [/^Each round's melds$/, "Her elin perleri"],
+  [/^Melds$/, "Perler"],
   [/^Points or pairs$/, "Sayı ya da çift"],
   [/^Numbers$/, "Sayılar"],
-  [/^Hands$/, "El sayısı"],
   [/^Opening points$/, "Açış sayısı"],
   [/^Opening pairs$/, "Açış çifti"],
   [/^Rounds$/, "Eller"],
@@ -291,6 +307,8 @@ const TR = [
   [/^Add a meld$/, "Per ekle"],
   [/^Remove the round$/, "Eli kaldır"],
   [/^Add a round$/, "El ekle"],
+  [/^or$/, "ya da"],
+  [/^pairs$/, "çift"],
   [/^Out-of-turn takes$/, "Yandan alma"],
   [/^A taken discard goes into a meld$/, "Alınan taş aynı turda işlenir"],
   [/^Lay more on the turn you open$/, "Açtığın turda da işle"],
@@ -299,11 +317,16 @@ const TR = [
   [/^A caught tile can still be taken$/, "Yakalanan taş yine alınır"],
   [/^Pairs for all$/, "Biri çift açınca herkes çift"],
   [/^Finish in one go$/, "Tek seferde bitirme"],
+  [
+    /^Shuffle the discards into a new pile$/,
+    "Atılanlar karıştırılıp yeni deste olur",
+  ],
   [/^Empty pile scores$/, "Taş bitince el yazılır"],
   [
     /^Not opened: okeys held count, doubled$/,
     "Açamayana okeyler de yazılır, katlanır",
   ],
+  [/^Not opened: the hand is counted$/, "Açamayanın eli sayılır"],
   [/^12-13-1 is a run$/, "12-13-1 seri sayılır"],
   [/^Most players$/, "En çok oyuncu"],
   [/^Tiles dealt$/, "Dağıtılan taş"],
@@ -325,7 +348,13 @@ const TR = [
   [/^Delete$/, "Sil"],
   [/^Undo changes$/, "Değişiklikleri geri al"],
   [/^Partners$/, "Eşli"],
-  [/^Doubling$/, "Katlamalı"],
+  [/^Doubling$/, "Cezalar katlanır"],
+  [/^Each opening beats the last$/, "Katlamalı"],
+  [/^Doubling counts for the finisher$/, "Bitirenin puanı da katlanır"],
+  [
+    /^Look through the discards on pair rounds$/,
+    "Çift elinde atılanlara bakılır",
+  ],
   [/^Open your hand$/, "El aç"],
   [/^Open picked$/, "Seçilenleri aç"],
   [/^Find and open$/, "Bul ve aç"],
@@ -338,7 +367,7 @@ const TR = [
   [/^Deal this round again$/, "Bu eli yeniden dağıt"],
   [/^Next Round$/, "Sonraki el"],
   [/^Shuffle and play on$/, "Karıştır, devam et"],
-  [/^End the game$/, "Oyunu bitir"],
+  [/^End the round$/, "Eli bitir"],
   [/^Scores$/, "Puanlar"],
   [/^Total$/, "Toplam"],
   [/^Sit$/, "Otur"],

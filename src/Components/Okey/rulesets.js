@@ -1,20 +1,34 @@
 import { sum } from "lodash";
 
-// Rulesets: a game's numbers and switches, stored in its state (`rules`),
-// so a game keeps the rules it was started with. The three here are the
-// presets; the editor (GameSettings.jsx) makes others from them, kept on the
-// device that made them or kept from a game played with them.
+// Rulesets: a game's rounds, numbers and switches, stored in its state
+// (`rules`), so a game keeps the rules it was started with. The three here
+// are the presets; the editor (GameSettings.jsx) makes others from them,
+// kept on the device that made them or kept from a game played with them.
+// Each round opens its own way: with `melds` (Americano's), with an
+// `opening` of points or pairs (101's), or neither, finished from the hand
+// (Elden, classic).
 
-// Classic: one hand, finished from the hand, unscored; a pile that runs out
-// is shuffled in again or ends the game. A ruleset without rounds plays it
-// (game.js), as does a game from before rulesets, which has none.
+// a round that opens with sets and runs worth `points`, or `pairs` pairs
+export const pointsRound = (opening) => ({
+  name: `${opening.points}`,
+  opening,
+});
+
+// Classic: one hand, finished from the hand; a pile that runs out is
+// shuffled in again, or the hand dealt again
 export const CLASSIC = {
   id: "classic",
   name: "Okey",
   handSize: 14,
   rowSlots: 13,
   seats: 4,
+  rounds: [{ name: "Elden", melds: null }],
   wrapRuns: true, // 12-13-1 is a run
+  doubling: false,
+  reshuffle: true, // the discards make a new pile
+  pileOutCounts: false,
+  finishDoubled: false,
+  peekPairRounds: false,
 };
 
 // Americano: 13 rounds, each with its own opening (el açma) requirement.
@@ -106,6 +120,9 @@ export const AMERICANO = {
   swapOkeys: true, // a table okey can be traded for the tile it stands for
   buildWhenOpening: false, // lay more and add to melds only from next turn
   doubling: true, // the okey thrown last doubles the others' scores
+  finishDoubled: false, // but finishing is always a line
+  pileOutCounts: true, // a pile that runs out ends the round, scored
+  peekPairRounds: true, // the pair round's discards can be looked through
 };
 
 // 101 Okey, as pagat.com has it (pagat.com/rummy/okey101.html): open with
@@ -117,13 +134,13 @@ export const ONE_O_ONE = {
   handSize: 21,
   rowSlots: 15, // a rack row: 22 tiles want more room than 13
   // the same opening every hand
-  rounds: Array.from({ length: 11 }, (_, i) => ({ name: `${i + 1}` })),
-  opening: { points: 101, pairs: 5 },
+  rounds: Array(11).fill(pointsRound({ points: 101, pairs: 5 })),
   // a pairs opener scores double, and lays only pairs (or adds to the
   // table's sets and runs); a win with pairs or by discarding the okey
   // doubles every score, both together quadruple it (a player who didn't
   // open pays at most twice notOpenedScore)
   finishScore: -101,
+  finishDoubled: true,
   notOpenedScore: 202,
   okeyInHandScore: 101,
   catchPenalty: 101, // işler taş, caught with the Catch button
@@ -139,14 +156,16 @@ export const ONE_O_ONE = {
   takeCaught: true, // and, caught, the next player can still take it
   pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn
   pairsForAll: true, // once someone opens with pairs, everyone lays pairs
+  peekPairRounds: false,
   finishInOne: true, // open all but one tile at once and finish, under 101 too
   pileOutCounts: true, // a pile that runs out ends the hand, scored as usual
   notOpenedCounts: true, // not opening: 202 and the okeys held, doubled too
-  // the table's choices when it starts: four in pairs across the table, the
-  // finisher's partner paying nothing; doubling (katlamalı) a win with the
-  // okey, with pairs or in one go, and a pairs opener's own score
+  // four in pairs across the table, the finisher's partner paying nothing:
+  // the table's choice when it starts
   partners: false,
-  doubling: false,
+  // a win with the okey, with pairs or in one go doubles the scores, and so
+  // does opening with pairs a player's own
+  doubling: true,
   // gösterge, which the PDF leaves out: the indicator's twin dropped on it
   // on your first turn takes this off your hand's score
   indicatorScore: -101,
@@ -157,6 +176,29 @@ export const ONE_O_ONE = {
 };
 
 export const PRESETS = [CLASSIC, AMERICANO, ONE_O_ONE];
+
+// Rules as they're played now, from an older game, save or kept ruleset:
+// none (a game from before rulesets) or classic's without rounds are one
+// hand from the hand; a points opening, once the whole game's, is each
+// round's; and the switches that came of the game's kind say what it did.
+export function modern(rules) {
+  if (!rules) return CLASSIC;
+  if (!rules.rounds) return { ...CLASSIC, ...rules };
+  const { opening, ...r } = rules;
+  if (!opening) {
+    return {
+      ...r,
+      pileOutCounts: r.pileOutCounts ?? true,
+      peekPairRounds: r.peekPairRounds ?? true,
+    };
+  }
+  return {
+    ...r,
+    finishDoubled: r.finishDoubled ?? true,
+    pileOutCounts: r.pileOutCounts ?? false,
+    rounds: r.rounds.map(() => pointsRound(opening)),
+  };
+}
 
 // Turkish "3'lü", "5'li", "6'lı", "9'lu": by how the number ends
 const SUFFIX = ["lu", "li", "li", "lü", "lü", "li", "lı", "li", "li", "lu"];
@@ -205,25 +247,22 @@ export function invalid(r) {
   if (!whole(rowSlots, 2, 20) || most > 2 * rowSlots) {
     return "Make the rack's rows longer";
   }
-  if (!r.rounds) return; // classic: one hand
-  if (!whole(r.rounds.length, 1, 50)) return "1 to 50 rounds";
+  if (!whole(r.rounds?.length, 1, 50)) return "1 to 50 rounds";
   const from = r.okeySwapFromRound;
   if (from != null && !whole(from, 1)) return "Fill in every number";
-  if (r.opening) {
-    const { points, pairs } = r.opening;
-    if (!whole(points, 1) || !whole(pairs, 1, handSize / 2)) {
-      return "Fill in every number";
-    }
-    return;
+  const open = r.rounds.map((round) => round.opening).filter(Boolean);
+  if (open.some(({ points, pairs }) => !whole(points, 1) || !whole(pairs, 1))) {
+    return "Fill in every number";
   }
-  const bad = r.rounds.findIndex(
-    ({ melds }) =>
-      melds &&
-      (!melds.length ||
-        melds.some(
-          ([type, size]) => !SIZES[type] || !whole(size, ...SIZES[type]),
-        ) ||
-        sum(melds.map(([, size]) => size)) > handSize),
+  const bad = r.rounds.findIndex(({ melds, opening }) =>
+    opening
+      ? opening.pairs * 2 > handSize
+      : melds &&
+        (!melds.length ||
+          melds.some(
+            ([type, size]) => !SIZES[type] || !whole(size, ...SIZES[type]),
+          ) ||
+          sum(melds.map(([, size]) => size)) > handSize),
   );
   if (bad >= 0) return `Round ${bad + 1} asks for more than a hand holds`;
 }
@@ -232,7 +271,7 @@ export function invalid(r) {
 const KEPT = "okey-rulesets";
 export function keptRulesets() {
   try {
-    return JSON.parse(localStorage.getItem(KEPT)) ?? [];
+    return (JSON.parse(localStorage.getItem(KEPT)) ?? []).map(modern);
   } catch {
     return [];
   }

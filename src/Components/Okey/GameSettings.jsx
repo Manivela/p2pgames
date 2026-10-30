@@ -1,6 +1,6 @@
 import { useContext, useReducer, useState } from "react";
 import { createPortal } from "react-dom";
-import { isEqual, omit } from "lodash";
+import { isEqual, uniq } from "lodash";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
 import { Confirm, Dialog } from "./TableMenu";
@@ -15,33 +15,33 @@ import {
   invalid,
   keepRuleset,
   keptRulesets,
+  pointsRound,
   roundName,
 } from "./rulesets";
 import { customNanoid } from "../../utils/customNanoid";
 import { t } from "../../i18n";
 
-// How a hand opens, which decides the rest: nothing, finished from the hand
-// (classic; scored once it's more than one hand), each round's melds
-// (Americano), or points or pairs (101).
-const modeOf = (r) =>
-  r.opening ? "points" : r.rounds?.some((x) => x.melds) ? "melds" : "hand";
-
-// [key, label, the value when the ruleset has none, the openings it's for
-// ("h" from the hand over more than one hand, "m" melds, "p" points; none
-// for every one, a classic hand too), the switch it hangs on]
+// [key, label, the value when the ruleset has none, the switch it hangs
+// on]. Every ruleset shows every one: what one is about (pairs openers,
+// the pair round, the table's melds) comes up in the rounds that have it.
 const RULES = [
-  ["partners", "Partners", false, "hmp"],
-  ["doubling", "Doubling", true, "hmp"],
-  ["outOfTurnTakes", "Out-of-turn takes", false, "hmp"],
-  ["takeMustBeUsed", "A taken discard goes into a meld", false, "mp"],
-  ["buildWhenOpening", "Lay more on the turn you open", false, "mp"],
-  ["swapOkeys", "Swap table okeys", false, "mp"],
-  ["catchUntilDraw", "Caught only before the next draw", false, "mp"],
-  ["takeCaught", "A caught tile can still be taken", false, "mp"],
-  ["pairsForAll", "Pairs for all", false, "p"],
-  ["finishInOne", "Finish in one go", false, "p"],
-  ["pileOutCounts", "Empty pile scores", false, "p"],
-  ["notOpenedCounts", "Not opened: okeys held count, doubled", false, "mp"],
+  ["partners", "Partners", false],
+  ["doubling", "Doubling", true],
+  ["finishDoubled", "Doubling counts for the finisher", false, "doubling"],
+  ["outOfTurnTakes", "Out-of-turn takes", false],
+  ["takeMustBeUsed", "A taken discard goes into a meld", false],
+  ["buildWhenOpening", "Lay more on the turn you open", false],
+  ["swapOkeys", "Swap table okeys", false],
+  ["catchUntilDraw", "Caught only before the next draw", false],
+  ["takeCaught", "A caught tile can still be taken", false],
+  ["peekPairRounds", "Look through the discards on pair rounds", false],
+  ["pairsForAll", "Pairs for all", false],
+  ["finishInOne", "Finish in one go", false],
+  ["raiseOpening", "Each opening beats the last", false],
+  ["reshuffle", "Shuffle the discards into a new pile", false],
+  ["pileOutCounts", "Empty pile scores", true],
+  ["notOpenedCounts", "Not opened: okeys held count, doubled", false],
+  ["notOpenedHand", "Not opened: the hand is counted", false],
   ["wrapRuns", "12-13-1 is a run", false],
 ];
 const NUMBERS = [
@@ -49,33 +49,33 @@ const NUMBERS = [
   ["tileSets", "Tile sets", 2],
   ["handSize", "Tiles dealt", 14],
   ["rowSlots", "Rack row", 13],
-  ["maxTakes", "Takes a round", 3, "hmp", "outOfTurnTakes"],
-  ["claimWaitSeconds", "Seconds to take", 8, "hmp", "outOfTurnTakes"],
-  ["okeySwapFromRound", "Before opening, from round", null, "mp", "swapOkeys"],
-  ["pairsAddMax", "Pairs opener adds a turn", 0, "p"],
+  ["maxTakes", "Takes a round", 3, "outOfTurnTakes"],
+  ["claimWaitSeconds", "Seconds to take", 8, "outOfTurnTakes"],
+  ["okeySwapFromRound", "Before opening, from round", null, "swapOkeys"],
+  ["pairsAddMax", "Pairs opener adds a turn", 0],
 ];
 const SCORES = [
-  ["finishScore", "Finishing", -20, "hmp"],
-  ["notOpenedScore", "Not opened", 100, "mp"],
-  ["okeyInHandScore", "Okey left in hand", 25, "hmp"],
-  ["catchPenalty", "Caught discard", 20, "mp"],
-  ["okeyDiscardPenalty", "Throwing the okey", 0, "mp"],
-  ["returnPenalty", "Putting it back", 0, "mp", "takeMustBeUsed"],
-  ["indicatorScore", "Showing the indicator", 0, "hmp"],
+  ["finishScore", "Finishing", -20],
+  ["notOpenedScore", "Not opened", 100],
+  ["okeyInHandScore", "Okey left in hand", 25],
+  ["catchPenalty", "Caught discard", 20],
+  ["okeyDiscardPenalty", "Throwing the okey", 0],
+  ["returnPenalty", "Putting it back", 0, "takeMustBeUsed"],
+  ["indicatorScore", "Showing the indicator", 0],
 ];
 
 // what each setting does, on its label (a tooltip)
 const ABOUT = {
-  opening:
-    "How a hand opens: finished from the hand (classic), each round's melds (Americano), or points or pairs (101)",
-  hands:
-    "Hands in the game; one hand finished from the hand is classic, unscored",
+  round:
+    "How the round opens: with these melds, with sets and runs worth the points or with the pairs, or not at all, finished from the hand",
   points: "Sets and runs worth this much at face value open a hand",
   pairs: "Or this many pairs open it",
   partners:
     "Four in two pairs across the table: a team scores both partners' totals, and the finisher's partner pays nothing for their hand",
   doubling:
-    "The okey thrown last doubles everyone else's score; in 101 a win with pairs or in one go does too",
+    "The okey thrown last doubles everyone else's score; so does a win with pairs or in one go",
+  finishDoubled:
+    "Doubling doubles the finisher's score too; off: finishing always scores the same",
   outOfTurnTakes:
     "Anyone may take the last discard out of turn, with an extra tile from the pile",
   takeMustBeUsed:
@@ -85,12 +85,21 @@ const ABOUT = {
   catchUntilDraw:
     "A discard that fits a table meld can be caught only until the next player draws",
   takeCaught: "A caught discard can still be taken by the next player",
+  peekPairRounds:
+    "On a round that opens with pairs, a tap on a discard pile spreads its tiles out to look through",
   pairsForAll: "Once someone opens with pairs, everyone lays pairs",
   finishInOne:
     "Laying all but one tile at once and finishing opens below the points too",
-  pileOutCounts: "A pile that runs out ends the hand, scored as usual",
+  raiseOpening:
+    "Opening with points takes more than the highest opening so far this hand",
+  reshuffle:
+    "When the pile runs out, the player whose turn it is can shuffle the discards into a new pile and play on, or end the round",
+  pileOutCounts:
+    "A pile that runs out ends the hand, scored as usual; off: it's dealt again, and only the okeys held score",
   notOpenedCounts:
     "Not opening scores the okeys held too, and doubles with the rest",
+  notOpenedHand:
+    "A player who didn't open scores their hand like everyone else, in place of the Not opened score",
   wrapRuns: "A run can go on from 13 to 1",
   seats: "The most players who can sit at the table",
   tileSets: "Sets of 53 tiles: two as usual, more for a bigger table",
@@ -121,18 +130,12 @@ const shownValue = (v) =>
   typeof v === "boolean" ? t(v ? "on" : "off") : (v ?? "—");
 const field = (key) =>
   [...RULES, ...NUMBERS, ...SCORES].find(([k]) => k === key);
-// the settings a ruleset's opening reads
-const shown = (r, fields) => {
-  const mode = modeOf(r);
-  const m = mode === "hand" ? (r.rounds ? "h" : "") : mode[0];
-  return fields.filter(
-    ([, , , modes, when]) =>
-      (!modes || (m && modes.includes(m))) && (!when || value(r, field(when))),
-  );
-};
+// the settings a ruleset reads: all but those hanging on a switch it has off
+const shown = (r, fields) =>
+  fields.filter(([, , , when]) => !when || value(r, field(when)));
 
-// the ruleset with every setting its opening reads filled in: one made from
-// another opening lacks some
+// the ruleset with every setting it reads filled in: one made by an older
+// build, or a preset, lacks some
 function complete(r) {
   const out = { ...r };
   for (const f of shown(r, [...RULES, ...NUMBERS, ...SCORES])) {
@@ -144,45 +147,42 @@ function complete(r) {
 // the start refused, and why
 const check = (r) => invalid(complete(r));
 
-// The switches on that no game opened this way has been played with: its
-// preset's are, and 101's own options both ways. Players may try them; a
-// rule that breaks would break mid-game, for the whole table.
+// How a round opens: with melds, points (or pairs), or from the hand
+const kindOf = (round) =>
+  round.opening ? "points" : round.melds ? "melds" : "hand";
+const KINDS = {
+  melds: "Melds",
+  points: "Points or pairs",
+  hand: "From the hand",
+};
+const ELDEN = { name: roundName(null), melds: null };
+const asKind = (kind) =>
+  kind === "melds"
+    ? { name: roundName([["kut", 3]]), melds: [["kut", 3]] }
+    : kind === "points"
+      ? ONE_O_ONE.rounds[0]
+      : ELDEN;
+
+// The switches on that no game opening the same way has been played with:
+// its preset's are (Americano's for melds, 101's for points, classic's for
+// a game all from the hand), and 101's own options both ways; scoring
+// can't break a game. Players may try them; a rule that breaks would break
+// mid-game, for the whole table.
 const PLAYED = { hand: CLASSIC, melds: AMERICANO, points: ONE_O_ONE };
-const OPTIONS = { points: ["partners", "doubling"] };
+const OPTIONS = { points: ["partners", "doubling", "raiseOpening"] };
+const SCORING = ["finishDoubled", "notOpenedCounts", "notOpenedHand"];
 const untested = (r) => {
-  const mode = modeOf(r);
+  const kinds = uniq(r.rounds.map(kindOf));
+  const played = kinds.length > 1 ? kinds.filter((k) => k !== "hand") : kinds;
   return shown(r, RULES)
     .filter(
       (f) =>
         value(r, f) &&
-        !value(PLAYED[mode], f) &&
-        !OPTIONS[mode]?.includes(f[0]),
+        !SCORING.includes(f[0]) &&
+        played.some((k) => !value(PLAYED[k], f) && !OPTIONS[k]?.includes(f[0])),
     )
     .map((f) => t(f[1]));
 };
-
-const numbered = (n) =>
-  Array.from({ length: n }, (_, i) => ({ name: `${i + 1}` }));
-const fromHand = (n) =>
-  Array.from({ length: n }, () => ({ name: roundName(null), melds: null }));
-const withRounds = (r, rounds) =>
-  rounds ? { ...r, rounds } : omit(r, "rounds");
-
-// the ruleset opened another way: its number of hands kept, Americano's
-// rounds for melds, 101's opening for points
-function withMode(r, mode) {
-  const { opening, ...rest } = r;
-  const hands = r.rounds?.length ?? 1;
-  if (mode === "points") {
-    return {
-      ...rest,
-      opening: opening ?? ONE_O_ONE.opening,
-      rounds: numbered(hands),
-    };
-  }
-  if (mode === "melds") return { ...rest, rounds: AMERICANO.rounds };
-  return withRounds(rest, hands > 1 && fromHand(hands));
-}
 
 // what an opening's dropdown offers: every size each kind of meld can be
 const MELDS = Object.entries(SIZES).flatMap(([type, [lo, hi]]) =>
@@ -309,8 +309,6 @@ function Settings({ base, changed, start, onClose }) {
   const { okeyState, setSetup } = useContext(OkeyContext);
   const setup = okeyState.setup ?? CLASSIC;
   const set = (change) => setSetup({ ...setup, ...change });
-  const mode = modeOf(setup);
-  const hands = setup.rounds?.length ?? 1;
   // a preset's own name is taken
   const [name, setName] = useState(
     PRESETS.some((p) => p.id === setup.id) ? "" : setup.name,
@@ -353,41 +351,23 @@ function Settings({ base, changed, start, onClose }) {
       {t(f[1])}
     </Setting>
   );
-  const MODES = {
-    hand: "From the hand",
-    melds: "Each round's melds",
-    points: "Points or pairs",
-  };
-  const setRound = (i, melds) =>
-    set({
-      rounds: setup.rounds.map((r, j) =>
-        j === i ? { name: roundName(melds), melds } : r,
-      ),
-    });
+  const setRound = (i, round) =>
+    set({ rounds: setup.rounds.map((r, j) => (j === i ? round : r)) });
+  // a points round's points, or its pairs
+  const openingField = (i, r, k) => (
+    <input
+      type="number"
+      className={k}
+      aria-label={t(k === "points" ? "Opening points" : "Opening pairs")}
+      title={t(ABOUT[k])}
+      value={r.opening[k] ?? ""}
+      onChange={(e) =>
+        setRound(i, pointsRound({ ...r.opening, [k]: number(e.target.value) }))
+      }
+    />
+  );
   return (
     <Dialog title={t("Game settings")} className="settings" onClose={onClose}>
-      <Setting
-        className="inline"
-        about={ABOUT.opening}
-        now={mode}
-        was={base && modeOf(base)}
-        format={(m) => t(MODES[m])}
-        input={
-          <select
-            id="setup-opening"
-            value={mode}
-            onChange={(e) => setSetup(withMode(setup, e.target.value))}
-          >
-            {Object.entries(MODES).map(([m, label]) => (
-              <option key={m} value={m}>
-                {t(label)}
-              </option>
-            ))}
-          </select>
-        }
-      >
-        {t("Opening")}
-      </Setting>
       <h4>{t("Rules")}</h4>
       <div className="chips">
         {shown(setup, RULES).map((f) => (
@@ -402,136 +382,95 @@ function Settings({ base, changed, start, onClose }) {
         </p>
       )}
       <h4>{t("Numbers")}</h4>
-      <div className="numbers">
-        {mode !== "melds" && (
-          <Setting
-            about={ABOUT.hands}
-            now={hands}
-            was={base && (base.rounds?.length ?? 1)}
-            input={
-              <input
-                type="number"
-                value={hands}
+      <div className="numbers">{shown(setup, NUMBERS).map(numberField)}</div>
+      <h4>{t("Scores")}</h4>
+      <div className="numbers">{shown(setup, SCORES).map(numberField)}</div>
+      <h4>
+        {t("Rounds")}
+        {base && !isEqual(base.rounds, setup.rounds) && (
+          <small className="was">{t("changed")}</small>
+        )}
+      </h4>
+      <ul className="rounds">
+        {setup.rounds.map((r, i) => (
+          <li key={i}>
+            <b>{i + 1}.</b>
+            <select
+              aria-label={t("Opening")}
+              title={t(ABOUT.round)}
+              value={kindOf(r)}
+              onChange={(e) => setRound(i, asKind(e.target.value))}
+            >
+              {Object.entries(KINDS).map(([k, label]) => (
+                <option key={k} value={k}>
+                  {t(label)}
+                </option>
+              ))}
+            </select>
+            {r.melds?.map((m, j) => (
+              <select
+                key={j}
+                value={m.join("-")}
                 onChange={(e) => {
-                  const n = Math.max(0, Math.min(50, number(e.target.value)));
-                  setSetup(
-                    withRounds(
-                      setup,
-                      mode === "points" ? numbered(n) : n !== 1 && fromHand(n),
-                    ),
+                  const melds = r.melds.flatMap((x, k) =>
+                    k !== j
+                      ? [x]
+                      : e.target.value
+                        ? [MELDS.find((y) => y.join("-") === e.target.value)]
+                        : [],
+                  );
+                  setRound(
+                    i,
+                    melds.length ? { name: roundName(melds), melds } : ELDEN,
                   );
                 }}
-              />
-            }
-          >
-            {t("Hands")}
-          </Setting>
-        )}
-        {mode === "points" &&
-          ["points", "pairs"].map((k) => (
-            <Setting
-              key={k}
-              about={ABOUT[k]}
-              now={setup.opening[k]}
-              was={base && (base.opening ?? ONE_O_ONE.opening)[k]}
-              input={
-                <input
-                  type="number"
-                  value={setup.opening[k] ?? ""}
-                  onChange={(e) =>
-                    set({
-                      opening: {
-                        ...setup.opening,
-                        [k]: number(e.target.value),
-                      },
-                    })
-                  }
-                />
-              }
-            >
-              {t(k === "points" ? "Opening points" : "Opening pairs")}
-            </Setting>
-          ))}
-        {shown(setup, NUMBERS).map(numberField)}
-      </div>
-      {setup.rounds && (
-        <>
-          <h4>{t("Scores")}</h4>
-          <div className="numbers">{shown(setup, SCORES).map(numberField)}</div>
-        </>
-      )}
-      {mode === "melds" && (
-        <>
-          <h4>
-            {t("Rounds")}
-            {base && !isEqual(base.rounds, setup.rounds) && (
-              <small className="was">{t("changed")}</small>
-            )}
-          </h4>
-          <ul className="rounds">
-            {setup.rounds.map((r, i) => (
-              <li key={i}>
-                <b>{i + 1}.</b>
-                {r.melds?.map((m, j) => (
-                  <select
-                    key={j}
-                    value={m.join("-")}
-                    onChange={(e) => {
-                      const melds = r.melds.flatMap((x, k) =>
-                        k !== j
-                          ? [x]
-                          : e.target.value
-                            ? [
-                                MELDS.find(
-                                  (y) => y.join("-") === e.target.value,
-                                ),
-                              ]
-                            : [],
-                      );
-                      setRound(i, melds.length ? melds : null);
-                    }}
-                  >
-                    <option value="">—</option>
-                    {MELDS.map((y) => (
-                      <option key={y.join("-")} value={y.join("-")}>
-                        {meldName(y)}
-                      </option>
-                    ))}
-                  </select>
-                )) ?? <span>{t(roundName(null))}</span>}
-                <button
-                  aria-label={t("Add a meld")}
-                  onClick={() => setRound(i, [...(r.melds ?? []), ["kut", 3]])}
-                >
-                  +
-                </button>
-                {setup.rounds.length > 1 && (
-                  <button
-                    aria-label={t("Remove the round")}
-                    onClick={() =>
-                      set({ rounds: setup.rounds.filter((_, j) => j !== i) })
-                    }
-                  >
-                    ✕
-                  </button>
-                )}
-              </li>
+              >
+                <option value="">—</option>
+                {MELDS.map((y) => (
+                  <option key={y.join("-")} value={y.join("-")}>
+                    {meldName(y)}
+                  </option>
+                ))}
+              </select>
             ))}
-          </ul>
-          <button
-            onClick={() =>
-              set({
-                rounds: [
-                  ...setup.rounds,
-                  { name: roundName(null), melds: null },
-                ],
-              })
-            }
-          >
-            {t("Add a round")}
-          </button>
-        </>
-      )}
+            {r.melds && (
+              <button
+                aria-label={t("Add a meld")}
+                onClick={() => {
+                  const melds = [...r.melds, ["kut", 3]];
+                  setRound(i, { name: roundName(melds), melds });
+                }}
+              >
+                +
+              </button>
+            )}
+            {r.opening && (
+              <>
+                {openingField(i, r, "points")}
+                <span>{t("or")}</span>
+                {openingField(i, r, "pairs")}
+                <span>{t("pairs")}</span>
+              </>
+            )}
+            {setup.rounds.length > 1 && (
+              <button
+                aria-label={t("Remove the round")}
+                onClick={() =>
+                  set({ rounds: setup.rounds.filter((_, j) => j !== i) })
+                }
+              >
+                ✕
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {/* like the last, to change */}
+      <button
+        onClick={() => set({ rounds: [...setup.rounds, setup.rounds.at(-1)] })}
+      >
+        {t("Add a round")}
+      </button>
       <h4>{t("Keep on this device")}</h4>
       <p className="inline">
         <input

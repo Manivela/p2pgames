@@ -8,16 +8,20 @@ import {
   rankOf,
   splitMelds,
 } from "./melds";
-import { AMERICANO } from "./rulesets";
+import { AMERICANO, modern } from "./rulesets";
 
-// Americano: 13 rounds, each with its own opening (el açma) requirement;
-// 101 Okey: open with 101 points or 5 pairs. Same shape as game.js:
-// (state, player, ...args) => new state | message. The numbers and
-// switches come from the game's ruleset (state.rules, rulesets.js).
+// Every game, played in rounds, each opening (el açma) its own way: with
+// the melds it asks for (Americano's), with points or pairs (101's), or
+// not at all, finished from the hand (Elden, classic). Same shape as
+// game.js: (state, player, ...args) => new state | message. The numbers
+// and switches come from the game's ruleset (state.rules, rulesets.js).
 
 const { seat, roundOver } = game;
 const tableTile = (tile) => ({ ...tile, source: "table", hidden: false });
-const isElden = (state) => state.rules.rounds[state.round - 1].melds === null;
+export const roundOf = (state) => state.rules.rounds[state.round - 1];
+// a round finished from the hand: nothing is laid down
+export const isElden = (state) =>
+  !roundOf(state).melds && !roundOf(state).opening;
 const wrap = (state) => state.rules.wrapRuns;
 const pairsOf = (tiles) => Array(tiles.length / 2).fill(["pair", 2]);
 // a round that opens with pairs (Americano's 4 çift)
@@ -32,22 +36,38 @@ export function startGame(state, deal, rules = AMERICANO) {
   }
   const s = game.startGame({ ...state, rules }, deal);
   if (s.gameState !== "play") return s;
+  return { ...s, ...FIRST_ROUND };
+}
+
+const FIRST_ROUND = {
+  round: 1,
+  scores: {},
+  melds: [],
+  opened: {},
+  openedWithPairs: {},
+  highestOpening: 0,
+  justOpened: null,
+  offer: null,
+  takes: {},
+  penalties: {},
+  replay: false,
+  tookDiscard: null,
+  tookOkey: null,
+  discards: 0,
+  indicatorShown: null,
+};
+
+// The game as it's played now, from what an older build wrote or saved:
+// its rules and the lobby's as they read now (modern), and a classic hand
+// from before every game had rounds as the first round
+export function current(state) {
+  const setup = state.setup && modern(state.setup);
+  if (state.gameState === "start") return { ...state, setup };
   return {
-    ...s,
-    round: 1,
-    scores: {},
-    melds: [],
-    opened: {},
-    openedWithPairs: {},
-    justOpened: null,
-    offer: null,
-    takes: {},
-    penalties: {},
-    replay: false,
-    tookDiscard: null,
-    tookOkey: null,
-    discards: 0,
-    indicatorShown: null,
+    ...(state.round ? {} : FIRST_ROUND),
+    ...state,
+    rules: modern(state.rules),
+    setup,
   };
 }
 
@@ -96,7 +116,7 @@ export function nextRound(state, deal) {
     if (!scores[p.id])
       scores[p.id] = [...Array(state.round - 1).fill(null), worst];
   }
-  // a 101 hand nobody finished is dealt again by the same player
+  // a hand nobody finished is dealt again by the same player
   const round = state.replay ? state.round : state.round + 1;
   return game.dealRound(
     {
@@ -107,6 +127,7 @@ export function nextRound(state, deal) {
       melds: [],
       opened: {},
       openedWithPairs: {},
+      highestOpening: 0,
       justOpened: null,
       offer: null,
       takes: {},
@@ -247,8 +268,17 @@ export const rackPoints = (state, player) =>
 // `points`, or (withPairs) `pairs` pairs or more anywhere on the rack;
 // picked tiles that make neither stay on the rack. Returns [melds, with
 // pairs] or null.
+// What opening with points takes this round: its points, or with
+// katlamalı (raiseOpening) more than the highest opening so far
+export const pointsToOpen = (state) =>
+  Math.max(
+    roundOf(state).opening.points,
+    state.rules.raiseOpening ? (state.highestOpening ?? 0) + 1 : 0,
+  );
+
 function openingOf(state, player, ids, withPairs) {
   const { okeyTile: ind, rules } = state;
+  const { opening } = roundOf(state);
   const hand = seat(state, player).hand;
   const groups = groupsOf(
     hand.map((t) => (ids.includes(t?.id) ? t : null)),
@@ -260,13 +290,12 @@ function openingOf(state, player, ids, withPairs) {
   const allButOne =
     rules.finishInOne &&
     sum(melds.map((m) => m.tiles.length)) === hand.filter(Boolean).length - 1;
-  if (sum(laid.map((l) => l.total)) >= rules.opening.points || allButOne) {
-    return [melds, false];
-  }
+  const total = sum(laid.map((l) => l.total));
+  if (total >= pointsToOpen(state) || allButOne) return [melds, false, total];
   if (!withPairs) return null;
   // as many pairs as there are
   const tiles = groups.flat();
-  for (let n = Math.floor(tiles.length / 2); n >= rules.opening.pairs; n--) {
+  for (let n = Math.floor(tiles.length / 2); n >= opening.pairs; n--) {
     const pairs = splitMelds(
       tiles,
       ind,
@@ -281,11 +310,8 @@ function openingOf(state, player, ids, withPairs) {
 
 // withPairs false (openAll): sets and runs only, pairs are picked by hand
 export function openHand(state, player, groups, withPairs = true) {
-  const { rules } = state;
-  const required = rules.rounds[state.round - 1].melds;
-  if (required === null) {
-    return "No opening this round: finish from your hand";
-  }
+  const { melds: required, opening } = roundOf(state);
+  if (isElden(state)) return "No opening this round: finish from your hand";
   if (state.opened[player]) return "You've already opened";
   if (!withPairs && required?.some(([type]) => type === "pair")) {
     return "Pick the pairs to open with";
@@ -295,15 +321,15 @@ export function openHand(state, player, groups, withPairs = true) {
   const hand = seat(state, player).hand;
   const tiles = groups.flat().map((id) => hand.find((t) => t?.id === id));
 
-  // Americano: the required melds, out of the picked tiles wherever they sit
-  // on the rack; picked tiles left over stay on the rack
-  const [melds, pairs] = rules.opening
+  // the required melds, out of the picked tiles wherever they sit on the
+  // rack; picked tiles left over stay on the rack
+  const [melds, pairs, total = 0] = opening
     ? (openingOf(state, player, groups.flat(), withPairs) ?? [])
     : [splitMelds(tiles, state.okeyTile, required, wrap(state), true), false];
   if (!melds) {
-    return rules.opening
-      ? `Open with ${rules.opening.points}+ or ${rules.opening.pairs} pairs`
-      : `Open with exactly: ${rules.rounds[state.round - 1].name}`;
+    return opening
+      ? `Open with ${pointsToOpen(state)}+ or ${opening.pairs} pairs`
+      : `Open with exactly: ${roundOf(state).name}`;
   }
   const taken = takeFromHand(state, player, [
     melds.flatMap((m) => m.tiles.map((t) => t.id)),
@@ -319,6 +345,7 @@ export function openHand(state, player, groups, withPairs = true) {
   );
   s.opened = { ...s.opened, [player]: true };
   if (pairs) s.openedWithPairs = { ...s.openedWithPairs, [player]: true };
+  s.highestOpening = Math.max(s.highestOpening ?? 0, total);
   s.justOpened = player;
   return s;
 }
@@ -761,8 +788,15 @@ function throwTile(state, player, tile, now = Date.now()) {
   // whether it can be caught, by the table as it lies now (catchDiscard)
   s.discardFits = fitsTable(s, tile);
   resolveOffer(s, player);
-  if (!s.drawPile.length) return endRound(s, null);
+  // the pile ran out: the round ends, or the next player shuffles the
+  // discards into a new one (game.shuffleDiscards) or calls it (endPile)
+  if (!s.drawPile.length && !s.rules.reshuffle) return endRound(s, null);
   return s;
+}
+
+export function endPile(state, player) {
+  if (!game.pileOut(state, player)) return;
+  return endRound(state, null);
 }
 
 const isCaught = (state, tileId) =>
@@ -913,10 +947,10 @@ function endRound(state, finisher, last, inOne = false) {
   const { rules } = s;
   const i = s.round - 1;
   const pairs = (id) => !!s.openedWithPairs?.[id];
-  // the okey as the last discard doubles every score but Americano's
-  // finisher's line; in 101, doubling (a game started before always
-  // doubles), so does a win with pairs, or opened and finished in one go
-  // while nobody else had opened (finishInOne), each
+  // doubling (a game started before always doubles): the okey as the last
+  // discard doubles every score, the finisher's only with finishDoubled; so
+  // does a win with pairs, or opened and finished in one go while nobody
+  // else had opened (finishInOne), each
   const doubles = rules.doubling ?? true;
   const alone =
     rules.finishInOne &&
@@ -927,13 +961,11 @@ function endRound(state, finisher, last, inOne = false) {
     : (pairs(finisher) ? 2 : 1) *
       (last && isOkey(last, s.okeyTile) ? 2 : 1) *
       (alone ? 2 : 1);
-  // 101: a hand nobody finishes scores only the okeys held, and is dealt
-  // again by the same player, unless it's scored as usual (pileOutCounts),
-  // then only when everyone opened with pairs: nobody could finish
+  // a hand nobody finishes scores only the okeys held, and is dealt again
+  // by the same player, unless it's scored as usual (pileOutCounts), then
+  // only when everyone opened with pairs: nobody could finish
   const voided =
-    rules.opening &&
-    !finisher &&
-    (!rules.pileOutCounts || s.players.every((p) => pairs(p.id)));
+    !finisher && (!rules.pileOutCounts || s.players.every((p) => pairs(p.id)));
   // pairs: the finisher's partner pays nothing for their hand
   const mate = rules.partners && finisher && game.partner(s.players, finisher);
   for (const p of s.players) {
@@ -946,10 +978,10 @@ function endRound(state, finisher, last, inOne = false) {
     const hand = voided
       ? rules.okeyInHandScore * okeys
       : p.id === finisher
-        ? rules.finishScore * (rules.opening ? times : 1) // Americano's: a line
+        ? rules.finishScore * (rules.finishDoubled ? times : 1)
         : p.id === mate?.id
           ? 0
-          : (finisher || rules.pileOutCounts) && !isElden(s) && !s.opened[p.id]
+          : !isElden(s) && !s.opened[p.id] && !rules.notOpenedHand
             ? notOpened
             : handScore(p.hand, s) * (pairs(p.id) && doubles ? 2 : 1) * times;
     const score = hand + penaltiesSoFar(s, p.id);
@@ -984,6 +1016,9 @@ function endRound(state, finisher, last, inOne = false) {
   return {
     ...s,
     gameState: "finish",
-    message: `${who} ${rules.partners ? "win" : "wins"} with ${total(winner)}`,
+    // a game of one hand is just won
+    message: `${who} ${rules.partners ? "win" : "wins"}${
+      rules.rounds.length > 1 ? ` with ${total(winner)}` : "!"
+    }`,
   };
 }

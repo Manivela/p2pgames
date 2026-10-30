@@ -72,18 +72,19 @@ export function Confirm({ label, onConfirm, children }) {
   );
 }
 
-function summary(s) {
+function summary(saved) {
+  const s = americano.current(saved);
   const turn = s.players.find((p) => p.id === s.currentPlayer)?.user?.name;
   const scores = s.players
     .filter((p) => p.user)
     .map((p) => `${p.user.name} ${sum(s.scores?.[p.id] ?? [])}`)
     .join(", ");
   return [
-    game.hasRounds(s)
+    s.rules.rounds.length > 1
       ? `${s.rules.name} · ${t(`Round ${s.round}/${s.rules.rounds.length}`)}`
-      : (s.rules?.name ?? "Okey"),
+      : s.rules.name,
     turn && t(`${turn}'s turn`),
-    game.hasRounds(s) && scores,
+    scores,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -217,9 +218,7 @@ function SetUpDialog({ onClose }) {
   const { okeyState, loadGame } = useContext(OkeyContext);
   // the game's own rules and the lobby's first, over a preset of their id
   const list = uniqBy(
-    [okeyState.rules, okeyState.setup, ...allRulesets()].filter(
-      (r) => r?.rounds,
-    ),
+    [okeyState.rules, okeyState.setup, ...allRulesets()].filter(Boolean),
     "id",
   );
   const [id, setId] = useState(list[0].id);
@@ -263,9 +262,8 @@ function SetUpDialog({ onClose }) {
           onChange={(e) => setRound(Number(e.target.value))}
         >
           {rules.rounds.map((r, i) => (
-            <option key={r.name} value={i + 1}>
-              {/* 101's hands are just numbered */}
-              {rules.opening ? i + 1 : `${i + 1}. ${t(r.name)}`}
+            <option key={i} value={i + 1}>
+              {`${i + 1}. ${t(r.name)}`}
             </option>
           ))}
         </select>
@@ -440,9 +438,7 @@ export default function TableMenu() {
                 />
               ))}
           <button onClick={() => show("load")}>{t("Saved games")}</button>
-          {(okeyState.gameState === "start" || game.hasRounds(okeyState)) && (
-            <button onClick={() => show("setup")}>{t("Set up a game")}</button>
-          )}
+          <button onClick={() => show("setup")}>{t("Set up a game")}</button>
           <label className="volume">
             {t("Sound")}
             <input
@@ -454,12 +450,12 @@ export default function TableMenu() {
               onChange={(e) => setVolume(Number(e.target.value))}
             />
           </label>
-          {/* classic: the pile ran out, and whoever's turn it is calls it */}
-          {!game.hasRounds(okeyState) && game.pileOut(okeyState, me) && (
-            <Confirm label={t("End the game")} onConfirm={then(endGame)} />
+          {/* the pile ran out (reshuffle), and whoever's turn it is calls it */}
+          {game.pileOut(okeyState, me) && (
+            <Confirm label={t("End the round")} onConfirm={then(endGame)} />
           )}
           {/* someone stands or sits mid-round: back to before the deal */}
-          {game.hasRounds(okeyState) && okeyState.gameState === "play" && (
+          {okeyState.gameState === "play" && (
             <Confirm
               label={t("Deal this round again")}
               onConfirm={then(redealRound)}

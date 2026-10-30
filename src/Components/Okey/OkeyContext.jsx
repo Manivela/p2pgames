@@ -73,7 +73,8 @@ export function OkeyProvider({ children }) {
   useMap("okey-state"); // re-render on every change
   const map = useDoc().getMap("okey-state");
   const shared = readState(map);
-  const okeyState = shared ?? game.initialState;
+  // as this build plays it, whichever build wrote it
+  const okeyState = shared ? americano.current(shared) : game.initialState;
   // an easter egg: anyone's right click turns a fake okey upside down, or
   // back, for the whole room and every game in it (apart from the game state)
   const spun = map.get("spun") ?? NONE_SPUN;
@@ -186,8 +187,6 @@ export function OkeyProvider({ children }) {
     [okeyState.players],
   );
 
-  const moves = game.hasRounds(okeyState) ? americano : game;
-
   // the tile you last dragged has already landed: moves.js doesn't fly it
   const dragged = React.useRef(null);
 
@@ -215,7 +214,7 @@ export function OkeyProvider({ children }) {
     (player, tile, toIndex) => {
       dragged.current = tile.id;
       return act(
-        moves.drawTile,
+        americano.drawTile,
         player,
         tile,
         toIndex,
@@ -223,7 +222,7 @@ export function OkeyProvider({ children }) {
         turnStart.current,
       );
     },
-    [act, moves],
+    [act],
   );
 
   // Tiles picked on your own rack (local only, not shared): dragging one
@@ -287,11 +286,8 @@ export function OkeyProvider({ children }) {
   const discardTile = useCallback(
     (player, tile) => {
       dragged.current = tile.id;
-      if (
-        !game.hasRounds(okeyState) ||
-        !americano.claimWait(okeyState, player)
-      ) {
-        return act(moves.discardTile, player, tile);
+      if (!americano.claimWait(okeyState, player)) {
+        return act(americano.discardTile, player, tile);
       }
       // anything else that would stop it is said now, not when it's thrown
       const next =
@@ -304,7 +300,7 @@ export function OkeyProvider({ children }) {
       setSelected((ids) => ids.filter((id) => id !== tile.id));
       return true;
     },
-    [act, moves, okeyState, me],
+    [act, okeyState, me],
   );
 
   // the held discard is thrown once the rules allow it (asked again when the
@@ -336,17 +332,15 @@ export function OkeyProvider({ children }) {
     (tile) => {
       if (ghost(tile)) return false;
       dragged.current = tile.id;
-      return act(moves.finishGame, me, tile);
+      return act(americano.finishGame, me, tile);
     },
-    [act, moves, me],
+    [act, me],
   );
 
-  // rules: a ruleset (rulesets.js); one without rounds is the classic game
+  // rules: a ruleset (rulesets.js)
   const startGame = useCallback(
     (rules) => {
-      const next = rules.rounds
-        ? americano.startGame(okeyState, undefined, rules)
-        : game.startGame({ ...okeyState, rules });
+      const next = americano.startGame(okeyState, undefined, rules);
       // a failed start would still replace the table, seats and all
       if (next.gameState !== "play") toast(t(next.message));
       else replaceState(map, next);
@@ -447,9 +441,8 @@ export function OkeyProvider({ children }) {
   }, [provider]);
 
   const showIndicator = useCallback(
-    (tile) =>
-      game.hasRounds(okeyState) && act(americano.showIndicator, me, tile.id),
-    [act, me, okeyState],
+    (tile) => act(americano.showIndicator, me, tile.id),
+    [act, me],
   );
 
   const playOnMeld = useCallback(
@@ -494,12 +487,13 @@ export function OkeyProvider({ children }) {
     else replaceState(map, next);
   }, [map, okeyState]);
 
-  // classic, the pile ran out: a new one from the discards, or the end
+  // the pile ran out (reshuffle): a new one from the discards, or the end
+  // of the round
   const shuffleDiscards = useCallback(
     () => act(game.shuffleDiscards, me),
     [act, me],
   );
-  const endGame = useCallback(() => act(game.endGame, me), [act, me]);
+  const endGame = useCallback(() => act(americano.endPile, me), [act, me]);
 
   // a saved or set-up game replaces the table whole
   const loadGame = useCallback((next) => replaceState(map, next), [map]);

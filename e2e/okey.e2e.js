@@ -15,7 +15,7 @@ const PASTE = /Paste a save code|Kayıt kodunu yapıştır/;
 const LOAD = /^(Load this game|Bu oyunu yükle)$/;
 const NEXT = /^(Next Round|Sonraki el)$/;
 const SHUFFLE = /^(Shuffle and play on|Karıştır, devam et)$/;
-const END = /^(End the game|Oyunu bitir)$/;
+const END = /^(End the round|Eli bitir)$/;
 const NEW_GAME = /^(New Game|Yeni oyun)$/;
 const REDEAL = /^(Deal this round again|Bu eli yeniden dağıt)$/;
 const OPEN = /^(Open your hand|El aç)$/;
@@ -242,8 +242,8 @@ test("after a round of four, a fifth arriving has a seat, and it fits", async ({
 });
 
 // classic: once the pile runs out, whoever's turn it is shuffles the
-// discards into a new one, or ends the game from the menu
-test("classic: an empty pile is shuffled again, or ends the game", async ({
+// discards into a new one, or ends the hand from the menu, to deal it again
+test("classic: an empty pile is shuffled again, or the hand dealt again", async ({
   page,
 }) => {
   await sitDown(page);
@@ -257,7 +257,7 @@ test("classic: an empty pile is shuffled again, or ends the game", async ({
   await table(page, "emptyPile");
   await confirm(page, END);
   await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(4);
-  await expect(page.getByRole("button", { name: NEW_GAME })).toBeVisible();
+  await expect(page.getByRole("button", { name: NEXT })).toBeVisible();
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
@@ -435,7 +435,7 @@ test("101 starts with what's ticked, and in pairs with four at the table", async
   await page.getByLabel(RULES).selectOption("101");
   await page.getByRole("button", { name: SETTINGS }).click();
   await page.getByLabel(/^(Partners|Eşli)$/).check();
-  await page.getByLabel(/^(Doubling|Katlamalı)$/).check();
+  await page.getByLabel(/^(Each opening beats the last|Katlamalı)$/).check();
   await page.getByRole("button", { name: CLOSE }).click();
   await expect(page.getByLabel(RULES)).toContainText("101 *");
   const start101 = page.getByRole("button", { name: START });
@@ -452,7 +452,7 @@ test("101 starts with what's ticked, and in pairs with four at the table", async
     .toMatchObject({
       id: "101",
       partners: true,
-      doubling: true,
+      raiseOpening: true,
     });
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
@@ -497,8 +497,8 @@ test("a game set up in the settings starts that way, and is kept", async ({
 }) => {
   await sitDown(page);
   await table(page, "seatBots", 2);
+  await page.getByLabel(RULES).selectOption("americano");
   await page.getByRole("button", { name: SETTINGS }).click();
-  await page.locator("#setup-opening").selectOption("melds");
   await page.getByLabel(/^(Tiles dealt|Dağıtılan taş)$/).fill("12");
   await page
     .getByRole("button", { name: /^(Remove the round|Eli kaldır)$/ })

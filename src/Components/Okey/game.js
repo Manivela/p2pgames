@@ -224,10 +224,6 @@ export const initialState = {
   message: "",
 };
 
-// A ruleset with rounds plays them, scored (americano.js); one without
-// (classic), or a game from before rulesets, plays one hand (game.js).
-export const hasRounds = (state) => !!state.rules?.rounds;
-
 // the most players a game takes: four, or what its ruleset seats
 export const seatsOf = (state) => state.rules?.seats ?? 4;
 
@@ -462,9 +458,9 @@ export function discardTile(state, player, tile) {
   return newState;
 }
 
-// The pile ran out (classic): before drawing, the player whose turn it is
-// shuffles every discard into a new pile and plays on, or ends the game
-// with nobody winning.
+// The pile ran out, in a ruleset that reshuffles: before drawing, the
+// player whose turn it is shuffles every discard into a new pile and plays
+// on, or ends the round (americano.endPile).
 export const pileOut = (state, player) =>
   state.gameState === "play" &&
   state.currentPlayer === player &&
@@ -482,13 +478,6 @@ export function shuffleDiscards(state, player) {
   for (const p of s.players) p.discardPile = [];
   s.lastDiscard = null;
   return s;
-}
-
-export function endGame(state, player) {
-  if (!pileOut(state, player)) return;
-  const s = cloneDeep(state);
-  showHands(s);
-  return { ...s, gameState: "finish", message: "No tiles left" };
 }
 
 // every hand shows face up once the round is over, tiles flipped in play too

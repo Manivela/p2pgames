@@ -11,7 +11,8 @@ import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { Lobby } from "./GameSettings";
 import { useMoves } from "./moves";
-import { ended, hasRounds, pileOut, rowOf, tableSeats } from "./game";
+import { ended, pileOut, rowOf, tableSeats } from "./game";
+import { isElden } from "./americano";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -156,13 +157,10 @@ function NextStep() {
     case "start":
       return <Lobby />;
     case "play": {
-      if (!hasRounds(okeyState)) {
+      // the pile ran out (reshuffle): before drawing, play on
+      if (pileOut(okeyState, me)) {
         return (
-          pileOut(okeyState, me) && (
-            <button onClick={shuffleDiscards}>
-              {t("Shuffle and play on")}
-            </button>
-          )
+          <button onClick={shuffleDiscards}>{t("Shuffle and play on")}</button>
         );
       }
       // El aç, all hand long: pressed once, it picks what it would lay down
@@ -173,7 +171,7 @@ function NextStep() {
       const lay = opened ? layMelds : openHand;
       return (
         me &&
-        okeyState.rules.rounds[okeyState.round - 1].melds !== null && (
+        !isElden(okeyState) && (
           <button
             aria-pressed={picking}
             onClick={
@@ -251,7 +249,7 @@ function OnTheTable({ pile }) {
   return (
     <>
       {pile}
-      {hasRounds(okeyState) && <Melds underPile={!!pile} />}
+      {okeyState.gameState !== "start" && <Melds underPile={!!pile} />}
     </>
   );
 }
@@ -427,7 +425,7 @@ function Board() {
           <DiscardPile player={mine.id} />
           {/* under your pile, a thumb away on a phone */}
           <div className="controls">
-            {hasRounds(okeyState) && <Scores />}
+            {okeyState.gameState !== "start" && <Scores />}
             <TableMenu />
           </div>
         </div>

@@ -165,6 +165,22 @@ test("101: open with 101 points as laid out on the rack, an okey where it stands
   );
 });
 
+test("101: katlamalı: an opening with points beats the highest so far", () => {
+  const rules = { ...ONE_O_ONE, raiseOpening: true };
+  let s = start(2, seri, rules);
+  assert.equal(americano.pointsToOpen(s), 101);
+  // after an opening of 103, 103 doesn't open
+  assert.equal(
+    americano.openHand({ ...s, highestOpening: 103 }, 1, [opening]),
+    "Open with 104+ or 5 pairs",
+  );
+  s = americano.openHand(s, 1, [opening]);
+  assert.equal(s.highestOpening, 103);
+  assert.equal(americano.pointsToOpen(s), 104);
+  // without it, 101 as ever; and the next hand starts over
+  assert.equal(americano.pointsToOpen({ ...s, rules: ONE_O_ONE }), 101);
+});
+
 test("101: picked tiles that fit no set or run stay on the rack", () => {
   // the red 3 right after red 10-11-okey, and a black 2 on its own
   let s = start(2, [...seri, "red3-0"]);
@@ -329,8 +345,9 @@ test("101: open all but one tile at once and finish, under 101 too", () => {
     "black5-1",
     "yellow5-1",
   ];
+  const plain = { ...ONE_O_ONE, doubling: false };
   const one = (extra) =>
-    holding(start(), 1, [
+    holding(start(2, seri, plain), 1, [
       ...melds.slice(0, 3),
       null,
       ...melds.slice(3),
@@ -347,9 +364,8 @@ test("101: open all but one tile at once and finish, under 101 too", () => {
   assert.isTrue(s.opened[1]);
   s = americano.finishGame(s, 1, tileIn(s, 1, "blue9-1"));
   assert.equal(s.scores[1][0], -101);
-  // doubling: nobody else had opened, so that's twice over
-  const doubled = { ...ONE_O_ONE, doubling: true };
-  s = holding(start(2, seri, doubled), 1, [...melds, null, "blue9-1"]);
+  // doubling (the PDF's): nobody else had opened, so that's twice over
+  s = holding(start(), 1, [...melds, null, "blue9-1"]);
   s = americano.openHand(s, 1, [melds]);
   s = americano.finishGame(s, 1, tileIn(s, 1, "blue9-1"));
   assert.equal(s.scores[1][0], -202);
@@ -492,16 +508,22 @@ const scoresOf = (s) =>
 const finish = (options) => scoresOf(finished(options));
 
 test("101: scoring a hand, as it is or doubling, alone or in pairs", () => {
-  // the winner -101; face value (an okey 101), 202 for not opening and 101
-  // for each okey held; penalties on top
-  assert.deepEqual(finish(), { 1: -101, 2: 113 + 101, 3: 7, 4: 202 });
-  assert.deepEqual(finish({ pairsWin: true, last: "blue1-0" }), finish());
-  assert.deepEqual(finish({ p4: ["red9-0", "blue1-0"] }), {
+  // without doubling: the winner -101; face value (an okey 101), 202 for
+  // not opening and 101 for each okey held; penalties on top
+  const plain = { ...ONE_O_ONE, doubling: false };
+  assert.deepEqual(finish({ rules: plain }), {
+    ...{ 1: -101, 2: 113 + 101, 3: 7, 4: 202 },
+  });
+  assert.deepEqual(
+    finish({ rules: plain, pairsWin: true, last: "blue1-0" }),
+    finish({ rules: plain }),
+  );
+  assert.deepEqual(finish({ rules: plain, p4: ["red9-0", "blue1-0"] }), {
     ...{ 1: -101, 2: 214, 3: 7, 4: 202 + 101 },
   });
-  // doubling: a pairs opener pays twice; a win with pairs or with the okey
-  // doubles every score, each
-  const doubling = { ...ONE_O_ONE, doubling: true };
+  // doubling, as the PDF has it: a pairs opener pays twice; a win with
+  // pairs or with the okey doubles every score, each
+  const doubling = ONE_O_ONE;
   assert.deepEqual(finish({ rules: doubling }), {
     ...{ 1: -101, 2: 214, 3: 14, 4: 202 },
   });

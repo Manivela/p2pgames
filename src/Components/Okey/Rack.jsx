@@ -4,10 +4,17 @@ import Tile, { TileFace } from "./Tile";
 import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
-import { pairRound, rackPoints, upForClaim } from "./americano";
+import {
+  isElden,
+  pairRound,
+  pointsToOpen,
+  rackPoints,
+  roundOf,
+  upForClaim,
+} from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-import { ended, hasRounds, partner, placeTiles, rowOf } from "./game";
+import { ended, partner, placeTiles, rowOf } from "./game";
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -19,26 +26,28 @@ const Timer = ({ okeyState }) => (
   <i key={`${okeyState.deal}-${okeyState.currentPlayer}`} className="timer" />
 );
 
-// how many tiles a player holds, while a ruleset's round is played
-// (classic hands don't shrink)
+// how many tiles a player holds, while a round is played (one finished
+// from the hand doesn't shrink)
 function TilesLeft({ player }) {
   const { okeyState, myHand } = useContext(OkeyContext);
-  if (!hasRounds(okeyState) || okeyState.gameState !== "play") return null;
+  if (okeyState.gameState !== "play" || isElden(okeyState)) return null;
   const left = myHand(player).filter(Boolean).length;
   return (
     <span className={`tilesLeft ${left === 1 ? "last" : ""}`}>{left}</span>
   );
 }
 
-// 101, until you've opened: what your sets and runs are worth as they lie
-// on your rack, against what opening takes
+// a round opened with points, until you've opened: what your sets and runs
+// are worth as they lie on your rack, against what opening takes
 function RackPoints({ player }) {
   const { okeyState } = useContext(OkeyContext);
-  const { rules, gameState, opened } = okeyState;
-  if (!rules?.opening || gameState !== "play" || opened?.[player]) return null;
+  const { gameState, opened } = okeyState;
+  if (gameState !== "play" || opened[player]) return null;
+  const { opening } = roundOf(okeyState);
+  if (!opening) return null;
   return (
     <span className="badge points">
-      {rackPoints(okeyState, player)}/{rules.opening.points}
+      {rackPoints(okeyState, player)}/{pointsToOpen(okeyState)}
     </span>
   );
 }
@@ -68,7 +77,7 @@ function Name({ player, children }) {
         {playing && turn && okeyState.drawn && (
           <span className="badge drew">{t("drew")}</span>
         )}
-        {playing && hasRounds(okeyState) && okeyState.opened[player] && (
+        {playing && okeyState.opened[player] && (
           <span className="badge">{t("opened")}</span>
         )}
         {playing &&
@@ -249,9 +258,7 @@ function Hands({ players }) {
             <span className="avatar" style={{ "--c": seatColors[player] }}>
               {name && [...name][0].toLocaleUpperCase()}
             </span>
-            {hasRounds(okeyState) && (
-              <b className="score">{score > 0 ? `+${score}` : score}</b>
-            )}
+            <b className="score">{score > 0 ? `+${score}` : score}</b>
             <div className="tiles">
               {[0, rowOf(okeyState)].map((from) => {
                 const row = hand.slice(from, from + rowOf(okeyState));
@@ -305,7 +312,8 @@ export function DiscardPile({ player, small }) {
   // look through; another tap, there or anywhere, puts them back
   const [peek, setPeek] = useState(false);
   const pileRef = useRef();
-  const canPeek = pairRound(okeyState) && pile.length > 1;
+  const canPeek =
+    pairRound(okeyState) && okeyState.rules.peekPairRounds && pile.length > 1;
   useEffect(() => {
     if (!peek) return;
     const away = (e) => !pileRef.current?.contains(e.target) && setPeek(false);
@@ -317,7 +325,6 @@ export function DiscardPile({ player, small }) {
   const ghost = held && player === me && myHand(me).find((t) => t?.id === held);
   // whether it fits a meld is for them to see
   const canCatch =
-    hasRounds(okeyState) &&
     okeyState.gameState === "play" &&
     me &&
     me !== player &&

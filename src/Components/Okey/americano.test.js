@@ -336,23 +336,42 @@ test("two-meld openings match in either order, okey included", () => {
   );
 });
 
-test("the round ends with no finisher when the pile runs out", () => {
-  let s = americano.startGame(seated(3));
+// three play until the pile runs out, nobody opening
+function pileOut(rules) {
+  let s = americano.startGame(seated(3), undefined, rules);
   while (s.gameState === "play") {
     const p = s.currentPlayer;
     if (!s.drawn) s = game.drawTile(s, p, s.drawPile.at(-1), 25);
     s = americano.discardTile(s, p, player(s, p).hand.find(Boolean));
   }
+  return s;
+}
+
+test("the round ends with no finisher when the pile runs out", () => {
+  let s = pileOut();
   assert.equal(s.gameState, "roundEnd");
   assert.equal(s.message, "Round 1: no tiles left");
   assert.deepEqual(turn(s), []); // nobody finished: nothing to show
-  // no finisher, so nobody gets the never-opened 100: everyone scores their hand
+  // scored as usual: nobody opened
+  for (const p of s.players.filter((x) => x.user)) {
+    assert.deepEqual(s.scores[p.id], [AMERICANO.notOpenedScore]);
+  }
+  // or the hands are counted
+  s = pileOut({ ...AMERICANO, notOpenedHand: true });
   for (const p of s.players.filter((x) => x.user)) {
     const hand = p.hand.filter(Boolean);
     const expected = sum(
       hand.map((x) => (isOkey(x, s.okeyTile) ? 25 : rankOf(x, s.okeyTile))),
     );
     assert.deepEqual(s.scores[p.id], [expected]);
+  }
+  // or the round is dealt again, scoring the okeys held
+  s = pileOut({ ...AMERICANO, pileOutCounts: false });
+  assert.isTrue(s.replay);
+  assert.equal(s.message, "Round 1: no tiles left, dealt again");
+  for (const p of s.players.filter((x) => x.user)) {
+    const okeys = p.hand.filter((x) => x && isOkey(x, s.okeyTile)).length;
+    assert.deepEqual(s.scores[p.id], [25 * okeys]);
   }
 });
 
@@ -376,6 +395,47 @@ test("the okey thrown as the last tile doubles everyone else's score", () => {
     2: [AMERICANO.notOpenedScore * 2],
   });
   assert.equal(s.message, "P1 finished round 1 ×2");
+  // and the finisher's too, if the rules say
+  s = americano.startGame(
+    seated(2),
+    {
+      ...deal,
+      hands: [p1Hand.map((x) => (x === "yellow11-0" ? "blue1-0" : x)), p2Hand],
+    },
+    { ...AMERICANO, finishDoubled: true },
+  );
+  s = americano.openHand(s, 1, [kut5]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 20);
+  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow5-0"));
+  s = game.drawTile(s, 1, player(s, 2).discardPile.at(-1), 20);
+  s = americano.addToMeld(s, 1, "yellow5-0", 0);
+  s = americano.layMelds(s, 1, [seri789, seri234, kut10]);
+  s = americano.addToMeld(s, 1, "red10-0", 1);
+  s = americano.finishGame(s, 1, tileIn(s, 1, "blue1-0"));
+  assert.equal(s.scores[1][0], AMERICANO.finishScore * 2);
+});
+
+test("a ruleset can count the hand of a player who didn't open", () => {
+  let s = americano.startGame(seated(2), deal, {
+    ...AMERICANO,
+    notOpenedHand: true,
+  });
+  s = americano.openHand(s, 1, [kut5]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 20);
+  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow5-0"));
+  s = game.drawTile(s, 1, player(s, 2).discardPile.at(-1), 20);
+  s = americano.addToMeld(s, 1, "yellow5-0", 0);
+  s = americano.layMelds(s, 1, [seri789, seri234, kut10]);
+  s = americano.addToMeld(s, 1, "red10-0", 1);
+  s = americano.finishGame(s, 1, tileIn(s, 1, "yellow11-0"));
+  const hand = player(s, 2).hand.filter(Boolean);
+  const counted = sum(
+    hand.map((x) => (isOkey(x, s.okeyTile) ? 25 : rankOf(x, s.okeyTile))),
+  );
+  assert.notEqual(counted, AMERICANO.notOpenedScore);
+  assert.deepEqual(s.scores, { 1: [AMERICANO.finishScore], 2: [counted] });
 });
 
 test("Elden: no opening, finish from hand, lowest total wins the game", () => {
