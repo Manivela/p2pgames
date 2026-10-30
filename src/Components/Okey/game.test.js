@@ -159,7 +159,7 @@ test("a loaded game seats whoever sits there now", () => {
 });
 
 test("a save code hides the state and loads it back", async () => {
-  const s = game.startGame(seated(4));
+  const s = americano.startGame(seated(4));
   const code = await game.encodeSave(s);
   assert.match(code, /^[A-Za-z0-9+/=]+$/); // no JSON, no tile ids
   assert.isBelow(code.length, JSON.stringify(s).length / 5);
@@ -398,6 +398,6 @@ test("a game keeps its ruleset, synced and saved", async () => {
       .currentPlayer,
     2,
   );
-  const classic = await game.decodeSave(await game.encodeSave(seated(2)));
-  assert.notProperty(classic, "rules");
+  // an older build's, not played in rounds, isn't loaded
+  assert.isNull(await game.decodeSave(await game.encodeSave(seated(2))));
 });

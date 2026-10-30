@@ -13,16 +13,14 @@ test("every message the rules return has a Turkish version", () => {
 
 test("every game setting, and what it does, has a Turkish version", () => {
   const src = readFileSync("src/Components/Okey/GameSettings.jsx", "utf8");
-  const start = src.indexOf("const ABOUT");
-  const about = src.slice(start, src.indexOf("};", start));
-  // [key, label, …]: a label starts with a capital or a number
-  const labels = [...src.matchAll(/\["\w+", "([A-Z0-9][^"]*)"/g)].map(
-    (m) => m[1],
-  );
-  const texts = [...about.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.isAbove(labels.length, 20);
-  assert.isAbove(texts.length, 20);
-  for (const m of [...labels, ...texts]) assert.notEqual(t(m, true), m, m);
+  const start = src.indexOf("const GROUPS");
+  const groups = src.slice(start, src.indexOf("const isSwitch", start));
+  // the headings and what each setting does: the keys are camelCase
+  const texts = [...groups.matchAll(/"([^"]+)"/g)]
+    .map((m) => m[1])
+    .filter((m) => /^[A-Z]/.test(m));
+  assert.isAbove(texts.length, 35);
+  for (const m of texts) assert.notEqual(t(m, true), m, m);
   assert.equal(t("default: 20", true), "varsayılan: 20");
 });
 

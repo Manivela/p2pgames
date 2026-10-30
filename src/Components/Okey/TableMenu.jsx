@@ -72,8 +72,7 @@ export function Confirm({ label, onConfirm, children }) {
   );
 }
 
-function summary(saved) {
-  const s = americano.current(saved);
+function summary(s) {
   const turn = s.players.find((p) => p.id === s.currentPlayer)?.user?.name;
   const scores = s.players
     .filter((p) => p.user)

@@ -74,7 +74,7 @@ export function OkeyProvider({ children }) {
   const map = useDoc().getMap("okey-state");
   const shared = readState(map);
   // as this build plays it, whichever build wrote it
-  const okeyState = shared ? americano.current(shared) : game.initialState;
+  const okeyState = shared ?? game.initialState;
   // an easter egg: anyone's right click turns a fake okey upside down, or
   // back, for the whole room and every game in it (apart from the game state)
   const spun = map.get("spun") ?? NONE_SPUN;

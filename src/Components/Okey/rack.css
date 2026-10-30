@@ -1054,11 +1054,6 @@ html:has(.fit) {
   font-weight: 600;
 }
 
-.settings .untested {
-  margin: 6px 0 0;
-  color: #a15c00;
-}
-
 .board .playerName button {
   height: auto;
   margin-left: 0.3em;
@@ -1299,76 +1294,59 @@ html:has(.fit) {
   margin: 4px 0;
 }
 
-.settings .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.settings .chips label {
-  display: flex;
+/* a setting a line: what it does, then its switch or number, in a column
+   of their own; one hanging on the switch above, set in under it */
+.settings .group label {
+  display: grid;
+  grid-template-columns: 1fr 70px;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
   margin: 0;
-  padding: 4px 10px;
-  border: 1px solid #ccc;
-  border-radius: 999px;
+  padding: 5px 0;
+  border-top: 1px solid #eee;
+  font-weight: normal;
   cursor: pointer;
 }
 
-.settings .chips label:has(:checked) {
-  border-color: #2e7d32;
-  background: #e8f5e9;
+.settings .group label:first-child {
+  border-top: none;
 }
 
-.settings .chips input {
+.settings .group .under {
+  padding-left: 20px;
+}
+
+.settings .group input {
   margin: 0;
 }
 
+.settings .group input[type="checkbox"] {
+  justify-self: center;
+  width: 18px;
+  height: 18px;
+}
+
 /* a setting changed from its ruleset's, with what it was */
-.settings .changed {
+.settings .changed input {
   outline: 2px solid #e8a33d;
   outline-offset: 1px;
 }
 
-.settings .numbers .changed {
-  outline: none;
-}
-
-.settings .numbers .changed input,
-.settings .inline.changed select {
-  outline: 2px solid #e8a33d;
-}
-
-.settings .inline.changed {
-  outline: none;
-}
-
-.settings .was {
+.settings :is(.was, .untested) {
   display: block;
   color: #a15c00;
   font-size: 12px;
   font-weight: normal;
 }
 
-.settings :is(.chips, h4) .was {
+.settings h4 .was {
   display: inline;
   margin-left: 6px;
 }
 
-.settings .numbers {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 4px 16px;
-}
-
-.settings .numbers label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0;
-  font-weight: normal;
+.settings .about {
+  margin: 0 0 6px;
+  color: #555;
 }
 
 .settings .rounds {

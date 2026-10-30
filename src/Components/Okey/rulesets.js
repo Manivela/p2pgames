@@ -14,28 +14,63 @@ export const pointsRound = (opening) => ({
   opening,
 });
 
+// Every setting a ruleset has, each preset's unless it says otherwise:
+// every switch off, the score sheet Americano's
+export const DEFAULTS = {
+  seats: 4,
+  tileSets: 2,
+  handSize: 14, // the starter gets one more
+  rowSlots: 13, // a rack row
+  rounds: [{ name: "Elden", melds: null }],
+  partners: false,
+  doubling: false,
+  finishDoubled: false,
+  outOfTurnTakes: false,
+  maxTakes: 3, // out-of-turn takes a player has a round
+  claimWaitSeconds: 8,
+  takeMustBeUsed: false,
+  buildWhenOpening: false,
+  swapOkeys: false,
+  okeySwapFromRound: null, // a table okey taken only once you've opened
+  catchUntilDraw: false,
+  takeCaught: false,
+  peekPairRounds: false,
+  pairsForAll: false,
+  pairsAddMax: 0, // no limit
+  finishInOne: false,
+  raiseOpening: false,
+  reshuffle: false,
+  pileOutCounts: false,
+  notOpenedHand: false,
+  notOpenedCounts: false,
+  wrapRuns: false,
+  // the score sheet: lowest total after the last round wins
+  finishScore: -20,
+  notOpenedScore: 100,
+  okeyInHandScore: 25,
+  // discarding a tile that fits a table meld (işler taş): whoever catches
+  // it adds this to the discarder's round score
+  catchPenalty: 20,
+  okeyDiscardPenalty: 0,
+  returnPenalty: 0,
+  indicatorScore: 0,
+};
+
 // Classic: one hand, finished from the hand; a pile that runs out is
 // shuffled in again, or the hand dealt again
 export const CLASSIC = {
+  ...DEFAULTS,
   id: "classic",
   name: "Okey",
-  handSize: 14,
-  rowSlots: 13,
-  seats: 4,
-  rounds: [{ name: "Elden", melds: null }],
   wrapRuns: true, // 12-13-1 is a run
-  doubling: false,
   reshuffle: true, // the discards make a new pile
-  pileOutCounts: false,
-  finishDoubled: false,
-  peekPairRounds: false,
 };
 
 // Americano: 13 rounds, each with its own opening (el açma) requirement.
 export const AMERICANO = {
+  ...DEFAULTS,
   id: "americano",
   name: "Americano",
-  handSize: 14, // the starter gets one more
   // The opening must be exactly these melds, [type, size] each.
   // Elden has no opening: you finish with your whole hand in one go.
   rounds: [
@@ -98,37 +133,22 @@ export const AMERICANO = {
     },
     { name: "Elden", melds: null },
   ],
-  // score sheet values; lowest total after the last round wins; the okey
-  // thrown as the last tile doubles everyone else's
-  finishScore: -20, // shown as a line on the sheet
-  notOpenedScore: 100,
-  okeyInHandScore: 25,
-  // out-of-turn takes allowed per player per round
-  maxTakes: 3,
-  // from this round on, a real tile can take an okey's place in a table meld
-  okeySwapFromRound: 6,
-  // a fifth player can sit in (14 × 5 + 1 dealt leaves 34 in the pile)
-  seats: 5,
-  // the others get this long to take the discard, from when the turn reached
-  // the player who drew from the pile instead
-  claimWaitSeconds: 8,
-  // discarding a tile that fits a table meld (işler taş): whoever catches it
-  // adds this to the discarder's round score, and nobody can take the tile
-  catchPenalty: 20,
-  wrapRuns: false, // runs stop at 13: 12-13-1 is classic only
   outOfTurnTakes: true, // anyone may claim the discard (maxTakes a round)
   swapOkeys: true, // a table okey can be traded for the tile it stands for
-  buildWhenOpening: false, // lay more and add to melds only from next turn
+  // from this round on, before opening too
+  okeySwapFromRound: 6,
   doubling: true, // the okey thrown last doubles the others' scores
-  finishDoubled: false, // but finishing is always a line
   pileOutCounts: true, // a pile that runs out ends the round, scored
   peekPairRounds: true, // the pair round's discards can be looked through
 };
 
-// 101 Okey, as pagat.com has it (pagat.com/rummy/okey101.html): open with
-// sets and runs worth 101 or more at face value, or with 5 pairs; the
-// lowest total after 11 hands wins.
+// 101 Okey, as pagat.com has it (pagat.com/rummy/okey101.html), with the
+// Eşli 101 Turnuvası's rules on top (medya.barobirlik.org.tr/barowebsite/
+// uploads/52/kural1.pdf): open with sets and runs worth 101 or more at face
+// value, or with 5 pairs; the lowest total after 11 hands wins. Partners
+// (eşli) are the table's to tick.
 export const ONE_O_ONE = {
+  ...DEFAULTS,
   id: "101",
   name: "101",
   handSize: 21,
@@ -136,69 +156,36 @@ export const ONE_O_ONE = {
   // the same opening every hand
   rounds: Array(11).fill(pointsRound({ points: 101, pairs: 5 })),
   // a pairs opener scores double, and lays only pairs (or adds to the
-  // table's sets and runs); a win with pairs or by discarding the okey
-  // doubles every score, both together quadruple it (a player who didn't
-  // open pays at most twice notOpenedScore)
-  finishScore: -101,
+  // table's sets and runs); a win with pairs, in one go or by discarding
+  // the okey doubles every score, the finisher's too, each (a player who
+  // didn't open pays at most twice notOpenedScore)
+  doubling: true,
   finishDoubled: true,
+  finishScore: -101,
   notOpenedScore: 202,
+  notOpenedCounts: true, // and the okeys held, doubled too
   okeyInHandScore: 101,
   catchPenalty: 101, // işler taş, caught with the Catch button
-  okeyDiscardPenalty: 101, // discarding the okey, unless it's your last tile
-  wrapRuns: false, // 1-2-3 only, never 12-13-1
-  outOfTurnTakes: false,
-  // the previous discard can be taken only to use it in a meld that turn
-  takeMustBeUsed: true,
-  // Eşli 101 Turnuvası's rules (medya.barobirlik.org.tr/barowebsite/uploads/
-  // 52/kural1.pdf), on top of pagat's: a game started before keeps pagat's
-  returnPenalty: 101, // taking the discard and putting it back
-  catchUntilDraw: true, // a discard is caught before the next player draws
+  catchUntilDraw: true, // before the next player draws
   takeCaught: true, // and, caught, the next player can still take it
+  okeyDiscardPenalty: 101, // discarding the okey, unless it's your last tile
+  // the previous discard can be taken only to use it in a meld that turn,
+  // or put back for this
+  takeMustBeUsed: true,
+  returnPenalty: 101,
   pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn
   pairsForAll: true, // once someone opens with pairs, everyone lays pairs
-  peekPairRounds: false,
   finishInOne: true, // open all but one tile at once and finish, under 101 too
   pileOutCounts: true, // a pile that runs out ends the hand, scored as usual
-  notOpenedCounts: true, // not opening: 202 and the okeys held, doubled too
-  // four in pairs across the table, the finisher's partner paying nothing:
-  // the table's choice when it starts
-  partners: false,
-  // a win with the okey, with pairs or in one go doubles the scores, and so
-  // does opening with pairs a player's own
-  doubling: true,
   // gösterge, which the PDF leaves out: the indicator's twin dropped on it
   // on your first turn takes this off your hand's score
   indicatorScore: -101,
   // a table okey goes to whoever holds its tile, once they've opened
   swapOkeys: true,
-  okeySwapFromRound: null,
   buildWhenOpening: true,
 };
 
 export const PRESETS = [CLASSIC, AMERICANO, ONE_O_ONE];
-
-// Rules as they're played now, from an older game, save or kept ruleset:
-// none (a game from before rulesets) or classic's without rounds are one
-// hand from the hand; a points opening, once the whole game's, is each
-// round's; and the switches that came of the game's kind say what it did.
-export function modern(rules) {
-  if (!rules) return CLASSIC;
-  if (!rules.rounds) return { ...CLASSIC, ...rules };
-  const { opening, ...r } = rules;
-  if (!opening) {
-    return {
-      ...r,
-      pileOutCounts: r.pileOutCounts ?? true,
-      peekPairRounds: r.peekPairRounds ?? true,
-    };
-  }
-  return {
-    ...r,
-    finishDoubled: r.finishDoubled ?? true,
-    pileOutCounts: r.pileOutCounts ?? false,
-    rounds: r.rounds.map(() => pointsRound(opening)),
-  };
-}
 
 // Turkish "3'lü", "5'li", "6'lı", "9'lu": by how the number ends
 const SUFFIX = ["lu", "li", "li", "lü", "lü", "li", "lı", "li", "li", "lu"];
@@ -232,8 +219,7 @@ const whole = (n, lo, hi = Infinity) =>
 // What keeps a ruleset made in the editor from being played, or nothing:
 // the rules read it without checking, at every table it's played at.
 export function invalid(r) {
-  // what game.js reads when a ruleset has none
-  const { seats = 4, handSize = 14, rowSlots = 13, tileSets = 2 } = r;
+  const { seats, handSize, rowSlots, tileSets } = r;
   if (!r.name?.trim()) return "Give the rules a name";
   if (!whole(seats, 2, 8)) return "2 to 8 players";
   if (!whole(tileSets, 1, 4)) return "1 to 4 sets of tiles";
@@ -271,7 +257,11 @@ export function invalid(r) {
 const KEPT = "okey-rulesets";
 export function keptRulesets() {
   try {
-    return (JSON.parse(localStorage.getItem(KEPT)) ?? []).map(modern);
+    // made before a setting was: as if it had it off
+    return (JSON.parse(localStorage.getItem(KEPT)) ?? []).map((r) => ({
+      ...DEFAULTS,
+      ...r,
+    }));
   } catch {
     return [];
   }

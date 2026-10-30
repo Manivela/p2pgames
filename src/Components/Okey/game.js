@@ -421,7 +421,8 @@ export async function decodeSave(code) {
       .stream()
       .pipeThrough(new DecompressionStream("deflate-raw"));
     const state = JSON.parse(await new Response(inflated).text());
-    return state?.players ? state : null;
+    // a game this build plays: in rounds, as an older build's isn't
+    return state?.players && state.round ? state : null;
   } catch {
     return null;
   }

@@ -183,13 +183,13 @@ test("three at the table fit, in play and once the round is over", async ({
   });
 });
 
-// Americano's fifth seat: four others and three piles along the top, five
-// hands on the rack at round end
-test("five at an Americano table fit, in play and once the round is over", async ({
+// a fifth seat: four others and three piles along the top, five hands on
+// the rack at round end
+test("five at a table fit, in play and once the round is over", async ({
   page,
 }) => {
   await sitDown(page);
-  await table(page, "start", 5);
+  await table(page, "start", 5, "americano", { seats: 5 });
   await table(page, "toMyTurn");
   await table(page, "openKut");
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
@@ -223,13 +223,13 @@ test("eight at a table fit, in play and once the round is over", async ({
   await expect(page).toHaveScreenshot("eight-round-end.png");
 });
 
-// four played a round: someone arriving sees Americano's fifth seat to
-// take, beside the score sheet and the menu
+// four played a round of rules with a fifth seat: someone arriving sees it
+// to take, beside the score sheet and the menu
 test("after a round of four, a fifth arriving has a seat, and it fits", async ({
   page,
 }) => {
   const room = await sitDown(page);
-  await table(page, "start", 4);
+  await table(page, "start", 4, "americano", { seats: 5 });
   await table(page, "playToEnd");
   const fifth = await secondPlayer(page, room);
   await expect(
@@ -434,8 +434,8 @@ test("101 starts with what's ticked, and in pairs with four at the table", async
   await sitDown(page);
   await page.getByLabel(RULES).selectOption("101");
   await page.getByRole("button", { name: SETTINGS }).click();
-  await page.getByLabel(/^(Partners|Eşli)$/).check();
-  await page.getByLabel(/^(Each opening beats the last|Katlamalı)$/).check();
+  await page.getByLabel(/^(Four in two pairs|Eşli:)/).check();
+  await page.getByLabel(/^(Opening with points takes more|Katlamalı:)/).check();
   await page.getByRole("button", { name: CLOSE }).click();
   await expect(page.getByLabel(RULES)).toContainText("101 *");
   const start101 = page.getByRole("button", { name: START });
@@ -464,7 +464,7 @@ test("four sets of tiles picked in the settings make a pile of 212", async ({
 }) => {
   await sitDown(page);
   await page.getByRole("button", { name: SETTINGS }).click();
-  await page.getByLabel(/^(Tile sets|Taş takımı)$/).fill("4");
+  await page.getByLabel(/^(Sets of 53 tiles|53'lük taş takımı)/).fill("4");
   await expect.poll(async () => (await state(page)).drawPile.length).toBe(212);
   // the error would toast as the pile changed: given time to show
   await page.waitForTimeout(1500);
@@ -499,7 +499,20 @@ test("a game set up in the settings starts that way, and is kept", async ({
   await table(page, "seatBots", 2);
   await page.getByLabel(RULES).selectOption("americano");
   await page.getByRole("button", { name: SETTINGS }).click();
-  await page.getByLabel(/^(Tiles dealt|Dağıtılan taş)$/).fill("12");
+  await page
+    .getByLabel(/^(Tiles dealt to each|Her oyuncuya dağıtılan)/)
+    .fill("12");
+  // an emptied number isn't played as its default
+  const finishing = page.getByLabel(
+    /^(Written for whoever finishes|Bitirene yazılan)/,
+  );
+  await finishing.fill("");
+  await page.locator(".settings .start").click();
+  await expect(
+    page.getByText(/^(Fill in every number|Her sayıyı doldur)$/),
+  ).toBeVisible();
+  await expect.poll(async () => (await state(page)).gameState).toBe("start");
+  await finishing.fill("-20");
   await page
     .getByRole("button", { name: /^(Remove the round|Eli kaldır)$/ })
     .first()
@@ -748,11 +761,11 @@ test("picked tiles move together", async ({ page }) => {
 // the pick goes with the round: its end shows the hands unpicked
 test("a pick is dropped when the round ends", async ({ page }) => {
   await sitDown(page);
-  await table(page, "start", 5);
+  await table(page, "start", 4);
   await slot(page, 2).locator(".tile").click();
   await expect(page.locator(".rack .tile.selected")).toHaveCount(1);
   await table(page, "playToEnd");
-  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(5);
+  await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(4);
   await expect(page.locator(".tile.selected")).toHaveCount(0);
 });
 

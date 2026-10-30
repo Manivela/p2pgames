@@ -8,7 +8,7 @@ import {
   rankOf,
   splitMelds,
 } from "./melds";
-import { AMERICANO, modern } from "./rulesets";
+import { AMERICANO } from "./rulesets";
 
 // Every game, played in rounds, each opening (el açma) its own way: with
 // the melds it asks for (Americano's), with points or pairs (101's), or
@@ -36,38 +36,23 @@ export function startGame(state, deal, rules = AMERICANO) {
   }
   const s = game.startGame({ ...state, rules }, deal);
   if (s.gameState !== "play") return s;
-  return { ...s, ...FIRST_ROUND };
-}
-
-const FIRST_ROUND = {
-  round: 1,
-  scores: {},
-  melds: [],
-  opened: {},
-  openedWithPairs: {},
-  highestOpening: 0,
-  justOpened: null,
-  offer: null,
-  takes: {},
-  penalties: {},
-  replay: false,
-  tookDiscard: null,
-  tookOkey: null,
-  discards: 0,
-  indicatorShown: null,
-};
-
-// The game as it's played now, from what an older build wrote or saved:
-// its rules and the lobby's as they read now (modern), and a classic hand
-// from before every game had rounds as the first round
-export function current(state) {
-  const setup = state.setup && modern(state.setup);
-  if (state.gameState === "start") return { ...state, setup };
   return {
-    ...(state.round ? {} : FIRST_ROUND),
-    ...state,
-    rules: modern(state.rules),
-    setup,
+    ...s,
+    round: 1,
+    scores: {},
+    melds: [],
+    opened: {},
+    openedWithPairs: {},
+    highestOpening: 0,
+    justOpened: null,
+    offer: null,
+    takes: {},
+    penalties: {},
+    replay: false,
+    tookDiscard: null,
+    tookOkey: null,
+    discards: 0,
+    indicatorShown: null,
   };
 }
 
@@ -810,8 +795,7 @@ export function penaltiesSoFar(state, player) {
   const caught = state.players.flatMap((p) => p.caught ?? []);
   const pile = seat(state, player)?.discardPile ?? [];
   return (
-    // none to catch when no round lays melds
-    (state.rules.catchPenalty ?? 0) *
+    state.rules.catchPenalty *
       pile.filter((t) => caught.includes(t.id)).length +
     (state.penalties?.[player] ?? 0)
   );
@@ -947,16 +931,14 @@ function endRound(state, finisher, last, inOne = false) {
   const { rules } = s;
   const i = s.round - 1;
   const pairs = (id) => !!s.openedWithPairs?.[id];
-  // doubling (a game started before always doubles): the okey as the last
-  // discard doubles every score, the finisher's only with finishDoubled; so
-  // does a win with pairs, or opened and finished in one go while nobody
-  // else had opened (finishInOne), each
-  const doubles = rules.doubling ?? true;
+  // doubling: the okey as the last discard doubles every score, the
+  // finisher's only with finishDoubled; so does a win with pairs, or opened
+  // and finished in one go while nobody else had opened (finishInOne), each
   const alone =
     rules.finishInOne &&
     inOne &&
     Object.keys(s.opened).every((id) => Number(id) === finisher);
-  const times = !doubles
+  const times = !rules.doubling
     ? 1
     : (pairs(finisher) ? 2 : 1) *
       (last && isOkey(last, s.okeyTile) ? 2 : 1) *
@@ -983,7 +965,9 @@ function endRound(state, finisher, last, inOne = false) {
           ? 0
           : !isElden(s) && !s.opened[p.id] && !rules.notOpenedHand
             ? notOpened
-            : handScore(p.hand, s) * (pairs(p.id) && doubles ? 2 : 1) * times;
+            : handScore(p.hand, s) *
+              (pairs(p.id) && rules.doubling ? 2 : 1) *
+              times;
     const score = hand + penaltiesSoFar(s, p.id);
     // a hand dealt again adds to the same line
     s.scores[p.id] = s.scores[p.id] ?? [];

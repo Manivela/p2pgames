@@ -192,7 +192,7 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
     [1, "finished", "yellow11-0"],
   ]);
 
-  assert.equal(s.players.length, 5); // free seats to sit in
+  assert.equal(s.players.length, 4); // free seats to sit in
 
   s = americano.nextRound(s);
   assert.equal(s.round, 2);
@@ -206,11 +206,14 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
   assertAllTiles(s);
 });
 
-test("Americano seats a fifth player; classic and 101 refuse one", () => {
+test("five play with a fifth seat; the presets refuse one", () => {
   // the fifth seat shows once the other four are taken
   assert.lengthOf(game.tableSeats(seated(3).players), 4);
   assert.lengthOf(game.tableSeats(seated(4).players), 5);
-  let s = americano.startGame(seated(5));
+  let s = americano.startGame(seated(5), undefined, {
+    ...AMERICANO,
+    seats: 5,
+  });
   assert.equal(s.gameState, "play");
   assert.deepEqual(
     s.players.map((p) => p.hand.filter(Boolean).length),
@@ -220,6 +223,7 @@ test("Americano seats a fifth player; classic and 101 refuse one", () => {
   assertAllTiles(s);
   for (const refused of [
     game.startGame(seated(5)),
+    americano.startGame(seated(5)),
     americano.startGame(seated(5), undefined, ONE_O_ONE),
   ]) {
     assert.equal(refused.gameState, "start");
@@ -289,7 +293,7 @@ test("a round dealt again: seats change in between, scores stay, its penalties g
   assert.equal(s.gameState, "roundEnd");
   assert.equal(s.message, "Round 3: dealt again");
   // back to before the deal: nothing on the table, every seat to sit in
-  assert.equal(s.players.length, 5);
+  assert.equal(s.players.length, 4);
   assert.isTrue(
     s.players.every((p) => !p.hand.length && !p.discardPile.length),
   );
