@@ -218,6 +218,11 @@ test("picked tiles land together around the one held", () => {
   assert.equal(place(top("A_______"), "XYZ", 7), "A____XYZ");
   // from this row: the group closes up towards where they were
   assert.equal(place(top("XY_ABCD_"), "XY", 4, "X"), "_ABCXYD_");
+  // the gap between them comes along; a tile between them doesn't
+  assert.equal(place(top("X_Y_____"), "XY", 4, "X"), "____X_Y_");
+  assert.equal(place(top("XAY_____"), "XY", 5, "X"), "_A___XY_");
+  // no room for the gap: side by side
+  assert.equal(place("ABCDEF__" + "X_Y_____", "XY", 6, "X"), "ABCDEFXY");
 });
 
 test("a full row swaps instead", () => {

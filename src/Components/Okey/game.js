@@ -15,13 +15,14 @@ function removeItem(array, tile) {
 }
 
 // Tiles dropped on a rack slot, moved along the rack or new to it (a draw):
-// they land side by side in rack order, the one under the finger (`held`)
-// on the slot it was dropped on, all in that slot's row. The tiles in their
-// way slide aside into the row's nearest gaps; back towards the slots the
-// moved tiles left in this row when those have room, so a group being
-// reordered closes up behind them instead of running into the next one. A
-// row too full to make room: what's in the way takes the moved tiles' old
-// slots, or the first gaps.
+// they land in rack order, with the gaps they had between them in a row
+// (side by side when the row has no room for those), the one under the
+// finger (`held`) on the slot it was dropped on, all in that slot's row.
+// The tiles in their way slide aside into the row's nearest gaps; back
+// towards the slots the moved tiles left in this row when those have room,
+// so a group being reordered closes up behind them instead of running into
+// the next one. A row too full to make room: what's in the way takes the
+// moved tiles' old slots, or the first gaps.
 export function placeTiles(hand, row, tiles, toIndex, held = tiles[0]?.id) {
   const h = Array.from(
     { length: Math.max(hand.length, 2 * row) },
@@ -33,23 +34,36 @@ export function placeTiles(hand, row, tiles, toIndex, held = tiles[0]?.id) {
     ...from.map((i) => h[i]),
     ...tiles.filter((t) => !h.some((x) => x?.id === t.id)),
   ];
+  // the gaps between them in a row come along, when the row has room
+  const gaps = (j) =>
+    j < from.length &&
+    Math.floor(from[j - 1] / row) === Math.floor(from[j] / row)
+      ? h.slice(from[j - 1] + 1, from[j]).filter((t) => !t).length
+      : 0;
+  const spaced = moving.flatMap((t, j) => [
+    ...Array(j ? gaps(j) : 0).fill(null),
+    t,
+  ]);
   from.forEach((i) => (h[i] = null));
-  const k = moving.length;
-  const rowStart = toIndex - (toIndex % row);
-  const [lo, hi] = k <= row ? [rowStart, rowStart + row] : [0, h.length];
-  const offset = Math.max(
-    0,
-    moving.findIndex((t) => t.id === held),
-  );
-  const start = Math.min(Math.max(toIndex - offset, lo), hi - k);
-  const to = moving.map((_, j) => start + j);
-  const room = k <= row && makeRoom(h, lo, hi, start, k, from);
-  const out = room || h;
-  const inWay = room ? [] : to.map((i) => h[i]).filter(Boolean);
-  to.forEach((i, j) => (out[i] = moving[j]));
-  const vacated = from.filter((i) => !to.includes(i));
-  for (const t of inWay) out[vacated.shift() ?? out.indexOf(null)] = t;
-  return out;
+  for (const block of [spaced, moving]) {
+    const k = block.length;
+    const rowStart = toIndex - (toIndex % row);
+    const [lo, hi] = k <= row ? [rowStart, rowStart + row] : [0, h.length];
+    const offset = Math.max(
+      0,
+      block.findIndex((t) => t?.id === held),
+    );
+    const start = Math.min(Math.max(toIndex - offset, lo), hi - k);
+    const room = k <= row && makeRoom(h, lo, hi, start, k, from);
+    if (!room && block !== moving) continue;
+    const to = block.map((_, j) => start + j);
+    const out = room || h;
+    const inWay = room ? [] : to.map((i) => h[i]).filter(Boolean);
+    to.forEach((i, j) => (out[i] = block[j]));
+    const vacated = from.filter((i) => !to.includes(i));
+    for (const t of inWay) out[vacated.shift() ?? out.indexOf(null)] = t;
+    return out;
+  }
 }
 
 // the hand with slots start..start+k-1 of the row [lo, hi) emptied: the
