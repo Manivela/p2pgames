@@ -1,15 +1,11 @@
 import { useDrag } from "react-dnd";
-import { getEmptyImage } from "react-dnd-html5-backend";
 import "./tile.css";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { OkeyContext } from "./OkeyContext";
 import { isOkey } from "./melds";
 import { symbols } from "./constants";
 import { ended } from "./game";
 
-// HTML5 drag and drop only follows a mouse; touch screens get the touch
-// backend (index.jsx), which also takes the mouse on touch laptops
-export const touch = navigator.maxTouchPoints > 0;
 // how far a finger can wander and still be holding a tile; past it, a drag
 export const SLOP = 8;
 
@@ -120,7 +116,7 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
     }
     stopHold();
   }
-  const [{ opacity }, dragRef, preview] = useDrag(
+  const [{ opacity }, dragRef] = useDrag(
     () => ({
       type: "TILE",
       item: { tile },
@@ -131,11 +127,6 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
     }),
     [tile, disabled],
   );
-  // the mouse drags our own lifted tile (index.jsx) instead of the
-  // browser's picture of it
-  useEffect(() => {
-    if (!touch) preview(getEmptyImage());
-  }, [preview]);
   const mark = markOf(lastTurn(okeyState), tile.id);
   const classes = [
     "tile",

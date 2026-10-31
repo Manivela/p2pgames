@@ -46,5 +46,5 @@ Driving the table (Playwright MCP or a script, against the dev server):
 - Dev-only `window.okey` reads and writes the shared state; to play any seat: `g = await import("/src/Components/Okey/game.js")`, then `okey.set(g.drawTile(okey.get(), seat, tile, slot))`. Dev-only `window.okeyFlights` counts animation flights.
 - `dragTo` works with react-dnd once source and target carry a `data-*` to find them by. Your own rack is the only `.rack`.
 - Turkish: override `navigator.language` with `addInitScript` before loading (CDP's locale override leaves it alone).
-- Touch: the touch backend is picked at load from `navigator.maxTouchPoints`: call CDP `Emulation.setTouchEmulationEnabled` before navigating, then drag with `Input.dispatchTouchEvent` start / move / end.
+- Touch: react-dnd's touch backend drags the mouse too, on every screen (never the browser's own drag and drop, which goes through the OS: players on Windows 11 lost copy and paste in every app while at the table). For real touches (a tile's hold, a finger's box) call CDP `Emulation.setTouchEmulationEnabled` before navigating, then `Input.dispatchTouchEvent` start / move / end.
 - Report a problem (Sentry's form) loads only on the deployed site: serve a production build at the live address (`route`) and intercept `ingest.us.sentry.io`.

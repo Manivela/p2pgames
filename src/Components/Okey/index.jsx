@@ -5,15 +5,14 @@ import {
   useSyncExternalStore,
 } from "react";
 import { DndProvider, useDragDropManager } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import Board from "./Board";
 import { OkeyContext, OkeyProvider } from "./OkeyContext";
-import Tile, { SLOP, touch } from "./Tile";
+import Tile, { SLOP } from "./Tile";
 import "./rack.css";
 
-// the dragged tile, lifted, under the finger or the mouse (neither backend
-// draws one here), with how many picked tiles come along
+// the dragged tile, lifted, under the finger or the mouse (the backend
+// draws none), with how many picked tiles come along
 function DragPreview() {
   const { selected } = useContext(OkeyContext);
   // read from react-dnd's monitor as it is now, not through useDragLayer:
@@ -47,8 +46,7 @@ function DragPreview() {
     addEventListener("touchcancel", cancel, true);
     return () => removeEventListener("touchcancel", cancel, true);
   }, [manager]);
-  // a link or text dragged from the page (a native drag) carries no tile
-  if (!item?.tile || !offset) return null;
+  if (!item || !offset) return null;
   const group = selected.includes(item.tile.id) ? selected.length : 1;
   return (
     <div className="dragPreview" style={{ left: offset.x, top: offset.y }}>
@@ -83,16 +81,16 @@ function Okey(props) {
   return (
     <OkeyProvider {...props}>
       <DndProvider
-        backend={touch ? TouchBackend : HTML5Backend}
-        options={
-          touch
-            ? {
-                enableMouseEvents: true,
-                ignoreContextMenu: true,
-                touchSlop: SLOP,
-              }
-            : undefined
-        }
+        // the mouse too, on every screen: the browser's own drag and drop
+        // goes through the OS's (OLE on Windows), the one way the page
+        // reaches it, and players on Windows 11 lost copy and paste in every
+        // app while at the table
+        backend={TouchBackend}
+        options={{
+          enableMouseEvents: true,
+          ignoreContextMenu: true,
+          touchSlop: SLOP,
+        }}
       >
         <Board />
         <DragPreview />
