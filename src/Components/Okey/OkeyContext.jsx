@@ -606,28 +606,35 @@ export function OkeyProvider({ children }) {
     });
   }, [currentUser, okeyState, setOkeyState]);
 
-  // everyone at the table says which build they run (awareness): a newer
-  // one there, or on the site, is offered (Board.jsx). Between hands the
-  // table's is picked up by itself: whoever runs it keeps the game while
-  // this page reloads, once a build, so a page the site still serves old
-  // can't loop
+  // everyone at the table says which build they run, and which deal of the
+  // game they have (awareness): a newer build there, or on the site, is
+  // offered (Board.jsx). Between hands the table's is picked up by itself,
+  // once one of its pages has our deal (not just come in, the game still on
+  // its way): it keeps the game while this page reloads, once a build, so a
+  // page the site still serves old can't loop
+  const deal = shared?.deal;
   React.useEffect(() => {
-    setLocalState((s) => (s?.build === BUILD ? s : { ...s, build: BUILD }));
-  }, [setLocalState]);
+    setLocalState((s) =>
+      s?.build === BUILD && s?.deal === deal ? s : { ...s, build: BUILD, deal },
+    );
+  }, [setLocalState, deal]);
   const tableBuild = Math.max(
     0,
     ...[...states.values()].map((s) => s?.build ?? 0),
+  );
+  const keeper = [...states.values()].some(
+    (s) => s?.build > BUILD && s.deal === deal,
   );
   const siteBuild = useSiteBuild();
   const newVersion =
     tableBuild > BUILD ? "table" : siteBuild > BUILD ? "site" : null;
   React.useEffect(() => {
-    if (newVersion !== "table" || !shared) return;
+    if (!keeper || !shared) return;
     if (okeyState.gameState === "play") return;
     if (stored("reloadedFor") === String(tableBuild)) return;
     store("reloadedFor", tableBuild);
     if (stored("reloadedFor") === String(tableBuild)) location.reload();
-  }, [newVersion, shared, okeyState.gameState, tableBuild]);
+  }, [keeper, shared, okeyState.gameState, tableBuild]);
 
   // the seat emptied, its hand left for a friend to sit down to; out of the
   // next deal unless someone does, unlike a phone that slept
