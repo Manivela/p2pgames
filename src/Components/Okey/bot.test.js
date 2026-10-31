@@ -266,6 +266,36 @@ test("a bot keeps a tile that fits the table rather than have it caught", () => 
   assert.equal(thrown(s).id, "red2-0");
 });
 
+test("a bot breaks up a wait whose tiles are all out of the game", () => {
+  // P2's red 12-13 waits on a red 11: it throws its loose yellow 11 while
+  // a red 11 might come, its red 13 once both are on a discard pile
+  const deal = {
+    okeyTile: "blue13-1",
+    hands: [
+      ["black1-0"],
+      ["yellow11-0", "red12-0", "red13-0", "red7-0", "red8-0", "red9-0"],
+    ],
+  };
+  let s = americano.startGame(seated(2), deal, AMERICANO);
+  s = { ...s, currentPlayer: 2, drawn: true };
+  const thrown = (s) => game.seat(bot.step(s, 2, 1e6, 0), 2).discardPile.at(-1);
+  assert.equal(thrown(s).id, "yellow11-0");
+  const gone = ["red11-0", "red11-1"].map((id) =>
+    game.onPile(
+      s.drawPile.find((t) => t.id === id),
+      1,
+    ),
+  );
+  s = {
+    ...s,
+    drawPile: s.drawPile.filter((t) => !gone.some((g) => g.id === t.id)),
+    players: s.players.map((p) =>
+      p.id === 1 ? { ...p, discardPile: gone } : p,
+    ),
+  };
+  assert.equal(thrown(s).id, "red13-0");
+});
+
 // P2, a bot, to play in round `round` of Americano with `hand`, the 13s'
 // küt on the table and, in a yellow run, an okey standing for the yellow 5
 function table13s(round, hand) {

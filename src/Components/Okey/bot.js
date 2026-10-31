@@ -2,6 +2,7 @@ import { cloneDeep, maxBy, minBy, sortBy, sum } from "lodash";
 import * as game from "./game";
 import * as americano from "./americano";
 import { colorOf, isOkey, rankOf } from "./melds";
+import { colorMap } from "./constants";
 
 // A bot: a seat whose user is { bot: true }, played by the page whose
 // userKey it holds (OkeyContext), one move a step through the same rules as
@@ -211,18 +212,49 @@ function arrange(state, player, melds, rest) {
   return s;
 }
 
-// what a tile could still make a meld with: same rank in other colours,
-// or its colour within two
-function partners(t, tiles, ind) {
-  return tiles.filter(
-    (u) =>
-      u !== t &&
-      !isOkey(u, ind) &&
-      (rankOf(u, ind) === rankOf(t, ind)
-        ? colorOf(u, ind) !== colorOf(t, ind)
-        : colorOf(u, ind) === colorOf(t, ind) &&
-          Math.abs(rankOf(u, ind) - rankOf(t, ind)) <= 2),
-  ).length;
+// The copies of each kind still out of sight, as a player who remembers
+// sees the table: all but those in their hand, the melds laid, every
+// discard and the indicator (okeys are wild, of no kind)
+function unseen(state, player) {
+  const ind = state.okeyTile;
+  const seen = {};
+  for (const t of [
+    ...hand(state, player),
+    ...state.melds.flatMap((m) => m.tiles),
+    ...state.players.flatMap((p) => p.discardPile),
+    ind,
+  ]) {
+    if (!isOkey(t, ind)) seen[keyOf(t, ind)] = (seen[keyOf(t, ind)] ?? 0) + 1;
+  }
+  return (kind) => Math.max(0, state.rules.tileSets - (seen[kind] ?? 0));
+}
+
+// A tile's waits: the tiles it could make a meld with (same rank in another
+// colour, or its colour within two), each while a tile that would make it
+// three is still out of sight. A wait whose tiles are all out is dead,
+// worth no more than a loose tile, so it's broken up. (Weighing waits by
+// how many tiles are left played no better against bots that didn't.)
+function live(t, tiles, state, left) {
+  const ind = state.okeyTile;
+  const [c, r] = [colorOf(t, ind), rankOf(t, ind)];
+  const share = (kinds) => (kinds.some((k) => left(k) > 0) ? 1 : 0);
+  const waits = (u) => {
+    const [uc, ur] = [colorOf(u, ind), rankOf(u, ind)];
+    if (ur === r) {
+      if (uc === c) return 0;
+      return share(
+        Object.values(colorMap)
+          .filter((x) => x !== c && x !== uc)
+          .map((x) => `${x}|${r}`),
+      );
+    }
+    const [lo, hi] = [Math.min(r, ur), Math.max(r, ur)];
+    if (uc !== c || hi - lo > 2) return 0;
+    if (hi - lo === 2) return share([`${c}|${lo + 1}`]);
+    const ends = [lo - 1, hi + 1 === 14 && wrap(state) ? 1 : hi + 1];
+    return share(ends.filter((x) => x >= 1 && x <= 13).map((x) => `${c}|${x}`));
+  };
+  return sum(tiles.filter((u) => u !== t && !isOkey(u, ind)).map(waits));
 }
 
 // a round opened with pairs (Americano's 4 çift) this bot hasn't opened:
@@ -254,17 +286,21 @@ function partnerWorth(state, player) {
 }
 
 // the tile that helps least: outside the best melds (without a twin, when
-// pairing), with the fewest partners, the highest first (partnerWorth);
-// never an okey while there's another, nor a tile that fits a meld on the
-// table (işler taş: caught, it costs catchPenalty) while there's another
-// loose one
+// pairing), with the deadest waits (live; pairing, its twin's copies out of
+// sight), the highest first (partnerWorth); never an okey while there's
+// another, nor a tile that fits a meld on the table (işler taş: caught, it
+// costs catchPenalty) while there's another loose one
 function worst(state, player, mistakes) {
   const tiles = hand(state, player);
   const ind = state.okeyTile;
   const plain = tiles.filter((t) => !isOkey(t, ind));
   if (!plain.length) return tiles[0];
   const worth = partnerWorth(state, player);
-  const score = (t) => partners(t, tiles, ind) * worth - rankOf(t, ind);
+  const left = unseen(state, player);
+  const waits = pairing(state, player)
+    ? (t) => (left(keyOf(t, ind)) > 0 ? 1 : 0)
+    : (t) => live(t, tiles, state, left);
+  const score = (t) => waits(t) * worth - rankOf(t, ind);
   // a slip: the next best, the table not minded
   const slip = slips(state, mistakes, player, "throw");
   const least = (pool) => {
