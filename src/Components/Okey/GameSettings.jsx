@@ -165,6 +165,15 @@ const GROUPS = [
       ],
     ],
   ],
+  [
+    "Bots",
+    [
+      [
+        "botMistakes",
+        "Times in 100 a bot misses a good move: a discard to take, a catch, an opening, the best tile to throw; 0: it plays its best",
+      ],
+    ],
+  ],
 ];
 const isSwitch = (key) => typeof DEFAULTS[key] === "boolean";
 
@@ -235,13 +244,21 @@ const meldName = ([type, size]) =>
 
 const number = (v) => (v === "" ? null : Number(v));
 
+// the rules the next game starts with; a setting they lack (written by an
+// older build, or a game of one just ended) at its default, as a kept
+// ruleset's are
+const setupOf = (okeyState) => ({
+  ...DEFAULTS,
+  ...(okeyState.setup ?? CLASSIC),
+});
+
 // The lobby: the rules the next game starts with, shared by everyone in the
 // room (`setup`) and anyone's to change; picked from the presets and this
 // device's, and changed in the settings (⚙).
 export function Lobby() {
   const { okeyState, startGame, setSetup } = useContext(OkeyContext);
   const [open, setOpen] = useState(false);
-  const setup = okeyState.setup ?? CLASSIC;
+  const setup = setupOf(okeyState);
   const list = allRulesets();
   const base = list.find((r) => r.id === setup.id);
   const changed = base && !isEqual(base, setup);
@@ -333,7 +350,7 @@ function Setting({ field: [key, text, when], setup, base, untested }) {
 // and go back to.
 function Settings({ base, changed, start, onClose }) {
   const { okeyState, setSetup } = useContext(OkeyContext);
-  const setup = okeyState.setup ?? CLASSIC;
+  const setup = setupOf(okeyState);
   const set = (change) => setSetup({ ...setup, ...change });
   // a preset's own name is taken
   const [name, setName] = useState(

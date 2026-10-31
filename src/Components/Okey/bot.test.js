@@ -121,6 +121,9 @@ function botsPlay(s) {
     now += 60000; // past the others' time to take the discard
     const next = bot.step(s, s.currentPlayer, now);
     assert.isObject(next, `round ${s.round}: ${next}`);
+    // 101: it takes a discard only to use it, never to put it back (+101,
+    // and it took it again, on and on)
+    assert.notMatch(next.message ?? "", /put the tile back/);
     s = outOfTurn(next);
     assertAllTiles(s);
     assert.isBelow(steps, 3000, `round ${s.round} goes on and on`);
@@ -140,7 +143,9 @@ test("bots play every Americano round to its end", () => {
 });
 
 test("bots play 101 and the classic game to the end of a hand", () => {
-  assert.isOk(botsPlay(americano.setUp(seated(4), 1, {}, 1, ONE_O_ONE)));
+  for (let i = 0; i < 10; i++) {
+    assert.isOk(botsPlay(americano.setUp(seated(4), 1, {}, 1, ONE_O_ONE)));
+  }
   assert.isOk(botsPlay(americano.startGame(seated(4), undefined, CLASSIC)));
 });
 
@@ -168,7 +173,10 @@ test("a bot takes out of turn for a new meld, not to lengthen one", () => {
     return s;
   };
   s = take(s, "red5-0");
-  s = bot.claim(s, 3, 0);
+  // a table whose bots miss every good move (botMistakes) lets it go
+  const careless = { ...s, rules: { ...s.rules, botMistakes: 100 } };
+  assert.isUndefined(bot.claim(careless, 3));
+  s = bot.claim(s, 3);
   assert.isOk(game.seat(s, 3).claim);
   assert.isUndefined(bot.claim(s, 3, 0)); // claimed already
   // P2 draws from the pile and throws: the red 5 goes to P3, with a tile

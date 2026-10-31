@@ -13,13 +13,11 @@ import { colorOf, isOkey, rankOf } from "./melds";
 // a tile thrown that fits the table, shows the gösterge when it pays,
 // finishes, and otherwise throws the tile that helps it least.
 //
-// And it slips, so people win more often than not: each chance it gets (a
-// discard to take, a claim, a catch, an okey, an opening, the gösterge, the
-// best tile to throw) it misses one time in MISTAKES, decided once per
-// chance so a second look doesn't undo it.
-// ponytail: one rate for every table, a game setting if people want to
-// pick how good their bots are
-const MISTAKES = 0.25;
+// It can slip: each chance it gets (a discard to take, a claim, a catch, an
+// okey, an opening, the gösterge, the best tile to throw) it misses the
+// rules' botMistakes times in 100, decided once per chance so a second look
+// doesn't undo it. A game from before the setting: never (NaN).
+const mistakesOf = (state) => state.rules.botMistakes / 100;
 
 // the same answer for the same chance: a hash of what it is, 0 to 1
 function chance(...key) {
@@ -319,6 +317,19 @@ function usable(state, player, tile) {
   return best.points >= americano.pointsToOpen(state) && has(best);
 }
 
+// 101: the discard just taken leaves the hand as the turn plays on (no
+// slips), not put back: one that's put back would be taken again, +101 a
+// time (usable() can say yes to a meld a pairs opener can't lay)
+function uses(state, player, now) {
+  const id = state.tookDiscard.tileId;
+  let s = state;
+  for (let i = 0; s?.drawn && i < 30; i++) {
+    if (!hand(s, player).some((t) => t.id === id)) return true;
+    s = ok(step(s, player, now, 0));
+  }
+  return false;
+}
+
 function draw(state, player, now, mistakes) {
   const slot = Math.max(0, game.seat(state, player).hand.indexOf(null));
   const top = game.previous(state.players, player).discardPile.at(-1);
@@ -329,7 +340,9 @@ function draw(state, player, now, mistakes) {
       : gain(state, player, top) > 0);
   if (wanted && !slips(state, mistakes, player, "take")) {
     const took = ok(americano.drawTile(state, player, top, slot, now));
-    if (took) return took;
+    if (took && (!state.rules.takeMustBeUsed || uses(took, player, now))) {
+      return took;
+    }
   }
   return americano.drawTile(state, player, state.drawPile.at(-1), slot, now);
 }
@@ -338,7 +351,7 @@ function draw(state, player, now, mistakes) {
 // makes a new meld: a take costs a tile from the pile, so one that only
 // lengthens a meld isn't worth it. Undefined when it lets it go or has
 // already claimed it.
-export function claim(state, player, mistakes = MISTAKES) {
+export function claim(state, player, mistakes = mistakesOf(state)) {
   const offer = americano.upForClaim(state);
   const seat = game.seat(state, player);
   if (!offer || seat.claim?.id === offer.id) return;
@@ -352,7 +365,7 @@ export function claim(state, player, mistakes = MISTAKES) {
 
 // Out of turn too: the tile just thrown, when it fits the table (işler
 // taş), caught, its thrower paying for it (americano.catchDiscard)
-export function catchTile(state, player, mistakes = MISTAKES) {
+export function catchTile(state, player, mistakes = mistakesOf(state)) {
   if (state.gameState !== "play" || !state.discardFits) return;
   if (state.players.some((p) => p.caught?.includes(state.lastDiscard))) return;
   if (slips(state, mistakes, player, "catch", state.lastDiscard)) return;
@@ -483,8 +496,14 @@ const throwTile = (state, player, now, mistakes) =>
 
 // One move of the bot whose turn it is, through the rules: a new state, or
 // a message (nothing it may do yet: the others' time to take the discard).
-// `mistakes`: how often it slips (MISTAKES; 0 plays its best).
-export function step(state, player, now = Date.now(), mistakes = MISTAKES) {
+// `mistakes`: how often it slips (the rules' botMistakes; 0 plays its
+// best).
+export function step(
+  state,
+  player,
+  now = Date.now(),
+  mistakes = mistakesOf(state),
+) {
   if (state.gameState !== "play" || state.currentPlayer !== player) return;
   if (game.pileOut(state, player)) return game.shuffleDiscards(state, player);
   const slip = (what) => slips(state, mistakes, player, what);
@@ -493,7 +512,11 @@ export function step(state, player, now = Date.now(), mistakes = MISTAKES) {
   if (!state.drawn) return draw(state, player, now, mistakes);
   const tiles = hand(state, player);
   const opened = state.opened?.[player];
-  const opening = !americano.isElden(state) && !opened && !slip("open");
+  // a discard taken to open with (101) opens: the same slip each time it's
+  // taken would put it back, +101, and take it again, on and on
+  const took = state.tookDiscard?.player === player;
+  const opening =
+    !americano.isElden(state) && !opened && (took || !slip("open"));
   return (
     ok(finishFromHand(state, player)) ||
     (opening && ok(open(state, player))) ||

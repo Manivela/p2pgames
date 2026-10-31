@@ -54,6 +54,8 @@ export const DEFAULTS = {
   okeyDiscardPenalty: 0,
   returnPenalty: 0,
   indicatorScore: 0,
+  // bots (bot.js): times in 100 one misses a good move
+  botMistakes: 0,
 };
 
 // Classic: one hand, finished from the hand; a pile that runs out is
