@@ -124,6 +124,7 @@ function Rack({ player, hands }) {
     claimDiscard,
     takeBack,
     held,
+    heldDraw,
   } = useContext(OkeyContext);
   const offer = upForClaim(okeyState);
   // moving my claim's ghost, or claiming the discard out of turn
@@ -142,13 +143,16 @@ function Rack({ player, hands }) {
     offer &&
     !okeyState.players.some((p) => p.caught?.includes(offer.tileId)) &&
     okeyState.players.find((p) => p.id === offer.from)?.discardPile.at(-1);
-  const ghost = me === player &&
-    offered &&
-    offered.id === offer.tileId &&
-    sittingPlayer.claim?.id === offer.id && {
-      slot: sittingPlayer.claim.slot,
-      tile: { ...offered, source: `claim-${me}` },
-    };
+  // and so does my draw while the others have time to catch the discard
+  const ghost =
+    me === player &&
+    ((offered &&
+      offered.id === offer.tileId &&
+      sittingPlayer.claim?.id === offer.id && {
+        slot: sittingPlayer.claim.slot,
+        tile: { ...offered, source: `claim-${me}` },
+      }) ||
+      (heldDraw && { slot: heldDraw.toIndex, tile: heldDraw.tile }));
   // a row's slots (13; 101's 15), empty before a deal, on someone else's
   // rack (watched from outside the game), and once the round ends: the
   // hands are shown
@@ -347,17 +351,28 @@ export function DiscardPile({ player, small }) {
     addEventListener("pointerdown", away);
     return () => removeEventListener("pointerdown", away);
   }, [peek]);
-  const caught = okeyState.players.some((p) => p.caught?.includes(top?.id));
+  const caughtAny = (id) =>
+    okeyState.players.some((p) => p.caught?.includes(id));
+  const caught = caughtAny(top?.id);
   // my discard, waiting for the others' time to take the last one to end
   const ghost = held && player === me && myHand(me).find((t) => t?.id === held);
-  // whether it fits a meld is for them to see
+  // Catch for the latest discard, whoever threw it, always under the pile
+  // left of your rack, a thumb away: along the top it would lie on the melds
+  // or on the tile you'd drag. Its pile glows (latest). Whether it fits a
+  // meld is for them to see.
+  const latest = okeyState.lastDiscard;
+  const thrower = okeyState.players.find(
+    (p) => p.discardPile.at(-1)?.id === latest,
+  );
   const canCatch =
+    !small &&
+    player !== me &&
     okeyState.gameState === "play" &&
     me &&
-    me !== player &&
+    thrower &&
+    thrower.id !== me &&
     okeyState.melds.length > 0 &&
-    top?.id === okeyState.lastDiscard &&
-    !caught;
+    !caughtAny(latest);
   return (
     <div
       ref={pileRef}
@@ -391,6 +406,8 @@ export function DiscardPile({ player, small }) {
       />
       {canCatch && (
         <button className="catch" onClick={catchDiscard}>
+          {/* which tile: it may lie on another pile */}
+          <TileFace id={latest} />
           {t("Catch")}
         </button>
       )}

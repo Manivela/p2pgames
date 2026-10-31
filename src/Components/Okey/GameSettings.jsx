@@ -104,6 +104,10 @@ const GROUPS = [
         "Written for throwing a tile that fit a table meld, when it's caught",
       ],
       [
+        "catchWaitSeconds",
+        "Seconds the others have to catch a discard before the next player can take it",
+      ],
+      [
         "catchUntilDraw",
         "A discard that fits a table meld can be caught only until the next player draws",
       ],

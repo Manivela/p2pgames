@@ -217,6 +217,8 @@ export function crowd(n = 8) {
 const SEL = [
   ".foot > .rack",
   ".seat",
+  ".seat .badges",
+  ".glass",
   ".hand",
   ".draw .stack",
   ".draw .indicator",
@@ -247,6 +249,8 @@ export function check(ignore = []) {
     const r = e.getBoundingClientRect();
     const cs = getComputedStyle(e);
     return (
+      // a copy flying from one place to the next (moves.js) isn't laid out
+      !e.closest(".flights") &&
       r.width > 0 &&
       r.height > 0 &&
       cs.display !== "none" &&

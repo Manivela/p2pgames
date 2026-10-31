@@ -172,6 +172,44 @@ test("a crowded table fits", async ({ page }) => {
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
+// the table full while another plays: their tea glass and badges stay in
+// the row along the top, clear of the melds, and Catch for the latest
+// discard is under the pile left of my rack
+test("a crowded table keeps clear of what hangs under the others", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "crowd", 7);
+  await table(page, "play", 2);
+  await expect(page.locator(".head .glass")).toBeVisible();
+  await expect(page.locator(".head .catch")).toHaveCount(0);
+  await expect(page.locator(".foot .catch")).toBeVisible();
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
+// a discard that fit a meld gives the others time to catch it: the next
+// player's take waits meanwhile, a ghost in its slot, and Catch shows the
+// tile it catches
+test("a discard that fits waits the others' time to catch it, then comes", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "toMyTurn", false);
+  await page.evaluate(() =>
+    window.okey.set({ ...window.okey.get(), discardFits: true }),
+  );
+  const top = (await state(page)).players[3].discardPile.at(-1).id;
+  await expect(page.locator(".foot .catch .tile")).toHaveCount(1);
+  const free = (await handIds(page)).indexOf(null);
+  await drag(page, page.locator('[data-pile="4"] .slot'), slot(page, free));
+  await expect(slot(page, free)).toHaveClass(/ghost/);
+  expect((await state(page)).drawn).toBeFalsy();
+  await expect.poll(async () => (await handIds(page))[free]).toBe(top);
+  await expect(slot(page, free)).not.toHaveClass(/ghost/);
+});
+
 test("on a wide screen the melds wrap about four to a row, as on a phone", async ({
   page,
 }, info) => {

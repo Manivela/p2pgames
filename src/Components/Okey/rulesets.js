@@ -33,6 +33,7 @@ export const DEFAULTS = {
   swapOkeys: false,
   okeySwapFromRound: null, // a table okey taken only once you've opened
   catchUntilDraw: false,
+  catchWaitSeconds: 2, // before the next player may take the discard
   takeCaught: false,
   peekPairRounds: false,
   pairsForAll: false,

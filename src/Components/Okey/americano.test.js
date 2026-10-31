@@ -740,6 +740,39 @@ test("the turn's ring fills in the others' time to take the discard, or at once"
   assert.equal(americano.discardWait({ ...s, rules: off }), 0);
 });
 
+test("the next player takes the discard once the others had time to catch it", () => {
+  let s = americano.startGame(seated(4));
+  s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  const turn = 1_000_000;
+  const wait = (s, ...args) => americano.catchWait(s, 2, ...args);
+  // nothing on the table it could be caught for
+  assert.equal(wait(s, false, turn, turn), 0);
+  s = { ...s, melds: [{ type: "kut", owner: 3, tiles: [] }] };
+  // a tile that didn't fit a meld when it was thrown goes at once
+  assert.equal(wait({ ...s, discardFits: false }, false, turn, turn), 0);
+  s = { ...s, discardFits: true };
+  // the ruleset's seconds, from the turn reaching them
+  assert.equal(wait(s, false, turn, turn), AMERICANO.catchWaitSeconds);
+  assert.equal(wait(s, false, turn + 500, turn), 1.5);
+  assert.equal(wait(s, false, turn + 2000, turn), 0);
+  const five = { ...s.rules, catchWaitSeconds: 5 };
+  assert.equal(wait({ ...s, rules: five }, false, turn, turn), 5);
+  // a draw from the pile leaves it to catch, unless that ends the catching
+  assert.equal(wait(s, true, turn, turn), 0);
+  const until = { ...s.rules, catchUntilDraw: true };
+  assert.equal(wait({ ...s, rules: until }, true, turn, turn), 2);
+  // not someone else's turn; nor caught already, nor only bots to catch it
+  assert.equal(americano.catchWait(s, 3, false, turn, turn), 0);
+  const as = (ids, change) => ({
+    ...s,
+    players: s.players.map((p) => (ids.includes(p.id) ? change(p) : p)),
+  });
+  const caught = as([3], (p) => ({ ...p, caught: [s.lastDiscard] }));
+  assert.equal(wait(caught, false, turn, turn), 0);
+  const bots = as([3, 4], (p) => ({ ...p, user: { ...p.user, bot: true } }));
+  assert.equal(wait(bots, false, turn, turn), 0);
+});
+
 test("out of turn: earliest claimant after the current player gets the discard + 1", () => {
   let s = americano.startGame(seated(4));
   const thrown = player(s, 1).hand.find(Boolean);

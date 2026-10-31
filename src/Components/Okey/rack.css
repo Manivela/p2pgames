@@ -451,9 +451,10 @@ html:has(.fit) {
 
 .seat .badges {
   position: absolute;
-  top: 100%;
+  top: calc(100% - var(--t) * 0.12);
   left: calc(var(--t) * 0.92);
-  margin-top: calc(var(--t) * 0.06);
+  /* as tall as the badges or buttons in it, not the name's line */
+  line-height: 1;
   white-space: nowrap;
 }
 
@@ -622,7 +623,9 @@ html:has(.fit) {
 }
 
 /* the tea glass floats in front of whoever's turn it is, so nothing moves
-   when it passes: under an avatar, beside your name */
+   when it passes: on an avatar's corner, beside your name. Nothing along
+   the top hangs past its row (the badges too): the melds come right up to
+   it on a full table. */
 .glass {
   position: absolute;
   width: calc(var(--t) * 0.7);
@@ -632,13 +635,18 @@ html:has(.fit) {
 }
 
 .seat .glass {
-  top: calc(100% + var(--t) * 0.1);
-  left: calc(var(--t) * 0.05);
+  bottom: calc(var(--t) * -0.08);
+  left: calc(var(--t) * -0.2);
+  width: calc(var(--t) * 0.42);
+  height: calc(var(--t) * 0.46);
 }
 
+/* as tall as your name's tab, so it stays out of the melds above */
 .rack > .playerName .glass {
-  top: calc(var(--t) * -0.22);
+  bottom: 0;
   left: calc(100% + var(--r) + var(--t) * 0.08);
+  width: calc(var(--t) * 0.55);
+  height: calc(var(--t) * 0.6);
 }
 
 /* a picked tile lifts */
@@ -1073,18 +1081,30 @@ html:has(.fit) {
   margin: 0 0.3em 0 0;
 }
 
-/* Catch (Yakala) under the latest discard, in amber, nudging while it can
-   be used */
+/* Catch (Yakala) under the pile left of your rack (Rack.jsx), in amber,
+   nudging while it can be used */
 .board .discardPile .catch {
+  --mini-t: calc(var(--t) * 0.36);
   position: absolute;
   z-index: 5;
   top: calc(100% + var(--t) * 0.15);
   left: 50%;
   translate: -50% 0;
-  padding: 0 calc(var(--t) * 0.22);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--t) * 0.08);
+  padding: 0 calc(var(--t) * 0.1);
+  border-radius: calc(var(--t) * 0.12);
+  font-size: calc(var(--t) * 0.27);
   background: #ffb300;
   color: #3a2600;
   animation: nudge 1.4s ease-in-out infinite;
+}
+
+/* the tile it catches, small, as it may lie on another pile */
+.board .discardPile .catch .tile {
+  --t: var(--mini-t);
+  flex: none;
 }
 
 @keyframes nudge {

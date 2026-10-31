@@ -980,6 +980,40 @@ export function cantCatch(state, player, from) {
   if (state.rules.catchUntilDraw && state.drawn) return "Too late to catch it";
 }
 
+// Seconds the others still have to catch the latest discard before
+// `player`, whose turn it is, takes it, or draws at all when a draw ends the
+// catching (catchUntilDraw; `fromPile`): from the turn reaching them,
+// `turnStart` on their own clock. Only for a tile that fit a meld when it
+// was thrown (so the wait tells it does, the user's call: no game slowed by
+// it otherwise), and someone else could catch (a bot catches the moment
+// it's thrown, bot.js).
+export function catchWait(
+  state,
+  player,
+  fromPile,
+  now = Date.now(),
+  turnStart = now,
+) {
+  if (state.gameState !== "play" || state.currentPlayer !== player) return 0;
+  if (state.drawn || !state.melds.length) return 0;
+  if (fromPile && !state.rules.catchUntilDraw) return 0;
+  const id = state.lastDiscard;
+  const from = state.players.find((p) => p.discardPile.at(-1)?.id === id);
+  if (!from || isCaught(state, id)) return 0;
+  const tile = from.discardPile.at(-1);
+  if (state.rules.okeyDiscardPenalty && isOkey(tile, state.okeyTile)) return 0;
+  if (!(state.discardFits ?? fitsTable(state, tile))) return 0;
+  const catcher = state.players.some(
+    (p) =>
+      p.user &&
+      !p.user.bot &&
+      p.id !== player &&
+      !cantCatch(state, p.id, from.id),
+  );
+  const wait = state.rules.catchWaitSeconds - (now - turnStart) / 1000;
+  return catcher && wait > 0 ? wait : 0;
+}
+
 // `tile` could go on the table as it is: added without moving an okey, or in
 // place of the okey that stands for it; a 1 after 13 doesn't count
 export function fitsTable(state, tile) {

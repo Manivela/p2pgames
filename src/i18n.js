@@ -138,6 +138,10 @@ const TR = [
     "Yerdeki bir pere işleyen atılan taş, sıradaki oyuncu çekene dek yakalanabilir",
   ],
   [
+    /^Seconds the others have to catch a discard before the next player can take it$/,
+    "Atılan taşı yakalamak için diğerlerinin süresi; sıradaki oyuncu taşı ancak sonra alır (sn)",
+  ],
+  [
     /^A caught discard can still be taken by the next player$/,
     "Yakalanan taşı sıradaki oyuncu yine alabilir",
   ],

@@ -211,19 +211,27 @@ export function OkeyProvider({ children }) {
   React.useEffect(() => {
     if (okeyState.currentPlayer === me) turnStart.current = Date.now();
   }, [okeyState.currentPlayer, okeyState.deal, me]);
+  // A draw made while the others still have time to catch the discard
+  // (local only, like a held discard): it waits as a ghost in the slot it
+  // was dropped on, and is drawn when the time is up.
+  const [heldDraw, setHeldDraw] = React.useState(null);
   const drawTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
-      return act(
-        americano.drawTile,
-        player,
-        tile,
-        toIndex,
-        Date.now(),
-        turnStart.current,
-      );
+      const args = [tile, toIndex, Date.now(), turnStart.current];
+      const fromPile = tile.source === "draw-pile";
+      const wait =
+        player === me &&
+        americano.catchWait(okeyState, player, fromPile, args[2], args[3]);
+      if (!wait) return act(americano.drawTile, player, ...args);
+      // anything else that would stop it is said now, not when it's drawn
+      const next = americano.drawTile(okeyState, player, ...args);
+      if (typeof next === "string") toast(t(next));
+      if (!next || typeof next === "string") return false;
+      setHeldDraw({ tile, toIndex });
+      return true;
     },
-    [act],
+    [act, okeyState, me],
   );
 
   // Tiles picked on your own rack (local only, not shared): dragging one
@@ -328,6 +336,39 @@ export function OkeyProvider({ children }) {
     throwIt();
     return () => clearTimeout(timer);
   }, [held, okeyState, me, act, myHand, isMyTurn]);
+
+  // the held draw is made once the others' time to catch is up (or someone
+  // caught it); a new turn or deal drops it
+  React.useEffect(() => setHeldDraw(null), [okeyState.deal]);
+  React.useEffect(() => {
+    if (!heldDraw) return;
+    if (!isMyTurn() || okeyState.drawn || okeyState.gameState !== "play") {
+      setHeldDraw(null);
+      return;
+    }
+    const { tile, toIndex } = heldDraw;
+    let timer;
+    const drawIt = () => {
+      const fromPile = tile.source === "draw-pile";
+      const now = Date.now();
+      const wait = americano.catchWait(
+        okeyState,
+        me,
+        fromPile,
+        now,
+        turnStart.current,
+      );
+      if (wait) {
+        timer = setTimeout(drawIt, wait * 1000);
+        return;
+      }
+      setHeldDraw(null);
+      dragged.current = tile.id;
+      act(americano.drawTile, me, tile, toIndex, now, turnStart.current);
+    };
+    drawIt();
+    return () => clearTimeout(timer);
+  }, [heldDraw, okeyState, me, act, isMyTurn]);
 
   const finishGame = useCallback(
     (tile) => {
@@ -745,17 +786,31 @@ export function OkeyProvider({ children }) {
   // follow, or another try in a second while the rules say wait (the
   // others' time to take the discard); sessionStorage botPace in ms
   const pace = Number(stored("botPace") ?? 900);
+  const botTurn = React.useRef({});
   React.useEffect(() => {
     const p = okeyState.players.find((x) => x.id === okeyState.currentPlayer);
     if (okeyState.gameState !== "play" || !p?.user?.bot) return;
     if (p.userKey !== localID) return;
+    // its turn's first move waits out the others' time to catch the
+    // discard, from when the turn reached this page (one key a turn)
+    const turn = `${okeyState.deal}.${okeyState.discards ?? 0}`;
+    if (botTurn.current.turn !== turn) {
+      botTurn.current = { turn, at: Date.now() };
+    }
+    const wait = americano.catchWait(
+      okeyState,
+      p.id,
+      false,
+      Date.now(),
+      botTurn.current.at,
+    );
     let timer;
     const move = () => {
       const next = bots.step(okeyState, p.id);
       if (next && typeof next !== "string") setOkeyState(next);
       else timer = setTimeout(move, 1000);
     };
-    timer = setTimeout(move, pace);
+    timer = setTimeout(move, Math.max(pace, wait * 1000));
     return () => clearTimeout(timer);
   }, [okeyState, localID, pace, setOkeyState]);
 
@@ -815,6 +870,7 @@ export function OkeyProvider({ children }) {
       picking,
       startPicking,
       held,
+      heldDraw,
       openHand,
       openAll,
       layMelds,
@@ -869,6 +925,7 @@ export function OkeyProvider({ children }) {
       picking,
       startPicking,
       held,
+      heldDraw,
       openHand,
       openAll,
       layMelds,
