@@ -23,7 +23,10 @@ const turnOf = (s, player) =>
 // device and loops, never skipping anyone. The key restarts it on a new
 // deal with the same starter.
 const Timer = ({ okeyState }) => (
-  <i key={`${okeyState.deal}-${okeyState.currentPlayer}`} className="timer" />
+  <i key={`${okeyState.deal}-${okeyState.currentPlayer}`} className="timer">
+    <b />
+    <b />
+  </i>
 );
 
 // how many tiles a player holds, while a round is played (one finished

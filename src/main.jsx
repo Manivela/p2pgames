@@ -25,8 +25,9 @@ fetch("/api/turn")
   )
   .catch(() => {}); // the dev server has no /api: STUN only
 
-// errors on the deployed site go to Sentry (manivela/p2pgames); its loader
-// fetches the SDK only once something goes wrong
+// errors on the deployed site go to Sentry (manivela/p2pgames), and how fast
+// pages load and answer taps: its loader (Performance on in the project's
+// Client Keys settings) fetches the SDK with tracing at once
 if (import.meta.env.PROD && location.hostname !== "localhost") {
   document.head.append(
     Object.assign(document.createElement("script"), {

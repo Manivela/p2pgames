@@ -524,24 +524,27 @@ html:has(.fit) {
 /* whose turn it is: a soft glow around your rack, and a 30 s timer, a ring
    that empties around their avatar, a bar over your rack. It loops, never
    skipping anyone, and turns red after the first lap. */
-@property --lap {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 360deg;
-}
-
 @property --ring {
   syntax: "<color>";
-  inherits: false;
+  inherits: true;
   initial-value: #ffd54f;
 }
 
-@keyframes lap {
-  from {
-    --lap: 360deg;
+/* the ring's halves: the left one empties in the first 15 s, the right one
+   in the next */
+@keyframes left-half {
+  50%,
+  to {
+    rotate: -180deg;
+  }
+}
+
+@keyframes right-half {
+  50% {
+    rotate: 0deg;
   }
   to {
-    --lap: 0deg;
+    rotate: -180deg;
   }
 }
 
@@ -575,10 +578,7 @@ html:has(.fit) {
 .avatar .timer {
   inset: calc(var(--t) * -0.13);
   border-radius: 50%;
-  background: conic-gradient(
-    var(--ring) var(--lap),
-    rgba(255, 255, 255, 0.2) 0
-  );
+  background: rgba(255, 255, 255, 0.2);
   -webkit-mask: radial-gradient(
     farthest-side,
     transparent calc(100% - 5px),
@@ -589,9 +589,39 @@ html:has(.fit) {
     transparent calc(100% - 5px),
     #000 calc(100% - 4px)
   );
-  animation:
-    lap 30s linear infinite,
-    overtime 0s 30s forwards;
+  animation: overtime 0s 30s forwards;
+}
+
+/* each half of the ring a half disc turning out of its own half: a
+   transform runs off the main thread, where a conic gradient was drawn
+   again every frame (5% of a core while the others played) */
+.avatar .timer b {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  overflow: hidden;
+}
+
+.avatar .timer b + b {
+  left: 50%;
+}
+
+.avatar .timer b::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ring);
+  border-radius: 100% 0 0 100% / 50% 0 0 50%;
+  transform-origin: right;
+  animation: left-half 30s linear infinite;
+}
+
+.avatar .timer b + b::before {
+  border-radius: 0 100% 100% 0 / 0 50% 50% 0;
+  transform-origin: left;
+  animation-name: right-half;
 }
 
 .rack > .timer {
@@ -1410,6 +1440,7 @@ html:has(.fit) {
 /* the timer keeps still, Catch stops nudging */
 @media (prefers-reduced-motion: reduce) {
   .avatar .timer,
+  .avatar .timer b::before,
   .rack > .timer,
   .board .discardPile .catch {
     animation: none;
