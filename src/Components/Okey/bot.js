@@ -1,15 +1,34 @@
-import { cloneDeep, maxBy, minBy, sum } from "lodash";
+import { cloneDeep, maxBy, minBy, sortBy, sum } from "lodash";
 import * as game from "./game";
 import * as americano from "./americano";
 import { colorOf, isOkey, rankOf } from "./melds";
 
 // A bot: a seat whose user is { bot: true }, played by the page whose
 // userKey it holds (OkeyContext), one move a step through the same rules as
-// everyone. It plays plainly: takes the discard when it makes more melds
-// (out of turn only for a new meld, as that costs a tile from the pile),
-// opens, lays and adds what it can, finishes, and otherwise throws the tile
-// that helps it least. It doesn't catch, show the indicator, or open 101
-// with pairs.
+// everyone, as a player who knows them: it takes the discard when it makes
+// more melds (out of turn only for a new meld, as that costs a tile from
+// the pile; in 101 only one it can use this turn), takes a table okey for
+// its tile once opened, or before when that opens its hand, opens (101 with
+// pairs when the points aren't there), lays and adds what it can, catches
+// a tile thrown that fits the table, shows the gösterge when it pays,
+// finishes, and otherwise throws the tile that helps it least.
+//
+// And it slips, so people win more often than not: each chance it gets (a
+// discard to take, a claim, a catch, an okey, an opening, the gösterge, the
+// best tile to throw) it misses one time in MISTAKES, decided once per
+// chance so a second look doesn't undo it.
+// ponytail: one rate for every table, a game setting if people want to
+// pick how good their bots are
+const MISTAKES = 0.25;
+
+// the same answer for the same chance: a hash of what it is, 0 to 1
+function chance(...key) {
+  let h = 2166136261;
+  for (const c of key.join("|")) h = Math.imul(h ^ c.codePointAt(0), 16777619);
+  return (h >>> 0) / 2 ** 32;
+}
+const slips = (state, mistakes, ...key) =>
+  chance(state.gameId, state.round, state.discards ?? 0, ...key) < mistakes;
 
 // sits a bot in an empty seat, or in place of one who's gone (away), whose
 // player sits back down when they're back; `runner` is the page playing it
@@ -217,16 +236,44 @@ const twinned = (t, tiles, ind) =>
     (u) => u !== t && !isOkey(u, ind) && keyOf(u, ind) === keyOf(t, ind),
   );
 
+// What a partner is worth against a tile's points, when throwing: while
+// the hand would count only once opened, everything; once it counts (or in
+// a hand finished from the rack), less the nearer the round's end, as the
+// pile runs down or someone gets close to finishing (how many tiles each
+// holds is there for all to see)
+function partnerWorth(state, player) {
+  const counts =
+    americano.isElden(state) ||
+    state.opened?.[player] ||
+    state.rules.notOpenedHand;
+  if (!counts) return 100;
+  const fewest = Math.min(
+    ...state.players
+      .filter((p) => p.id !== player)
+      .map((p) => p.hand.filter(Boolean).length),
+  );
+  return 2 + Math.min(state.drawPile.length / 6, fewest);
+}
+
 // the tile that helps least: outside the best melds (without a twin, when
-// pairing), with the fewest partners, the highest first; never an okey
-// while there's another
-function worst(state, player) {
+// pairing), with the fewest partners, the highest first (partnerWorth);
+// never an okey while there's another, nor a tile that fits a meld on the
+// table (işler taş: caught, it costs catchPenalty) while there's another
+// loose one
+function worst(state, player, mistakes) {
   const tiles = hand(state, player);
   const ind = state.okeyTile;
   const plain = tiles.filter((t) => !isOkey(t, ind));
   if (!plain.length) return tiles[0];
-  const least = (pool) =>
-    minBy(pool, (t) => partners(t, tiles, ind) * 100 - rankOf(t, ind));
+  const worth = partnerWorth(state, player);
+  const score = (t) => partners(t, tiles, ind) * worth - rankOf(t, ind);
+  // a slip: the next best, the table not minded
+  const slip = slips(state, mistakes, player, "throw");
+  const least = (pool) => {
+    if (slip) return sortBy(pool, score)[1] ?? pool[0];
+    const safe = pool.filter((t) => !americano.fitsTable(state, t));
+    return minBy(safe.length ? safe : pool, score);
+  };
   if (pairing(state, player)) {
     const single = plain.filter((t) => !twinned(t, tiles, ind));
     return least(single.length ? single : plain);
@@ -259,10 +306,28 @@ function gain(state, player, tile) {
   );
 }
 
-function draw(state, player, now) {
+// 101: a discard taken goes into a meld this turn, laid (opened) or opened
+// with
+function usable(state, player, tile) {
+  const tiles = [...hand(state, player), tile];
+  const has = ({ melds }) => melds.some((m) => m.tiles.includes(tile));
+  if (state.opened?.[player]) {
+    return has(bestMelds(tiles, state.okeyTile, wrap(state)));
+  }
+  if (!americano.roundOf(state).opening) return false;
+  const best = bestMelds(tiles, state.okeyTile, wrap(state), "points");
+  return best.points >= americano.pointsToOpen(state) && has(best);
+}
+
+function draw(state, player, now, mistakes) {
   const slot = Math.max(0, game.seat(state, player).hand.indexOf(null));
   const top = game.previous(state.players, player).discardPile.at(-1);
-  if (top && !state.rules.takeMustBeUsed && gain(state, player, top) > 0) {
+  const wanted =
+    top &&
+    (state.rules.takeMustBeUsed
+      ? usable(state, player, top)
+      : gain(state, player, top) > 0);
+  if (wanted && !slips(state, mistakes, player, "take")) {
     const took = ok(americano.drawTile(state, player, top, slot, now));
     if (took) return took;
   }
@@ -273,7 +338,7 @@ function draw(state, player, now) {
 // makes a new meld: a take costs a tile from the pile, so one that only
 // lengthens a meld isn't worth it. Undefined when it lets it go or has
 // already claimed it.
-export function claim(state, player) {
+export function claim(state, player, mistakes = MISTAKES) {
   const offer = americano.upForClaim(state);
   const seat = game.seat(state, player);
   if (!offer || seat.claim?.id === offer.id) return;
@@ -281,26 +346,65 @@ export function claim(state, player) {
   if ((state.takes?.[player] ?? 0) >= state.rules.maxTakes) return;
   const tile = game.seat(state, offer.from).discardPile.at(-1);
   if (tile?.id !== offer.tileId || gain(state, player, tile) < 2) return;
+  if (slips(state, mistakes, player, "claim", offer.id)) return;
   return ok(americano.claimDiscard(state, player, seat.hand.indexOf(null)));
+}
+
+// Out of turn too: the tile just thrown, when it fits the table (işler
+// taş), caught, its thrower paying for it (americano.catchDiscard)
+export function catchTile(state, player, mistakes = MISTAKES) {
+  if (state.gameState !== "play" || !state.discardFits) return;
+  if (state.players.some((p) => p.caught?.includes(state.lastDiscard))) return;
+  if (slips(state, mistakes, player, "catch", state.lastDiscard)) return;
+  return ok(americano.catchDiscard(state, player));
 }
 
 function open(state, player) {
   const { melds, opening } = americano.roundOf(state);
+  const all = hand(state, player).map((t) => t.id);
   if (melds?.some(([type]) => type === "pair")) {
-    const ids = hand(state, player).map((t) => t.id);
-    return americano.openHand(state, player, [ids], true);
+    return americano.openHand(state, player, [all], true);
   }
   if (melds) return americano.openAll(state, player);
+  if (!opening) return;
   const best = bestMelds(
     hand(state, player),
     state.okeyTile,
     wrap(state),
     "points",
   );
-  if (best.points < americano.pointsToOpen(state) || !opening) return;
+  // 101: the points, or as many pairs as it takes
+  if (best.points < americano.pointsToOpen(state)) {
+    const ind = state.okeyTile;
+    const twins = hand(state, player).filter(
+      (t) => !isOkey(t, ind) && twinned(t, hand(state, player), ind),
+    );
+    if (twins.length / 2 < opening.pairs) return;
+    return americano.openHand(state, player, [all], true);
+  }
   const s = arrange(state, player, best.melds, best.rest);
   const ids = best.melds.flatMap((m) => m.tiles.map((t) => t.id));
   return s && americano.openHand(s, player, [ids], false);
+}
+
+// Before opening, a table okey for the tile it stands for, when the okey
+// then opens the hand (an okey taken must open it or go back); once
+// opened, add() trades one as it goes (americano.playOnMeld)
+function takeOkey(state, player) {
+  for (let i = 0; i < state.melds.length; i++) {
+    for (const t of hand(state, player)) {
+      const s = ok(americano.swapOkey(state, player, t.id, i));
+      if (s && ok(open(s, player))) return s;
+    }
+  }
+}
+
+// 101's gösterge, when it scores for the bot (a minus)
+function showIndicator(state, player) {
+  if (!(state.rules.indicatorScore < 0) || state.indicatorShown) return;
+  const kind = state.okeyTile.id.split("-")[0];
+  const twin = hand(state, player).find((t) => t.id.split("-")[0] === kind);
+  return twin && americano.showIndicator(state, player, twin.id);
 }
 
 // sets and runs from the rack, keeping a tile to finish with
@@ -360,20 +464,45 @@ function finishFromHand(state, player) {
   return s && americano.finishGame(s, player, best.rest[0]);
 }
 
+// The rack as a player keeps it, laid out as the turn ends: the melds it
+// has, a gap after each, then the rest by colour and number, so the hands
+// shown at the round's end read as it saw them
+function tidy(state, player) {
+  const ind = state.okeyTile;
+  const { melds, rest } = bestMelds(hand(state, player), ind, wrap(state));
+  const sorted = sortBy(rest, [
+    (t) => isOkey(t, ind),
+    (t) => colorOf(t, ind),
+    (t) => rankOf(t, ind),
+  ]);
+  return arrange(state, player, melds, sorted) ?? state;
+}
+
+const throwTile = (state, player, now, mistakes) =>
+  americano.discardTile(state, player, worst(state, player, mistakes), now);
+
 // One move of the bot whose turn it is, through the rules: a new state, or
-// a message (nothing it may do yet: the others' time to take the discard)
-export function step(state, player, now = Date.now()) {
+// a message (nothing it may do yet: the others' time to take the discard).
+// `mistakes`: how often it slips (MISTAKES; 0 plays its best).
+export function step(state, player, now = Date.now(), mistakes = MISTAKES) {
   if (state.gameState !== "play" || state.currentPlayer !== player) return;
   if (game.pileOut(state, player)) return game.shuffleDiscards(state, player);
-  if (!state.drawn) return draw(state, player, now);
+  const slip = (what) => slips(state, mistakes, player, what);
+  const shown = !slip("gösterge") && ok(showIndicator(state, player));
+  if (shown) return shown;
+  if (!state.drawn) return draw(state, player, now, mistakes);
   const tiles = hand(state, player);
   const opened = state.opened?.[player];
+  const opening = !americano.isElden(state) && !opened && !slip("open");
   return (
     ok(finishFromHand(state, player)) ||
-    (!americano.isElden(state) && !opened && ok(open(state, player))) ||
+    (opening && ok(open(state, player))) ||
+    (opening && ok(takeOkey(state, player))) ||
     (opened && ok(lay(state, player))) ||
     (opened && ok(add(state, player))) ||
     (tiles.length === 1 && ok(americano.finishGame(state, player, tiles[0]))) ||
-    americano.discardTile(state, player, worst(state, player), now)
+    // 101: a discard it took and couldn't use goes back
+    ok(americano.returnDiscard(state, player)) ||
+    throwTile(tidy(state, player), player, now, mistakes)
   );
 }

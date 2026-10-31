@@ -704,14 +704,15 @@ export function OkeyProvider({ children }) {
     [okeyState, localID, setOkeyState],
   );
   // the bots this page plays, out of turn: a claim on the discard up for
-  // it, and tiles won into the inbox onto the rack, one write a render
+  // it or a catch of the tile just thrown, and tiles won into the inbox
+  // onto the rack, one write a render
   React.useEffect(() => {
     if (okeyState.gameState !== "play") return;
     for (const p of okeyState.players) {
       if (!p.user?.bot || p.userKey !== localID) continue;
       const next = p.inbox?.length
         ? americano.collectInbox(okeyState, p.id)
-        : bots.claim(okeyState, p.id);
+        : bots.claim(okeyState, p.id) || bots.catchTile(okeyState, p.id);
       if (next) {
         setOkeyState(next);
         return;

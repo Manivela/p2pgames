@@ -914,7 +914,7 @@ export function cantCatch(state, player, from) {
 
 // `tile` could go on the table as it is: added without moving an okey, or in
 // place of the okey that stands for it; a 1 after 13 doesn't count
-function fitsTable(state, tile) {
+export function fitsTable(state, tile) {
   const ind = state.okeyTile;
   return state.melds.some((m) => {
     const j = okeyFor(m, tile, ind);
