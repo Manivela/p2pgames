@@ -5,6 +5,7 @@ import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
 import {
+  discardWait,
   isElden,
   pairRound,
   pointsToOpen,
@@ -19,11 +20,16 @@ import { ended, partner, placeTiles, rowOf } from "./game";
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
 
-// A soft 30 s turn timer (rack.css): it starts when the turn reaches this
-// device and loops, never skipping anyone. The key restarts it on a new
-// deal with the same starter.
+// Whose turn it is, filling once in the time they wait before they may
+// discard (rack.css), from when the turn reaches this device; full at once
+// when they don't. The key starts it again on a new deal with the same
+// starter.
 const Timer = ({ okeyState }) => (
-  <i key={`${okeyState.deal}-${okeyState.currentPlayer}`} className="timer">
+  <i
+    key={`${okeyState.deal}-${okeyState.currentPlayer}`}
+    className="timer"
+    style={{ "--wait": `${discardWait(okeyState)}s` }}
+  >
     <b />
     <b />
   </i>

@@ -720,6 +720,26 @@ test("the others' time to take a discard before the next one", () => {
   assert.equal(americano.claimWait({ ...s, players }, 2, soon), 0);
 });
 
+test("the turn's ring fills in the others' time to take the discard, or at once", () => {
+  let s = americano.startGame(seated(4));
+  // the starter throws without drawing: nothing on offer
+  assert.equal(americano.discardWait(s), 0);
+  s = americano.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  // the ruleset's seconds, before the draw and after one from the pile
+  assert.equal(americano.discardWait(s), AMERICANO.claimWaitSeconds);
+  const rules = { ...s.rules, claimWaitSeconds: 5 };
+  assert.equal(americano.discardWait({ ...s, rules }), 5);
+  const drawn = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  assert.equal(americano.discardWait(drawn), AMERICANO.claimWaitSeconds);
+  // the discard taken: nothing left on offer
+  const top = player(s, 1).discardPile.at(-1);
+  assert.equal(americano.discardWait(americano.drawTile(s, 2, top, 25)), 0);
+  // nobody else could take it, or a game without out-of-turn takes
+  assert.equal(americano.discardWait({ ...s, takes: { 3: 3, 4: 3 } }), 0);
+  const off = { ...s.rules, outOfTurnTakes: false };
+  assert.equal(americano.discardWait({ ...s, rules: off }), 0);
+});
+
 test("out of turn: earliest claimant after the current player gets the discard + 1", () => {
   let s = americano.startGame(seated(4));
   const thrown = player(s, 1).hand.find(Boolean);

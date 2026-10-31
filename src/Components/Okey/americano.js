@@ -836,6 +836,14 @@ export function claimWait(state, player, now = Date.now()) {
   return !last && wait > 0 && claimable(state, player) ? wait : 0;
 }
 
+// the seconds the player whose turn it is waits, from the turn reaching
+// them, before they may discard (claimWait): the turn's ring fills in them
+// (Rack.jsx). 0 when nothing is or will be on offer, or nobody could take it.
+export const discardWait = (state) =>
+  claimable({ ...state, offer: upForClaim(state) }, state.currentPlayer)
+    ? state.rules.claimWaitSeconds
+    : 0;
+
 const LAST = "Throw your last tile to the middle to finish";
 const onlyTile = (state, player) =>
   seat(state, player)?.hand.filter(Boolean).length === 1;
