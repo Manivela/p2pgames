@@ -999,15 +999,6 @@ html:has(.fit) {
   color: #1d1d1d;
 }
 
-/* a newer version to reload for */
-.board .update {
-  width: calc(var(--t) * 0.7);
-  padding: 0;
-  background: #ffb300;
-  color: #3a2600;
-  font-size: calc(var(--t) * 0.4);
-}
-
 /* the lobby: the rules the next game starts with, and their settings (⚙) */
 .side .pick {
   display: flex;
@@ -1115,6 +1106,18 @@ html:has(.fit) {
 .table-menu > .dots {
   width: calc(var(--t) * 0.7);
   padding: 0;
+}
+
+/* a newer version to reload for (in the menu) */
+.table-menu > .dots.news::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: calc(var(--t) * 0.18);
+  height: calc(var(--t) * 0.18);
+  border-radius: 50%;
+  background: #ff9100;
 }
 
 /* the hand being played: what's owed so far, until it's scored */

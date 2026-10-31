@@ -382,6 +382,7 @@ export default function TableMenu() {
     endGame,
     volume,
     setVolume,
+    newVersion,
   } = useContext(OkeyContext);
   const { roomId } = useParams();
   const [open, setOpen] = useState(false);
@@ -399,8 +400,9 @@ export default function TableMenu() {
   };
   return (
     <div className="table-menu">
+      {/* a newer version out (OkeyContext): a dot on ⋯, easy to leave be */}
       <button
-        className="dots"
+        className={newVersion ? "dots news" : "dots"}
         aria-label={t("Table menu")}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
@@ -411,6 +413,11 @@ export default function TableMenu() {
         <div className="menu">
           {/* the most needed first; a long menu scrolls on a phone, and
               the moves that end the game sit at the bottom */}
+          {newVersion && (
+            <button onClick={() => location.reload()}>
+              {t("Update to the new version")}
+            </button>
+          )}
           {window.Sentry && (
             <button
               onClick={then(() =>

@@ -206,24 +206,6 @@ function NextStep() {
   }
 }
 
-// a newer version out (OkeyContext): reload for it
-function NewVersion() {
-  const { newVersion } = useContext(OkeyContext);
-  return (
-    newVersion && (
-      // an icon beside the corner buttons, where there's room for little
-      <button
-        className="update"
-        aria-label={t("New version")}
-        title={t("New version")}
-        onClick={() => location.reload()}
-      >
-        ↻
-      </button>
-    )
-  );
-}
-
 // what's on the table: the melds (left as they are when the round ends),
 // before a game a way to bring the others; and the draw pile, while it's
 // in the middle
@@ -403,10 +385,7 @@ function Board() {
           </div>
         </div>
         <div className="middle">
-          <div className="left">
-            <NewVersion />
-            {pileAside && <DrawPile />}
-          </div>
+          <div className="left">{pileAside && <DrawPile />}</div>
           <div className="center" ref={table}>
             <OnTheTable pile={!pileAside && <DrawPile />} />
           </div>

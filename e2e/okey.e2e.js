@@ -19,7 +19,7 @@ const END = /^(End the round|Eli bitir)$/;
 const NEW_GAME = /^(New Game|Yeni oyun)$/;
 const REDEAL = /^(Deal this round again|Bu eli yeniden dağıt)$/;
 const OPEN = /^(Open your hand|El aç)$/;
-const UPDATE = /^(New version|Yeni sürüm)$/;
+const UPDATE = /^(Update to the new version|Yeni sürüme geç)$/;
 const SOUND = /^(Sound|Ses)$/;
 const FIND = /^(Find and open|Bul ve aç)$/;
 const LAY = /^(Lay melds|Per aç)$/;
@@ -1126,12 +1126,15 @@ test("a newer version on the site is offered", async ({ page }) => {
     route.fulfill({ json: { build: Date.now() + 60_000 } }),
   );
   await sitDown(page);
+  // a dot on the menu, and in it the reload
+  const menu = page.getByRole("button", { name: MENU });
+  await expect(menu).toHaveClass(/news/);
+  await menu.click();
   await expect(page.getByRole("button", { name: UPDATE })).toBeVisible();
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
-  // beside the score sheet, with a full table
-  await table(page, "start", 4, "101");
-  await table(page, "toMyTurn");
-  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  const reloaded = page.waitForEvent("load");
+  await page.getByRole("button", { name: UPDATE }).click();
+  await reloaded;
 });
 
 test("a newer version at the table is picked up between hands", async ({
@@ -1142,7 +1145,7 @@ test("a newer version at the table is picked up between hands", async ({
   await table(page, "start", 2);
   // Bora comes in on a newer build
   await secondPlayer(page, room, Date.now() + 60_000);
-  await expect(page.getByRole("button", { name: UPDATE })).toBeVisible();
+  await expect(page.getByRole("button", { name: MENU })).toHaveClass(/news/);
   // not in the middle of a hand
   await page.evaluate(() => (window.stayed = true));
   await page.waitForTimeout(500);
