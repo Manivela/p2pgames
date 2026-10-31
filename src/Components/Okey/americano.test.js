@@ -1,5 +1,5 @@
 import { assert, test } from "vitest";
-import { sum } from "lodash";
+import { cloneDeep, sum } from "lodash";
 import * as americano from "./americano";
 import * as game from "./game";
 import { isOkey, meldOrder, okeyStandsFor, rankOf } from "./melds";
@@ -214,6 +214,115 @@ test("round 1: open exactly, lay and add later, finish by throwing the last tile
   assert.deepEqual(s.takes, {});
   assert.deepEqual(turn(s), []);
   assertAllTiles(s);
+});
+
+// P1 opened with the 5s; P2 threw a red 11 and P1 took it
+function secondTurn() {
+  let s = americano.startGame(seated(2), deal);
+  s = americano.openHand(s, 1, [kut5]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 20);
+  s = americano.discardTile(s, 2, tileIn(s, 2, "red11-0"));
+  return americano.drawTile(s, 1, player(s, 2).discardPile.at(-1), 20);
+}
+
+test("a discard taken goes back on its pile that turn, free outside 101", () => {
+  const s = secondTurn();
+  // nor does it have to be used
+  assert.isOk(americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0")).players);
+  const back = americano.returnDiscard(s, 1);
+  assert.equal(player(back, 2).discardPile.at(-1).id, "red11-0");
+  assert.isNotOk(tileIn(back, 1, "red11-0"));
+  assert.isFalse(back.drawn);
+  assert.deepEqual(back.penalties, {});
+  assert.deepEqual(turn(back), []);
+  assertAllTiles(back);
+  // a hand finished from the hand (Elden) leaves nothing to put back
+  assert.isNull(
+    americano.nextRound({ ...back, gameState: "roundEnd" }).tookDiscard,
+  );
+});
+
+test("a tile added this turn comes back to the rack, a seri's from its end", () => {
+  let s = americano.layMelds(secondTurn(), 1, [seri789]);
+  s = americano.addToMeld(s, 1, "red10-0", 1);
+  s = americano.addToMeld(s, 1, "red11-0", 1, true);
+  assert.equal(
+    americano.takeBack(s, 1, "red10-0", 20),
+    "Take back the tile past it first",
+  );
+  assert.equal(
+    americano.takeBack(s, 1, "red7-0", 20),
+    "Only a tile you added this turn comes back",
+  );
+  s = americano.takeBack(s, 1, "red11-0", 20);
+  assert.equal(player(s, 1).hand[20].id, "red11-0");
+  assert.equal(player(s, 1).hand[20].source, "hand-1");
+  s = americano.takeBack(s, 1, "red10-0", 21);
+  assert.deepEqual(ids(s.melds[1].tiles), seri789);
+  assert.deepEqual(turn(s), [
+    [1, "took", "red11-0"],
+    [1, "laid", ...seri789],
+  ]);
+  assertAllTiles(s);
+
+  // once the turn has passed, it stays
+  s = americano.addToMeld(s, 1, "red10-0", 1);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
+  assert.equal(
+    americano.takeBack(s, 1, "red10-0", 20),
+    "Only a tile you added this turn comes back",
+  );
+});
+
+test("picked tiles dropped on a meld are all added to it, or laid down", () => {
+  const s = americano.layMelds(secondTurn(), 1, [seri789]);
+  // in whatever order they're picked
+  for (const pick of [
+    ["red11-0", "red10-0"],
+    ["red10-0", "red11-0"],
+  ]) {
+    const added = americano.addPick(s, 1, [pick], 1);
+    assert.deepEqual(ids(added.melds[1].tiles), [
+      ...seri789,
+      "red10-0",
+      "red11-0",
+    ]);
+    assert.deepEqual(turn(added).slice(2), [
+      [1, "added", "red10-0"],
+      [1, "added", "red11-0"],
+    ]);
+  }
+  // an okey goes on after the real tiles, on the end it's dropped on
+  const okey = s.drawPile.find((x) => x.id.startsWith("blue1-"));
+  const withOkey = cloneDeep(s);
+  withOkey.drawPile = withOkey.drawPile.map((x) =>
+    x.id === okey.id ? { ...tileIn(s, 1, "yellow11-0"), hidden: true } : x,
+  );
+  player(withOkey, 1).hand = player(withOkey, 1).hand.map((x) =>
+    x?.id === "yellow11-0" ? { ...okey, source: "hand-1", hidden: false } : x,
+  );
+  for (const pick of [
+    [okey.id, "red10-0"],
+    ["red10-0", okey.id],
+  ]) {
+    const added = americano.addPick(withOkey, 1, [pick], 1, true);
+    assert.deepEqual(ids(added.melds[1].tiles), [
+      ...seri789,
+      "red10-0",
+      okey.id,
+    ]);
+    assertAllTiles(added);
+  }
+  // one that doesn't fit: none are added, and they don't lay down either
+  assert.equal(
+    americano.addPick(s, 1, [["red10-0", "yellow11-0"]], 1),
+    "That's not a küt or a seri",
+  );
+  // a meld of their own that doesn't go on this one lays down
+  const laid = americano.addPick(s, 1, [kut10], 1);
+  assert.deepEqual(ids(laid.melds.at(-1).tiles), kut10);
+  assertAllTiles(laid);
 });
 
 test("five play with a fifth seat; the presets refuse one", () => {

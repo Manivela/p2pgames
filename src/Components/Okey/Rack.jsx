@@ -113,6 +113,7 @@ function Rack({ player, hands }) {
     okeyState,
     me,
     claimDiscard,
+    takeBack,
     held,
   } = useContext(OkeyContext);
   const offer = upForClaim(okeyState);
@@ -123,6 +124,7 @@ function Rack({ player, hands }) {
   function onDrop(tile, toIndex) {
     if (claim(tile)) claimDiscard(toIndex);
     else if (tile.source.includes("hand")) moveTile(player, tile, toIndex);
+    else if (tile.source === "table") takeBack(tile, toIndex);
     else drawTile(player, tile, toIndex);
   }
   const sittingPlayer = okeyState.players.find((p) => p.id === player);

@@ -1,4 +1,4 @@
-import { cloneDeep, max, sum } from "lodash";
+import { cloneDeep, max, sortBy, sum } from "lodash";
 import * as game from "./game";
 import {
   colorOf,
@@ -167,6 +167,7 @@ export function nextRound(state, deal) {
       takes: {},
       penalties: {},
       replay: false,
+      tookDiscard: null,
       discards: 0,
       indicatorShown: null,
     },
@@ -457,6 +458,62 @@ export function layMelds(state, player, groups) {
   return s;
 }
 
+// Picked tiles dropped on a meld: added to it, in whatever order they fit
+// (9 then 8 onto 5-6-7 too), okeys last so they don't take a real tile's
+// place. If they don't all fit, they open or lay down as anywhere on the
+// table.
+export function addPick(state, player, groups, meldIndex, atEnd) {
+  const hand = seat(state, player)?.hand ?? [];
+  const okey = (id) =>
+    hand.some((t) => t?.id === id && isOkey(t, state.okeyTile));
+  let s = state;
+  let left = sortBy(groups.flat(), okey);
+  let added = true;
+  while (left.length && added) {
+    added = false;
+    for (const id of left) {
+      const next = addToMeld(s, player, id, meldIndex, atEnd);
+      if (next && typeof next !== "string") {
+        s = next;
+        left = left.filter((x) => x !== id);
+        added = true;
+      }
+    }
+  }
+  if (!left.length && s !== state) return s;
+  return (state.opened[player] ? layMelds : openHand)(state, player, groups);
+}
+
+// a tile the player added to a meld this turn (they can take it back)
+export const addedThisTurn = (state, player, tileId) =>
+  state.gameState === "play" &&
+  state.currentPlayer === player &&
+  (state.turnMoves ?? []).some(
+    (m) => m.by === player && m.move === "added" && m.tiles[0] === tileId,
+  );
+
+// A tile added to a meld this turn comes back to the rack, at toIndex: off
+// a seri's end, so one added past it comes back first
+export function takeBack(state, player, tileId, toIndex) {
+  if (roundOver(state)) return roundOver(state);
+  if (!addedThisTurn(state, player, tileId)) {
+    return "Only a tile you added this turn comes back";
+  }
+  const k = state.melds.findIndex((m) => m.tiles.some((t) => t.id === tileId));
+  const { type, tiles } = state.melds[k];
+  const i = tiles.findIndex((t) => t.id === tileId);
+  if (type === "seri" && i > 0 && i < tiles.length - 1) {
+    return "Take back the tile past it first";
+  }
+  const s = cloneDeep(state);
+  s.melds[k].tiles.splice(i, 1);
+  const me = seat(s, player);
+  const tile = { ...tiles[i], source: `hand-${player}`, hidden: false };
+  me.hand = game.placeTiles(me.hand, game.rowOf(s), [tile], toIndex);
+  game.unlog(s, "added", tileId);
+  return s;
+}
+
 // atEnd: dropped on the meld's right half, so an okey added to a seri goes
 // on its high end (the low end otherwise, or wherever it fits)
 export function addToMeld(state, player, tileId, meldIndex, atEnd = false) {
@@ -618,8 +675,9 @@ export function drawTile(
   if (caught) {
     penalize(s, Number(tile.source.split("-")[1]), state.rules.catchPenalty);
   }
-  // 101: a discard taken must go into a meld before this turn's discard
-  if (state.rules.takeMustBeUsed && tile.source.startsWith("discard-")) {
+  // a discard taken can go back on its pile this turn (returnDiscard); in
+  // 101 it must, unless it goes into a meld (takeMustBeUsed)
+  if (tile.source.startsWith("discard-")) {
     s.tookDiscard = {
       player,
       tileId: tile.id,
@@ -797,6 +855,7 @@ function throwTile(state, player, tile, now = Date.now()) {
   }
   const took = state.tookDiscard;
   if (
+    state.rules.takeMustBeUsed &&
     took?.player === player &&
     seat(state, player).hand.some((t) => t?.id === took.tileId)
   ) {
@@ -852,8 +911,9 @@ export function penaltiesSoFar(state, player) {
   );
 }
 
-// 101: a discard taken that can't be used goes back on its pile, and the
-// player draws from the pile instead (for returnPenalty, if the rules ask)
+// A discard taken goes back on its pile while it's still in the hand, and
+// the player draws from the pile instead; in 101, where it must be used
+// (takeMustBeUsed), for returnPenalty
 export function returnDiscard(state, player) {
   const took = state.tookDiscard;
   const tile = seat(state, player)?.hand.find((t) => t?.id === took?.tileId);
@@ -869,7 +929,7 @@ export function returnDiscard(state, player) {
   game.unlog(s, "took", tile.id);
   // back on the pile, a caught tile counts there again
   if (isCaught(s, tile.id)) penalize(s, from.id, -s.rules.catchPenalty);
-  const cost = s.rules.returnPenalty;
+  const cost = s.rules.takeMustBeUsed && s.rules.returnPenalty;
   if (cost) {
     penalize(s, player, cost);
     s.message = `${me.user?.name} put the tile back: +${cost}`;

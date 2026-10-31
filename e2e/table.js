@@ -80,12 +80,14 @@ export function play(turns) {
   window.okey.set(s);
 }
 
-// everyone plays until it's seat 1's turn again, and seat 1 draws
-export function toMyTurn() {
+// everyone plays until it's seat 1's turn again, and seat 1 draws (unless
+// `draw` is false)
+export function toMyTurn(draw = true) {
   let s = turn(window.okey.get());
   while (s.currentPlayer !== 1) s = turn(s);
   const slot = seat(s, 1).hand.indexOf(null);
-  window.okey.set(ok(americano.drawTile(s, 1, s.drawPile.at(-1), slot, 0)));
+  if (draw) s = ok(americano.drawTile(s, 1, s.drawPile.at(-1), slot, 0));
+  window.okey.set(s);
 }
 
 // seat id asks for the discard on offer, into its first free slot
@@ -159,6 +161,18 @@ export function okeyAndSeri() {
   s.justOpened = null;
   window.okey.set(s);
   return okey;
+}
+
+// okeyAndSeri, and the tiles either side of its seri in my slots 1 and 2
+export function seriAndEnds() {
+  okeyAndSeri();
+  const s = structuredClone(window.okey.get());
+  const ends = [5, 9].map((r) =>
+    s.melds[0].tiles[0].id.replace(/\d+-1$/, `${r}-0`),
+  );
+  ends.forEach((id, i) => intoMyFirstSlot(s, id, i + 1));
+  window.okey.set(s);
+  return ends;
 }
 
 // the indicator's twin in my first slot (101's gösterge)

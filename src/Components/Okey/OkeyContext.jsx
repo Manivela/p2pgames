@@ -406,6 +406,12 @@ export function OkeyProvider({ children }) {
     () => laid(act(americano.layMelds, me, picked())),
     [act, me, picked, laid],
   );
+  // the pick dropped on a meld: added to it, or laid down
+  const addPick = useCallback(
+    (meldIndex, atEnd) =>
+      laid(act(americano.addPick, me, picked(), meldIndex, atEnd)),
+    [act, me, picked, laid],
+  );
 
   // a knock on the table (knock.js): passed round as this page's presence,
   // not the game, and heard once by every page already at the table
@@ -463,9 +469,18 @@ export function OkeyProvider({ children }) {
     [act, me],
   );
 
-  // 101: the discard I took goes back on its pile
+  // the discard I took goes back on its pile
   const returnDiscard = useCallback(
     () => act(americano.returnDiscard, me),
+    [act, me],
+  );
+
+  // a tile I added to a meld this turn, back on my rack
+  const takeBack = useCallback(
+    (tile, toIndex) => {
+      dragged.current = tile.id;
+      return act(americano.takeBack, me, tile.id, toIndex);
+    },
     [act, me],
   );
 
@@ -803,11 +818,13 @@ export function OkeyProvider({ children }) {
       openHand,
       openAll,
       layMelds,
+      addPick,
       showIndicator,
       playOnMeld,
       claimDiscard,
       catchDiscard,
       returnDiscard,
+      takeBack,
       nextRound,
       redealRound,
       shuffleDiscards,
@@ -855,11 +872,13 @@ export function OkeyProvider({ children }) {
       openHand,
       openAll,
       layMelds,
+      addPick,
       showIndicator,
       playOnMeld,
       claimDiscard,
       catchDiscard,
       returnDiscard,
+      takeBack,
       nextRound,
       redealRound,
       shuffleDiscards,

@@ -447,6 +447,55 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
   await expect(page.locator(".meld .ghost")).toHaveCount(0);
 });
 
+test("picked tiles dropped on a meld go on it, and one comes back this turn", async ({
+  page,
+}) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  const [low, high] = await table(page, "seriAndEnds");
+  const meld = async () => (await state(page)).melds[0].tiles.map((t) => t.id);
+  for (const i of [1, 2]) await slot(page, i).locator(".tile").click();
+  await drag(
+    page,
+    slot(page, 2).locator(".tile"),
+    page.locator('[data-meld="0"]'),
+  );
+  await expect.poll(meld).toHaveLength(5);
+  expect([(await meld())[0], (await meld())[4]]).toEqual([low, high]);
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
+  // dragged back to the rack, into the slot it's dropped on, once it has
+  // landed (a tile in flight can't be picked up)
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => !a.effect.target?.matches(".tile")),
+  );
+  await drag(
+    page,
+    page.locator(`.meld [data-tile-id="${high}"]`),
+    slot(page, 2),
+  );
+  await expect.poll(async () => (await handIds(page))[2]).toBe(high);
+  expect(await meld()).not.toContain(high);
+  expect(await meld()).toContain(low);
+});
+
+test("a discard taken goes back on its pile with a drag", async ({ page }) => {
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn", false);
+  const pile = page.locator('[data-pile="4"] .slot');
+  const top = (await state(page)).players[3].discardPile.at(-1).id;
+  const gap = (await handIds(page)).indexOf(null);
+  await drag(page, pile.locator(".tile"), slot(page, gap));
+  await expect.poll(async () => (await handIds(page))[gap]).toBe(top);
+  await drag(page, slot(page, gap).locator(".tile"), pile);
+  await expect
+    .poll(async () => (await state(page)).players[3].discardPile.at(-1).id)
+    .toBe(top);
+  expect((await state(page)).drawn).toBe(false);
+  expect(await handIds(page)).not.toContain(top);
+});
+
 // what's ticked in the settings goes into the game it starts, without saving
 // anything; in pairs it takes four
 test("101 starts with what's ticked, and in pairs with four at the table", async ({

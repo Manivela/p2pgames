@@ -550,7 +550,8 @@ export function step(
   const opened = state.opened?.[player];
   // a discard taken to open with (101) opens: the same slip each time it's
   // taken would put it back, +101, and take it again, on and on
-  const took = state.tookDiscard?.player === player;
+  const took =
+    state.rules.takeMustBeUsed && state.tookDiscard?.player === player;
   const opening =
     !americano.isElden(state) && !opened && (took || !slip("open"));
   return (
@@ -561,7 +562,7 @@ export function step(
     (opened && ok(add(state, player))) ||
     (tiles.length === 1 && ok(americano.finishGame(state, player, tiles[0]))) ||
     // 101: a discard it took and couldn't use goes back
-    ok(americano.returnDiscard(state, player)) ||
+    (took && ok(americano.returnDiscard(state, player))) ||
     throwTile(tidy(state, player), player, now, mistakes)
   );
 }

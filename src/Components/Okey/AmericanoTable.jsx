@@ -4,6 +4,7 @@ import { findKey, sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
 // playOnMeld here is the rule, tried out for the ghost
 import {
+  addedThisTurn,
   claimants,
   isElden,
   penaltiesSoFar,
@@ -41,13 +42,13 @@ const Ghost = ({ face, at }) => (
   </span>
 );
 
-// one tile of a bigger pick brings the pick: that's opening or laying
-// down, wherever on the table it lands
+// one tile of a bigger pick brings the pick: on a meld, added to it if
+// it all fits there; otherwise opening or laying down, wherever it lands
 const inPick = (selected, tile) =>
   selected.length > 1 && selected.includes(tile.id);
 
 function Meld({ meld, index }) {
-  const { playOnMeld, okeyState, me, selected, openHand, layMelds } =
+  const { playOnMeld, okeyState, me, selected, addPick } =
     useContext(OkeyContext);
   const box = useRef(null);
   // the end a tile goes on: the half of the meld it's over
@@ -61,17 +62,16 @@ function Meld({ meld, index }) {
       accept: "TILE",
       hover: (e, monitor) => setAtEnd(endOf(monitor)),
       drop: (e, monitor) => {
-        if (inPick(selected, e.tile)) {
-          (okeyState.opened[me] ? layMelds : openHand)();
-        } else {
-          playOnMeld(e.tile, index, endOf(monitor));
-        }
+        // a tile taken back off the table goes to the rack (Rack.jsx)
+        if (e.tile.source === "table") return;
+        if (inPick(selected, e.tile)) addPick(index, endOf(monitor));
+        else playOnMeld(e.tile, index, endOf(monitor));
       },
       collect: (monitor) => ({
         held: monitor.isOver() ? monitor.getItem().tile : null,
       }),
     }),
-    [playOnMeld, index, selected, okeyState.opened, me, openHand, layMelds],
+    [playOnMeld, index, selected, addPick],
   );
   const ghost = useMemo(
     () =>
@@ -80,12 +80,15 @@ function Meld({ meld, index }) {
         : null,
     [held, okeyState, me, index, atEnd, selected],
   );
-  // a full küt (all four colours, no okey left to swap out) is one tile
+  // a tile I added this turn can be dragged back to my rack
+  const back = (x) => addedThisTurn(okeyState, me, x.id);
+  // a full küt (all four colours, no okey left to swap out) is one tile,
+  // once none of it can be taken back
   const ind = okeyState.okeyTile;
   const full =
     meld.type === "kut" &&
     meld.tiles.length === 4 &&
-    !meld.tiles.some((x) => isOkey(x, ind));
+    !meld.tiles.some((x) => isOkey(x, ind) || back(x));
   const moves = lastTurn(okeyState);
   const marks = meld.tiles.map((x) => markOf(moves, x.id)).filter(Boolean);
   const mark = marks.length ? Math.min(...marks) : null;
@@ -130,7 +133,7 @@ function Meld({ meld, index }) {
             <Tile
               key={x.id}
               tile={x}
-              disabled
+              disabled={!back(x)}
               // tiles side by side from one move show its number once, on
               // the last of them
               numbered={

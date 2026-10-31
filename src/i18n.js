@@ -50,6 +50,11 @@ const TR = [
   [/^That's not a pair, küt or seri$/, "Bu çift, küt ya da seri değil"],
   [/^That tile doesn't fit there$/, "Bu taş oraya işlemez"],
   [
+    /^Only a tile you added this turn comes back$/,
+    "Yalnızca bu tur işlediğin taş geri alınır",
+  ],
+  [/^Take back the tile past it first$/, "Önce ötesindeki taşı geri al"],
+  [
     /^No okey there that tile can replace$/,
     "Bu taşın yerine geçeceği okey yok",
   ],
