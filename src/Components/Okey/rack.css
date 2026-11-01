@@ -491,6 +491,15 @@ html:has(.fit) {
   background: rgba(0, 0, 0, 0.2);
 }
 
+/* a bot's while you watch: Sit (Rack.jsx), white as every Sit */
+.avatar.sit {
+  padding: 0;
+  background: #fff;
+  color: #1b5e20;
+  font-size: calc(var(--t) * 0.26);
+  line-height: 1;
+}
+
 /* tiles left: on an avatar's corner; yours beside your name tab, across
    from the tea glass */
 .tilesLeft {
@@ -970,8 +979,8 @@ html:has(.fit) {
 }
 
 /* table buttons, and the site's corner ones over the table: dark
-   see-through pills */
-.board button:not(:where(.menu, .dialog) button),
+   see-through pills (not a bot's avatar as Sit: it stays an avatar) */
+.board button:not(:where(.menu, .dialog) button, :where(.avatar)),
 .scores > summary,
 #root:has(.fit) .corner button {
   height: calc(var(--t) * 0.7);

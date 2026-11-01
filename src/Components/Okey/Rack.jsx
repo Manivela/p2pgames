@@ -63,11 +63,13 @@ function RackPoints({ player }) {
 
 // A name and what everyone at the table can see about them, or an empty
 // seat to sit in or put a bot in; a bot's seat is anyone's to take over
-function Name({ player, children }) {
+// (a seat round the table, on its avatar: `avatarSits`)
+function Name({ player, avatarSits, children }) {
   const { okeyState, me, sit, seatBot, isAlreadySitting } =
     useContext(OkeyContext);
   const seat = okeyState.players.find((p) => p.id === player);
-  const sitHere = !isAlreadySitting && (!seat.user || seat.user.bot) && (
+  const bot = seat.user?.bot && !avatarSits;
+  const sitHere = !isAlreadySitting && (!seat.user || bot) && (
     <button onClick={() => sit(player)}>{t("Sit")}</button>
   );
   if (!seat.user) {
@@ -252,22 +254,31 @@ function Rack({ player, hands }) {
 }
 
 // Someone else at the table: a round avatar in their seat's colour with
-// how many tiles they hold, and their name
+// how many tiles they hold, and their name. A bot's, while you watch, is
+// the Sit that takes it over: under its name, beside drew and opened, the
+// next pile would cover it.
 export function Seat({ player }) {
-  const { okeyState } = useContext(OkeyContext);
-  const name = okeyState.players.find((p) => p.id === player).user?.name;
+  const { okeyState, sit, isAlreadySitting } = useContext(OkeyContext);
+  const user = okeyState.players.find((p) => p.id === player).user;
+  const name = user?.name;
   const turn = turnOf(okeyState, player);
+  const takeOver = !isAlreadySitting && user?.bot;
+  const Avatar = takeOver ? "button" : "div";
   return (
     <div className={`seat ${turn ? "turn" : ""}`} data-seat={player}>
-      <div
-        className={`avatar ${name ? "" : "empty"}`}
+      <Avatar
+        className={`avatar ${name ? "" : "empty"} ${takeOver ? "sit" : ""}`}
         style={{ "--c": seatColors[player] }}
+        {...(takeOver && {
+          "aria-label": t("Sit"),
+          onClick: () => sit(player),
+        })}
       >
         {turn && <Timer okeyState={okeyState} />}
-        {name && [...name][0].toLocaleUpperCase()}
+        {takeOver ? t("Sit") : name && [...name][0].toLocaleUpperCase()}
         <TilesLeft player={player} />
-      </div>
-      <Name player={player} />
+      </Avatar>
+      <Name player={player} avatarSits />
     </div>
   );
 }
