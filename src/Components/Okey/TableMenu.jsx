@@ -433,10 +433,11 @@ export default function TableMenu() {
               />
             </label>
           </div>
-          {/* standing leaves your hand to whoever sits down */}
+          {/* standing leaves your hand to whoever sits down, you again too:
+              nothing lost, so one tap */}
           <div className="group">
             {me && (
-              <Confirm label={t("Stand")} onConfirm={then(() => stand(me))} />
+              <button onClick={then(() => stand(me))}>{t("Stand")}</button>
             )}
           </div>
           {/* anyone's, gone or still here: mid-round every seat is in the

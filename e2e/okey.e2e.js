@@ -1408,8 +1408,9 @@ test("mid-round, standing leaves my hand; leaving takes it out", async ({
   await table(page, "start", 4);
   await table(page, "toMyTurn");
   const hand = await handIds(page);
-  // stood up from, my seat keeps its hand for whoever sits down: me again
-  await confirm(page, STAND);
+  // stood up from (one tap), my seat keeps its hand for whoever sits down: me again
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: STAND }).click();
   await expect.poll(async () => (await state(page)).players[0].user).toBeNull();
   await page.getByRole("button", { name: SIT }).click();
   await expect
