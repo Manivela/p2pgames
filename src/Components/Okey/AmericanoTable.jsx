@@ -13,7 +13,7 @@ import {
 } from "./americano";
 import { allSeats, partner } from "./game";
 import { colorOf, isOkey, okeyStandsFor, rankOf } from "./melds";
-import { colorMap, symbols } from "./constants";
+import { colorMap, seatColors, symbols } from "./constants";
 import Tile, { TileFace, lastTurn, markOf } from "./Tile";
 import { t } from "../../i18n";
 
@@ -376,6 +376,14 @@ export function Scores() {
       : value;
   };
   const name = (p) => p.user?.name ?? t(`Player ${p.id}`);
+  // blank for someone new: their total comes with the deal
+  const total = (team) =>
+    team.some((p) => scores?.[p.id])
+      ? sum(team.map((p) => sum(scores?.[p.id] ?? [])))
+      : null;
+  // the lowest total leads (americano.js's winner), unless all are level
+  const totals = columns.map(total).filter((v) => v !== null);
+  const lead = totals.some((v) => v !== totals[0]) && Math.min(...totals);
   return (
     // a tap away: a round's end shows its scores with the hands, the end
     // of the game who won, and an open sheet would cover the next step
@@ -392,30 +400,51 @@ export function Scores() {
             <tr>
               <th />
               {columns.map((team) => (
-                <th key={team[0].id}>{team.map(name).join(" & ")}</th>
+                <th key={team[0].id}>
+                  {team.map((p, j) => (
+                    <span key={p.id} style={{ "--c": seatColors[p.id] }}>
+                      {j > 0 && " & "}
+                      <i aria-hidden="true" />
+                      {name(p)}
+                    </span>
+                  ))}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rules.rounds.map((r, i) => (
-              <tr key={r.name} className={i === live ? "running" : ""}>
+              <tr
+                key={r.name}
+                // rounds still to come, dimmed
+                className={
+                  i === live
+                    ? "running"
+                    : i >= round && gameState !== "finish"
+                      ? "later"
+                      : ""
+                }
+              >
                 <th>{t(r.name)}</th>
                 {columns.map((team) => (
                   <td key={team[0].id}>{cell(team, i)}</td>
                 ))}
               </tr>
             ))}
+          </tbody>
+          <tfoot>
             <tr>
               <th>{t("Total")}</th>
-              {columns.map((team) => (
-                // blank for someone new: their total comes with the deal
-                <td key={team[0].id}>
-                  {team.some((p) => scores?.[p.id]) &&
-                    sum(team.map((p) => sum(scores?.[p.id] ?? [])))}
-                </td>
-              ))}
+              {columns.map((team) => {
+                const value = total(team);
+                return (
+                  <td key={team[0].id} className={value === lead ? "lead" : ""}>
+                    {value}
+                  </td>
+                );
+              })}
             </tr>
-          </tbody>
+          </tfoot>
         </table>
       </div>
     </details>

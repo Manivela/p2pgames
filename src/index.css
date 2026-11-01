@@ -178,6 +178,13 @@ form[action$="destroy"] button {
   line-height: 0;
 }
 
+/* the icon half the button, as it shrinks with the table's (20px of 40px
+   elsewhere) */
+.corner button svg {
+  width: 50%;
+  height: 50%;
+}
+
 /* fullscreen gives the game the whole screen, below the corner buttons
    (the Okey table keeps them a place of its own) */
 :fullscreen #detail:not(:has(.fit)) {
