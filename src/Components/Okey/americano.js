@@ -210,13 +210,12 @@ function penalize(s, player, points) {
   };
 }
 
-// Takes the groups (arrays of tile ids) out of the player's hand on their
-// turn. Returns [newState, groups of tiles] or a message.
-function takeFromHand(state, player, groups) {
+// Why the player can't take these tile ids out of their hand now, if they
+// can't
+function cantTake(state, player, ids) {
   if (roundOver(state)) return roundOver(state);
   if (state.currentPlayer !== player) return "Not your turn";
   if (!state.drawn) return "Draw a tile first";
-  const ids = groups.flat();
   const hand = seat(state, player).hand;
   if (
     !ids.length ||
@@ -226,6 +225,15 @@ function takeFromHand(state, player, groups) {
     return "Select tiles from your rack";
   }
   if (hand.filter(Boolean).length - ids.length < 1) return KEEP;
+}
+
+// Takes the groups (arrays of tile ids) out of the player's hand on their
+// turn. Returns [newState, groups of tiles] or a message.
+function takeFromHand(state, player, groups) {
+  const ids = groups.flat();
+  const cant = cantTake(state, player, ids);
+  if (cant) return cant;
+  const hand = seat(state, player).hand;
   const s = cloneDeep(state);
   const me = seat(s, player);
   const tiles = groups.map((g) =>
@@ -529,12 +537,14 @@ export function addToMeld(state, player, tileId, meldIndex, atEnd = false) {
   }
   const meld = state.melds[meldIndex];
   if (!meld) return;
-  const taken = takeFromHand(state, player, [[tileId]]);
-  if (typeof taken === "string") return taken;
-  const [s, [[tile]]] = taken;
-
-  const ordered = withTile(s, meld, tile, wrap(s), atEnd);
+  // whether it fits comes before takeFromHand copies the whole state: a
+  // bot tries every tile on every meld (bot.js add), the ghost every hover
+  const cant = cantTake(state, player, [tileId]);
+  if (cant) return cant;
+  const tile = seat(state, player).hand.find((t) => t?.id === tileId);
+  const ordered = withTile(state, meld, tile, wrap(state), atEnd);
   if (!ordered) return "That tile doesn't fit there";
+  const [s] = takeFromHand(state, player, [[tileId]]);
   s.melds[meldIndex] = { ...meld, tiles: ordered.map(tableTile) };
   game.logMove(s, player, "added", [tile]);
   return s;
