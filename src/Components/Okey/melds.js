@@ -118,7 +118,8 @@ const combos = (arr, k) =>
 // Splits the picked tiles into melds, using every tile, or with `spare` as
 // many as the shapes need. `shapes` is a list of [type, size] to make
 // exactly (an opening); without it any küts (3–4) and seris of 3+ will do
-// (laying down later), and pairs too `withPairs`. A group that could be
+// (laying down later), and pairs too `withPairs`, the longest seri first so
+// a run of six goes down as one, not two of three. A group that could be
 // both is a seri. Returns [{ type, tiles }] with each meld's tiles in
 // order, or null.
 export function splitMelds(
@@ -145,7 +146,10 @@ export function splitMelds(
             shapes.findIndex(([t, s]) => t === type && s === size) === i,
         )
     : [
-        ...Array.from({ length: tiles.length - 2 }, (_, k) => ["seri", k + 3]),
+        ...Array.from({ length: tiles.length - 2 }, (_, k) => [
+          "seri",
+          tiles.length - k,
+        ]),
         ["kut", 3],
         ["kut", 4],
         ...(withPairs ? [["pair", 2]] : []),

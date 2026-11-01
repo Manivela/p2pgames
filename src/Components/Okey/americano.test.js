@@ -139,6 +139,26 @@ const deal = {
   ],
 };
 
+// a run of six picked to lay goes down as one run, not as two of three
+test("a long run is laid whole", () => {
+  const seri6 = ["red2-0", "red3-0", "red4-0", "red5-0", "red6-0", "red7-0"];
+  const rest = ["yellow9-0", "yellow11-0", "yellow13-0"];
+  let s = americano.startGame(seated(2), {
+    okeyTile: "blue13-1",
+    hands: [[...kut10, ...seri6, ...seri234, ...rest], p2Hand],
+  });
+  s = americano.openHand(s, 1, [kut10]);
+  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 20);
+  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow5-0"));
+  s = game.drawTile(s, 1, s.drawPile.at(-1), 20);
+  s = americano.layMelds(s, 1, [seri6]);
+  assert.deepEqual(
+    s.melds.map((m) => ids(m.tiles)),
+    [kut10, seri6],
+  );
+});
+
 test("round 1: open exactly, lay and add later, finish by throwing the last tile to the middle", () => {
   let s = americano.startGame(seated(2), deal);
   assert.equal(s.round, 1);
