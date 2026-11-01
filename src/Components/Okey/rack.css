@@ -1081,8 +1081,7 @@ html:has(.fit) {
   margin: 0 0.3em 0 0;
 }
 
-/* Catch (Yakala) under the pile left of your rack (Rack.jsx), in amber,
-   nudging while it can be used */
+/* Catch (Yakala) under the pile left of your rack (Rack.jsx), in amber */
 .board .discardPile .catch {
   --mini-t: calc(var(--t) * 0.36);
   position: absolute;
@@ -1098,19 +1097,12 @@ html:has(.fit) {
   font-size: calc(var(--t) * 0.27);
   background: #ffb300;
   color: #3a2600;
-  animation: nudge 1.4s ease-in-out infinite;
 }
 
 /* the tile it catches, small, as it may lie on another pile */
 .board .discardPile .catch .tile {
   --t: var(--mini-t);
   flex: none;
-}
-
-@keyframes nudge {
-  50% {
-    scale: 1.07;
-  }
 }
 
 /* Scores and the table menu (TableMenu.jsx) at the table's top right,
@@ -1440,12 +1432,11 @@ html:has(.fit) {
   }
 }
 
-/* the timer keeps still, Catch stops nudging */
+/* the timer keeps still */
 @media (prefers-reduced-motion: reduce) {
   .avatar .timer,
   .avatar .timer b::before,
-  .rack > .timer,
-  .board .discardPile .catch {
+  .rack > .timer {
     animation: none;
   }
   .tile.armed {

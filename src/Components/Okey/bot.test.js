@@ -340,6 +340,25 @@ test("before opening, a bot takes a table okey when it opens the hand", () => {
   assert.notInclude(ids(game.seat(s, 2).hand.filter(Boolean)), "blue1-0");
 });
 
+test("an opened bot adds its okey to the table when that finishes it", () => {
+  // a red 2 that goes nowhere and the okey it just drew: the okey onto a
+  // meld, the 2 to the middle, not the okey kept till someone else wins
+  let s = table13s(1, ["red2-0", "blue1-1"]);
+  s = { ...s, opened: { ...s.opened, 2: true } };
+  for (let i = 0; i < 4 && s.currentPlayer === 2; i++) {
+    s = bot.step(s, 2, 1e6, 0);
+  }
+  assert.equal(s.gameState, "roundEnd");
+  assert.include(ids(s.melds.flatMap((m) => m.tiles)), "blue1-1");
+  // two okeys: one onto the table, the other thrown to finish
+  s = table13s(1, ["blue1-1", "yellow👌-0"]);
+  s = { ...s, opened: { ...s.opened, 2: true } };
+  for (let i = 0; i < 4 && s.currentPlayer === 2; i++) {
+    s = bot.step(s, 2, 1e6, 0);
+  }
+  assert.equal(s.gameState, "roundEnd");
+});
+
 test("a bot catches a tile thrown that fits the table", () => {
   let s = table13s(1, ["red2-0"]);
   s = {
@@ -363,7 +382,14 @@ test("a bot catches a tile thrown that fits the table", () => {
     drawPile: s.drawPile.filter((t) => t.id !== "yellow13-0"),
   };
   s = americano.discardTile(s, 1, game.seat(s, 1).hand[1]);
-  s = bot.catchTile(s, 2, 0);
+  // botCatches times in 100 (30 unless the rules say), a draw a tile:
+  // never, about 30 in 100, or every one
+  const never = { ...s, rules: { ...s.rules, botCatches: 0 } };
+  assert.isUndefined(bot.catchTile(never, 2, 0));
+  const tries = Array.from({ length: 500 }, (_, i) => ({ ...s, discards: i }));
+  const caught = tries.filter((x) => bot.catchTile(x, 2, 0)).length;
+  assert.closeTo(caught / tries.length, 0.3, 0.06);
+  s = bot.catchTile({ ...s, rules: { ...s.rules, botCatches: 100 } }, 2, 0);
   assert.deepEqual(game.seat(s, 2).caught, ["yellow13-0"]);
   assert.isUndefined(bot.catchTile(s, 2, 0)); // caught already
 });

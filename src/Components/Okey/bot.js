@@ -11,7 +11,8 @@ import { colorMap } from "./constants";
 // the pile; in 101 only one it can use this turn), takes a table okey for
 // its tile once opened, or before when that opens its hand, opens (101 with
 // pairs when the points aren't there), lays and adds what it can, catches
-// a tile thrown that fits the table, shows the gösterge when it pays,
+// a tile thrown that fits the table (botCatches times in 100, decided once
+// a tile: it's no hawk), shows the gösterge when it pays,
 // finishes, and otherwise throws the tile that helps it least.
 //
 // It can slip: each chance it gets (a discard to take, a claim, a catch, an
@@ -404,6 +405,9 @@ export function claim(state, player, mistakes = mistakesOf(state)) {
 export function catchTile(state, player, mistakes = mistakesOf(state)) {
   if (state.gameState !== "play" || !state.discardFits) return;
   if (state.players.some((p) => p.caught?.includes(state.lastDiscard))) return;
+  const { gameId, round, discards, lastDiscard, rules } = state;
+  const odds = chance(gameId, round, discards ?? 0, player, "eye", lastDiscard);
+  if (!(odds < rules.botCatches / 100)) return;
   if (slips(state, mistakes, player, "catch", state.lastDiscard)) return;
   return ok(americano.catchDiscard(state, player));
 }
@@ -503,6 +507,24 @@ function add(state, player) {
   }
 }
 
+// its okeys onto the table's melds once all it holds but one tile are
+// okeys: the last one then finishes (add() keeps okeys for its own melds,
+// and so kept one till someone else won, okeyInHandScore)
+function addOkey(state, player) {
+  const ind = state.okeyTile;
+  const tiles = hand(state, player);
+  const okeys = tiles.filter((t) => isOkey(t, ind));
+  if (!okeys.length || tiles.length < 2 || tiles.length - okeys.length > 1) {
+    return;
+  }
+  for (let i = 0; i < state.melds.length; i++) {
+    for (const atEnd of [true, false]) {
+      const s = ok(americano.playOnMeld(state, player, okeys[0].id, i, atEnd));
+      if (s) return s;
+    }
+  }
+}
+
 // A finish from the hand (Elden): every tile but one in melds, laid out on
 // the rack, and that one thrown to the middle
 function finishFromHand(state, player) {
@@ -561,6 +583,7 @@ export function step(
     (opened && ok(lay(state, player))) ||
     (opened && ok(add(state, player))) ||
     (tiles.length === 1 && ok(americano.finishGame(state, player, tiles[0]))) ||
+    (opened && ok(addOkey(state, player))) ||
     // 101: a discard it took and couldn't use goes back
     (took && ok(americano.returnDiscard(state, player))) ||
     throwTile(tidy(state, player), player, now, mistakes)

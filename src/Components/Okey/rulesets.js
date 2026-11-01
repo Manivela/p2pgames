@@ -57,6 +57,7 @@ export const DEFAULTS = {
   indicatorScore: 0,
   // bots (bot.js): times in 100 one misses a good move
   botMistakes: 0,
+  botCatches: 30, // times in 100 one catches a tile it could
 };
 
 // Classic: one hand, finished from the hand; a pile that runs out is

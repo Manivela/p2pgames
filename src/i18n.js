@@ -232,6 +232,10 @@ const TR = [
     /^Times in 100 a bot misses a good move: a discard to take, a catch, an opening, the best tile to throw; 0: it plays its best$/,
     "Bir botun 100 hamlede iyi bir hamleyi kaçırdığı sayı: yandan almak, yakalamak, açmak, atılacak en iyi taş; 0: en iyisini oynar",
   ],
+  [
+    /^Times in 100 a bot catches a thrown tile that fits a table meld; 100: every one$/,
+    "Yerdeki bir pere işleyen atılan 100 taştan botun yakaladığı sayı; 100: hepsini",
+  ],
   [/^default: (.+)$/, "varsayılan: $1"],
   [/^on$/, "açık"],
   [/^off$/, "kapalı"],

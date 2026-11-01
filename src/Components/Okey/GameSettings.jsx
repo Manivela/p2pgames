@@ -176,6 +176,10 @@ const GROUPS = [
         "botMistakes",
         "Times in 100 a bot misses a good move: a discard to take, a catch, an opening, the best tile to throw; 0: it plays its best",
       ],
+      [
+        "botCatches",
+        "Times in 100 a bot catches a thrown tile that fits a table meld; 100: every one",
+      ],
     ],
   ],
 ];
