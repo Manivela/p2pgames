@@ -58,6 +58,11 @@ const arrived = (page) =>
     .poll(() => page.evaluate(() => !!window.okey?.get()?.players[0].user), NET)
     .toBe(true);
 
+// what the table does rather than what fits: small-phone differs from phone
+// only in size, so phone (touch, Turkish) and desktop (mouse, English) cover it
+const anySize = (info) =>
+  test.skip(info.project.name === "small-phone", "not about the size");
+
 // a fresh room each time: rooms with the same name sync over the internet.
 // A page asked for a name as it first loads (a reload keeps the login); the
 // first in a new room taps Sit, one joining a table sits down by itself
@@ -193,7 +198,8 @@ test("a crowded table keeps clear of what hangs under the others", async ({
 // tile it catches
 test("a discard that fits waits the others' time to catch it, then comes", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await stages.play(page);
   await table(page, "toMyTurn", false);
@@ -336,7 +342,8 @@ test("picking a tile keeps the melds' size", async ({ page }) => {
 
 // a table with room has the draw pile in the middle until the melds need
 // it (phones keep the pile on the left: see their screenshots)
-test("the draw pile makes way as the table fills", async ({ page }) => {
+test("the draw pile makes way as the table fills", async ({ page }, info) => {
+  anySize(info);
   await page.setViewportSize({ width: 1100, height: 700 });
   await sitDown(page);
   await stages.play(page);
@@ -349,7 +356,8 @@ test("the draw pile makes way as the table fills", async ({ page }) => {
 
 test("dragging picked tiles onto the table opens the hand", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
@@ -367,7 +375,8 @@ test("dragging picked tiles onto the table opens the hand", async ({
 
 test("El aç: it picks what it would open, a tap picks a whole group, and it stays to lay more", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await page.clock.install();
   await sitDown(page);
   await table(page, "start", 4);
@@ -402,7 +411,8 @@ test("El aç: it picks what it would open, a tap picks a whole group, and it sta
 
 test("101: the indicator's twin dropped on it is shown to the table", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4, "101");
   await table(page, "twinFirst");
@@ -416,7 +426,8 @@ test("101: the indicator's twin dropped on it is shown to the table", async ({
 
 test("101: once opened, El aç picks the runs on the rack and lays them", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4, "101");
   await table(page, "toMyTurn");
@@ -487,7 +498,8 @@ test("an okey shows where it would go, and goes on the end it's dropped on", asy
 
 test("picked tiles dropped on a meld go on it, and one comes back this turn", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
@@ -517,7 +529,10 @@ test("picked tiles dropped on a meld go on it, and one comes back this turn", as
   expect(await meld()).toContain(low);
 });
 
-test("a discard taken goes back on its pile with a drag", async ({ page }) => {
+test("a discard taken goes back on its pile with a drag", async ({
+  page,
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn", false);
@@ -569,7 +584,8 @@ test("101 starts with what's ticked, and in pairs with four at the table", async
 // four of a tile isn't taken for a duplicate
 test("four sets of tiles picked in the settings make a pile of 212", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await page.getByRole("button", { name: SETTINGS }).click();
   await page.getByLabel(/^(Sets of 53 tiles|53'lük taş takımı)/).fill("4");
@@ -586,7 +602,8 @@ test("four sets of tiles picked in the settings make a pile of 212", async ({
 // a game played as a preset sets the next one up as that preset, unchanged
 test("after a game of Americano, the next is set up as Americano", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "seatBots", 2);
   await page.getByLabel(RULES).selectOption("americano");
@@ -602,7 +619,8 @@ test("after a game of Americano, the next is set up as Americano", async ({
 // device under a name, for the next night
 test("a game set up in the settings starts that way, and is kept", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "seatBots", 2);
   await page.getByLabel(RULES).selectOption("americano");
@@ -666,7 +684,8 @@ test("a link dragged over the table leaves it be", async ({ page }, info) => {
 // every hand shows face up (the rules turn them) and stays that way
 test("a tile flips during play, and shows once the round is over", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   const hidden = async () => (await state(page)).players[0].hand[0].hidden;
@@ -728,7 +747,10 @@ test("a knock on the table is heard from where it was", async ({
 });
 
 // an easter egg: a right click turns the fake okey upside down, and back
-test("the fake okey turns on a right click, for good", async ({ page }) => {
+test("the fake okey turns on a right click, for good", async ({
+  page,
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   const id = (await handIds(page)).find((x) => x?.includes("👌"));
@@ -808,7 +830,10 @@ test("holding a tile still flips it, moving drags it", async ({
   await expect(page.locator(".rack .tile.armed")).toHaveCount(0);
 });
 
-test("the last tile is thrown to the middle to finish", async ({ page }) => {
+test("the last tile is thrown to the middle to finish", async ({
+  page,
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
@@ -850,7 +875,8 @@ test("the last tile is thrown to the middle to finish", async ({ page }) => {
   await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(3);
 });
 
-test("picked tiles move together", async ({ page }) => {
+test("picked tiles move together", async ({ page }, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   const before = await handIds(page);
@@ -868,7 +894,8 @@ test("picked tiles move together", async ({ page }) => {
 });
 
 // the pick goes with the round: its end shows the hands unpicked
-test("a pick is dropped when the round ends", async ({ page }) => {
+test("a pick is dropped when the round ends", async ({ page }, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await slot(page, 2).locator(".tile").click();
@@ -882,7 +909,8 @@ test("a pick is dropped when the round ends", async ({ page }) => {
 // is marked, theirs too
 test("picked tiles held near where they were mark every slot they'd land in", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   for (const i of [2, 3, 4]) await slot(page, i).locator(".tile").click();
@@ -899,7 +927,8 @@ test("picked tiles held near where they were mark every slot they'd land in", as
 
 test("a tile held over the rack shows the others sliding aside", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   const before = await handIds(page);
@@ -924,7 +953,8 @@ test("a tile held over the rack shows the others sliding aside", async ({
 // held over its neighbour, then over the gap, it drops into the gap
 test("a tile held over a gap drops into it, past the tile slid there", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   // a gap at slot 3: its tile to the bottom row
@@ -957,7 +987,10 @@ test("a tile held over a gap drops into it, past the tile slid there", async ({
     .toEqual([before[2], before[held]]);
 });
 
-test("a box drawn on the rack picks the tiles in it", async ({ page }) => {
+test("a box drawn on the rack picks the tiles in it", async ({
+  page,
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   const hand = await handIds(page);
@@ -982,7 +1015,8 @@ test("a box drawn on the rack picks the tiles in it", async ({ page }) => {
 
 test("a box drawn from the felt picks the tiles it reaches, a tap there drops them", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   const hand = await handIds(page);
@@ -1249,7 +1283,8 @@ test("a newer version at the table is picked up between hands", async ({
   expect(await page.evaluate(() => window.stayed)).toBe(true);
 });
 
-test("another player's move flies across the table", async ({ page }) => {
+test("another player's move flies across the table", async ({ page }, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "play", 1); // my discard
@@ -1261,7 +1296,8 @@ test("another player's move flies across the table", async ({ page }) => {
 
 test("tiles taken out of turn fly into their slots on my rack", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "play", 2); // me, then Bora
@@ -1299,7 +1335,8 @@ test("your takes out of turn are counted beside the round", async ({
 
 test("a discard during the others' wait is held, then thrown", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
@@ -1333,7 +1370,8 @@ test("a discard during the others' wait is held, then thrown", async ({
 test("between rounds a seat can be freed and taken", async ({
   page,
   browser,
-}) => {
+}, info) => {
+  anySize(info);
   const room = await sitDown(page);
   await table(page, "start", 3);
   await table(page, "playToEnd");
@@ -1403,7 +1441,8 @@ test("mid-round a seat is freed and the round plays on", async ({ page }) => {
 
 test("mid-round, standing leaves my hand; leaving takes it out", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
@@ -1428,7 +1467,8 @@ test("mid-round, standing leaves my hand; leaving takes it out", async ({
 test("someone joining sits down by themselves, in the first free seat", async ({
   page,
   browser,
-}) => {
+}, info) => {
+  anySize(info);
   const room = await sitDown(page);
   const other = await (await browser.newContext()).newPage();
   await sitDown(other, { room, name: "Bora", sit: false });
@@ -1469,7 +1509,8 @@ test("bots fill the table and play their turns", async ({ page }) => {
 test("a bot plays for someone gone, and makes way when they're back", async ({
   page,
   browser,
-}) => {
+}, info) => {
+  anySize(info);
   test.setTimeout(60000);
   await page.addInitScript(() => sessionStorage.setItem("botPace", "0"));
   const room = await sitDown(page);
@@ -1512,7 +1553,8 @@ test("a bot plays for someone gone, and makes way when they're back", async ({
 test("a bot plays on when the page that added it closes", async ({
   page,
   browser,
-}) => {
+}, info) => {
+  anySize(info);
   test.setTimeout(60000);
   const fast = () => sessionStorage.setItem("botPace", "0");
   await page.addInitScript(fast);
@@ -1558,7 +1600,8 @@ test("a bot plays on when the page that added it closes", async ({
   expect((await state(bora)).discards).toBe(7);
 });
 
-test("this device keeps the last two games", async ({ page }) => {
+test("this device keeps the last two games", async ({ page }, info) => {
+  anySize(info);
   await sitDown(page);
   const kept = () =>
     page.evaluate(() =>
@@ -1569,8 +1612,9 @@ test("this device keeps the last two games", async ({ page }) => {
     if (i) await confirm(page, NEW_GAME);
     await table(page, "start", 4);
     games.unshift((await state(page)).gameId);
-    // autosave waits a second
-    await expect.poll(kept).toEqual(games.slice(0, 2));
+    // autosave waits a second: probed often, as the default backoff
+    // (100, 250, 500, then 1000 ms) found it up to a second late
+    await expect.poll(kept, { intervals: [100] }).toEqual(games.slice(0, 2));
   }
   await page.getByRole("button", { name: MENU }).click();
   await page.getByRole("button", { name: SAVED }).click();
@@ -1579,7 +1623,8 @@ test("this device keeps the last two games", async ({ page }) => {
 
 test("a save code brings the game back, and can't be read", async ({
   page,
-}) => {
+}, info) => {
+  anySize(info);
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");

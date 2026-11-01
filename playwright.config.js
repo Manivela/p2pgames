@@ -9,6 +9,9 @@ export default defineConfig({
   testDir: "e2e",
   testMatch: "*.e2e.js",
   fullyParallel: true,
+  // past Playwright's default half: 6 workers on 8 cores took the suite
+  // from 77 s to 69 s
+  workers: "75%",
   ignoreSnapshots: process.platform !== "linux",
   // flat felt in the screenshots: its grain and dithered light make every
   // PNG ~6x bigger
