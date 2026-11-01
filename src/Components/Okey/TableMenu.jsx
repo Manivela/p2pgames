@@ -410,77 +410,89 @@ export default function TableMenu() {
         ⋯
       </button>
       {open && (
+        // in groups, a line between them (an empty one takes none): this
+        // device, your seat, the others', the game's tools, and the moves
+        // that leave or end the round or the game at the bottom, in red; a
+        // long menu scrolls on a phone
         <div className="menu">
-          {/* the most needed first; a long menu scrolls on a phone, and
-              the moves that end the game sit at the bottom */}
-          {newVersion && (
-            <button onClick={() => location.reload()}>
-              {t("Update to the new version")}
-            </button>
-          )}
-          {window.Sentry && (
-            <button
-              onClick={then(() =>
-                report(okeyState, {
-                  room: roomId,
-                  player: okeyState.players.find((p) => p.id === me)?.user
-                    ?.name,
-                }),
-              )}
-            >
-              {t("Report a problem")}
-            </button>
-          )}
-          {/* standing leaves your hand to whoever sits down; leaving takes
-              it out of the round */}
-          {me && (
-            <Confirm label={t("Stand")} onConfirm={then(() => stand(me))} />
-          )}
-          {me && playing && (
-            <Confirm
-              label={t("Leave the round")}
-              onConfirm={then(() => freeSeat(me))}
-            />
-          )}
+          <div className="group">
+            {newVersion && (
+              <button className="news" onClick={() => location.reload()}>
+                {t("Update to the new version")}
+              </button>
+            )}
+            <label className="volume">
+              {t("Sound")}
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+              />
+            </label>
+          </div>
+          {/* standing leaves your hand to whoever sits down */}
+          <div className="group">
+            {me && (
+              <Confirm label={t("Stand")} onConfirm={then(() => stand(me))} />
+            )}
+          </div>
           {/* anyone's, gone or still here: mid-round every seat is in the
               round, stood up from or not, and leaves it (americano.freeSeat) */}
-          {okeyState.players
-            .filter((p) => (p.user || p.away || playing) && p.id !== me)
-            .map((p) => (
+          <div className="group">
+            {okeyState.players
+              .filter((p) => (p.user || p.away || playing) && p.id !== me)
+              .map((p) => (
+                <Confirm
+                  key={p.id}
+                  label={t(`Free seat: ${p.user?.name ?? t(`Player ${p.id}`)}`)}
+                  onConfirm={then(() => freeSeat(p.id))}
+                />
+              ))}
+          </div>
+          <div className="group">
+            <button onClick={() => show("load")}>{t("Saved games")}</button>
+            <button onClick={() => show("setup")}>{t("Set up a game")}</button>
+            {window.Sentry && (
+              <button
+                onClick={then(() =>
+                  report(okeyState, {
+                    room: roomId,
+                    player: okeyState.players.find((p) => p.id === me)?.user
+                      ?.name,
+                  }),
+                )}
+              >
+                {t("Report a problem")}
+              </button>
+            )}
+          </div>
+          <div className="group ends">
+            {/* leaving takes your hand out of the round */}
+            {me && playing && (
               <Confirm
-                key={p.id}
-                label={t(`Free seat: ${p.user?.name ?? t(`Player ${p.id}`)}`)}
-                onConfirm={then(() => freeSeat(p.id))}
+                label={t("Leave the round")}
+                onConfirm={then(() => freeSeat(me))}
               />
-            ))}
-          <button onClick={() => show("load")}>{t("Saved games")}</button>
-          <button onClick={() => show("setup")}>{t("Set up a game")}</button>
-          <label className="volume">
-            {t("Sound")}
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-            />
-          </label>
-          {/* the pile ran out (reshuffle), and whoever's turn it is calls it */}
-          {game.pileOut(okeyState, me) && (
-            <Confirm label={t("End the round")} onConfirm={then(endGame)} />
-          )}
-          {/* someone stands or sits mid-round: back to before the deal */}
-          {playing && (
-            <Confirm
-              label={t("Deal this round again")}
-              onConfirm={then(redealRound)}
-            />
-          )}
-          {okeyState.gameState !== "start" && (
-            <Confirm label={t("New Game")} onConfirm={then(newGame)} />
-          )}
-          <Confirm label={t("Reset Game")} onConfirm={then(resetGame)} />
+            )}
+            {/* the pile ran out (reshuffle), and whoever's turn it is calls it */}
+            {game.pileOut(okeyState, me) && (
+              <Confirm label={t("End the round")} onConfirm={then(endGame)} />
+            )}
+            {/* someone stands or sits mid-round: back to before the deal */}
+            {playing && (
+              <Confirm
+                label={t("Deal this round again")}
+                onConfirm={then(redealRound)}
+              />
+            )}
+            {okeyState.gameState !== "start" && (
+              <Confirm label={t("New Game")} onConfirm={then(newGame)} />
+            )}
+            <Confirm label={t("Reset Game")} onConfirm={then(resetGame)} />
+          </div>
         </div>
       )}
       {dialog === "load" && <LoadDialog onClose={() => setDialog(null)} />}

@@ -1268,6 +1268,33 @@ html:has(.fit) {
   flex: none;
 }
 
+/* its groups (TableMenu.jsx), a line between those with anything in them */
+.table-menu .group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.table-menu .group:empty {
+  display: none;
+}
+
+.table-menu .group:not(:empty) ~ .group:not(:empty) {
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* the moves that leave or end the round or the game */
+.table-menu .ends button:not(.armed) {
+  color: #c62828;
+}
+
+/* a newer version to reload for, in the orange of ⋯'s dot */
+.table-menu .menu button.news {
+  background: #ff9100;
+  color: #fff;
+}
+
 /* this device's sound level */
 .table-menu .volume {
   display: flex;
