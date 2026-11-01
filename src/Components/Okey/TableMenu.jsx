@@ -6,6 +6,7 @@ import { OkeyContext } from "./OkeyContext";
 import * as americano from "./americano";
 import * as game from "./game";
 import { allRulesets } from "./rulesets";
+import { TableSettings } from "./GameSettings";
 import { t } from "../../i18n";
 
 // Every device keeps the latest two games it saw, in any room, so they can
@@ -456,6 +457,10 @@ export default function TableMenu() {
           <div className="group">
             <button onClick={() => show("load")}>{t("Saved games")}</button>
             <button onClick={() => show("setup")}>{t("Set up a game")}</button>
+            {/* the game's rules, those it reads as it's played (the lobby has ⚙) */}
+            {okeyState.gameState !== "start" && (
+              <button onClick={() => show("rules")}>{t("Rules")}</button>
+            )}
             {window.Sentry && (
               <button
                 onClick={then(() =>
@@ -498,6 +503,7 @@ export default function TableMenu() {
       )}
       {dialog === "load" && <LoadDialog onClose={() => setDialog(null)} />}
       {dialog === "setup" && <SetUpDialog onClose={() => setDialog(null)} />}
+      {dialog === "rules" && <TableSettings onClose={() => setDialog(null)} />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { Fragment, useContext, useReducer, useState } from "react";
 import { createPortal } from "react-dom";
-import { isEqual, uniq } from "lodash";
+import { isEmpty, isEqual, pickBy, uniq } from "lodash";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
 import { Confirm, Dialog } from "./TableMenu";
@@ -315,10 +315,9 @@ export function Lobby() {
 
 // A setting: what it does, and its switch or number; changed from the
 // ruleset's (`base`), marked with what it was
-function Setting({ field: [key, text, when], setup, base, untested }) {
-  const { setSetup } = useContext(OkeyContext);
+function Setting({ field: [key, text, when], setup, base, untested, change }) {
   const changed = base && !isEqual(setup[key], base[key]);
-  const set = (v) => setSetup({ ...setup, [key]: v });
+  const set = (v) => change({ [key]: v });
   return (
     <label className={`${when ? "under" : ""} ${changed ? "changed" : ""}`}>
       <span>
@@ -352,6 +351,28 @@ function Setting({ field: [key, text, when], setup, base, untested }) {
   );
 }
 
+// these groups' settings, as `setup` has them; `change` takes the changed
+function Groups({ groups = GROUPS, setup, base, change }) {
+  const warn = untested(setup);
+  return groups.map(([heading, fields]) => (
+    <Fragment key={heading}>
+      <h4>{t(heading)}</h4>
+      <div className="group">
+        {shown(setup, fields).map((f) => (
+          <Setting
+            key={f[0]}
+            field={f}
+            setup={setup}
+            base={base}
+            untested={warn.includes(f[0])}
+            change={change}
+          />
+        ))}
+      </div>
+    </Fragment>
+  ));
+}
+
 // Every setting of the rules the next game starts with, to change for that
 // game or keep on this device as a ruleset of its own. `base`: the ruleset
 // they come from (none when it isn't on this device), to mark what changed
@@ -366,7 +387,6 @@ function Settings({ base, changed, start, onClose }) {
   );
   const [, kept] = useReducer((n) => n + 1, 0);
   const mine = keptRulesets().some((r) => r.id === setup.id);
-  const warn = untested(setup);
   const save = () => {
     const trimmed = name.trim();
     if (PRESETS.some((p) => p.name === trimmed)) {
@@ -397,22 +417,7 @@ function Settings({ base, changed, start, onClose }) {
   );
   return (
     <Dialog title={t("Game settings")} className="settings" onClose={onClose}>
-      {GROUPS.map(([heading, fields]) => (
-        <Fragment key={heading}>
-          <h4>{t(heading)}</h4>
-          <div className="group">
-            {shown(setup, fields).map((f) => (
-              <Setting
-                key={f[0]}
-                field={f}
-                setup={setup}
-                base={base}
-                untested={warn.includes(f[0])}
-              />
-            ))}
-          </div>
-        </Fragment>
-      ))}
+      <Groups setup={setup} base={base} change={set} />
       <h4>
         {t("Rounds")}
         {base && !isEqual(base.rounds, setup.rounds) && (
@@ -525,6 +530,45 @@ function Settings({ base, changed, start, onClose }) {
         {changed && (
           <button onClick={() => setSetup(base)}>{t("Undo changes")}</button>
         )}
+      </p>
+    </Dialog>
+  );
+}
+
+// Mid-game, from the ⋯ menu: the settings the rules read as they're
+// played, changed for the whole table from then on. The table's (players,
+// tiles, the rack, partners) and the rounds stay as the game was dealt:
+// its hands and seats are already laid out by them. A draft, applied at
+// once: the rules read every number the moment it's written, an emptied one
+// too. Only what was changed here is written, over the rules as they are
+// by then. A setting a saved game's rules lack (an older build's) at its
+// default, as the lobby's are.
+const DEALT = "The table";
+export function TableSettings({ onClose }) {
+  const { okeyState, setRules } = useContext(OkeyContext);
+  const [opened] = useState({ ...DEFAULTS, ...okeyState.rules });
+  const [draft, setDraft] = useState(opened);
+  const apply = () => {
+    const changes = pickBy(draft, (v, k) => !isEqual(v, opened[k]));
+    if (isEmpty(changes)) return onClose();
+    const rules = { ...DEFAULTS, ...okeyState.rules, ...changes };
+    const no = check(rules);
+    if (no) return toast(t(no));
+    setRules(rules);
+    onClose();
+  };
+  return (
+    <Dialog title={t("Rules")} className="settings" onClose={onClose}>
+      <Groups
+        groups={GROUPS.filter(([heading]) => heading !== DEALT)}
+        setup={draft}
+        base={allRulesets().find((r) => r.id === draft.id)}
+        change={(change) => setDraft({ ...draft, ...change })}
+      />
+      <p className="actions">
+        <button className="start" onClick={apply}>
+          {t("Apply")}
+        </button>
       </p>
     </Dialog>
   );

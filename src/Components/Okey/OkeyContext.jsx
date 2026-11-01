@@ -585,6 +585,21 @@ export function OkeyProvider({ children }) {
     [okeyState, setOkeyState],
   );
 
+  // mid-game, the settings the rules read as they're played, anyone's to
+  // change (TableSettings), said on the table so nobody's caught out; not
+  // over how a round or the game ended, which the message holds till the deal
+  const setRules = useCallback(
+    (rules) =>
+      setOkeyState({
+        ...okeyState,
+        rules,
+        ...(okeyState.gameState === "play" && {
+          message: `${currentUser?.name ?? "Someone"} changed the rules`,
+        }),
+      }),
+    [okeyState, setOkeyState, currentUser?.name],
+  );
+
   const sit = useCallback(
     (player) => {
       if (!currentUser) return;
@@ -848,6 +863,7 @@ export function OkeyProvider({ children }) {
       finishGame,
       startGame,
       setSetup,
+      setRules,
       sit,
       stand,
       freeSeat,
@@ -903,6 +919,7 @@ export function OkeyProvider({ children }) {
       finishGame,
       startGame,
       setSetup,
+      setRules,
       sit,
       stand,
       freeSeat,

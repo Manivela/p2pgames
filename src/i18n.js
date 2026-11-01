@@ -284,6 +284,7 @@ const TR = [
   [/^(.+) & (.+) win!$/, "$1 & $2 kazandı!"],
   [/^No tiles left$/, "Taş kalmadı"], // before "(.+) left"
   [/^(.+) left$/, "$1 ayrıldı"],
+  [/^(.+) changed the rules$/, "$1 kuralları değiştirdi"],
   // how the round finished (LastTurn)
   [/^(.+) took the discard$/, "$1 yandan aldı"],
   [/^taken (\d+)\/(\d+)$/, "yandan $1/$2"],
@@ -328,6 +329,7 @@ const TR = [
   [/^Keep on this device$/, "Bu cihazda sakla"],
   [/^Name$/, "Ad"],
   [/^Save$/, "Kaydet"],
+  [/^Apply$/, "Uygula"],
   [/^Delete$/, "Sil"],
   [/^Undo changes$/, "Değişiklikleri geri al"],
   [/^Open your hand$/, "El aç"],

@@ -615,6 +615,40 @@ test("after a game of Americano, the next is set up as Americano", async ({
   );
 });
 
+// mid-game, the ⋯ menu's settings change the rules played from then on, for
+// the whole table, and say so; the table's own (seats, tiles, the rack) stay
+// as dealt
+test("the rules can be changed mid-game, for the whole table", async ({
+  page,
+}, info) => {
+  anySize(info);
+  const room = await sitDown(page);
+  const other = await secondPlayer(page, room);
+  await table(page, "start", 2);
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: RULES }).click();
+  await expect(
+    page.getByLabel(/^(Tiles dealt to each|Her oyuncuya dağıtılan)/),
+  ).toHaveCount(0);
+  const penalty = page.getByLabel(
+    /^(Written for throwing a tile that fit|Yerdeki bir pere işleyen taşı atıp)/,
+  );
+  // the rules read a number as it's written: an emptied one isn't
+  await penalty.fill("");
+  await page.locator(".settings .start").click();
+  await expect(
+    page.getByText(/^(Fill in every number|Her sayıyı doldur)$/),
+  ).toBeVisible();
+  await penalty.fill("50");
+  await page.locator(".settings .start").click();
+  await expect
+    .poll(async () => (await state(other)).rules.catchPenalty, NET)
+    .toBe(50);
+  await expect(
+    other.getByText(/^(Ayşe changed the rules|Ayşe kuralları değiştirdi)$/),
+  ).toBeVisible();
+});
+
 // the settings: a game set up any way, started from them and kept on this
 // device under a name, for the next night
 test("a game set up in the settings starts that way, and is kept", async ({
