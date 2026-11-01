@@ -384,6 +384,10 @@ const TR = [
   [/^(.+)'s turn$/, "sıra: $1"],
   [/^Round (\d+)\/(\d+)$/, "El $1/$2"],
   [/^Turn your phone sideways to play$/, "Oynamak için telefonu yan çevir"],
+  [
+    /^Turn your phone sideways to play, and go full screen for a better experience$/,
+    "Oynamak için telefonu yan çevir; daha iyi bir deneyim için tam ekrana geç",
+  ],
   [/^Fullscreen$/, "Tam ekran"],
   [/^Menu$/, "Menü"],
   [/^Share Link$/, "Bağlantıyı paylaş"],

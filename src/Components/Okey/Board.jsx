@@ -359,6 +359,14 @@ function Board() {
       className="fit"
       ref={fit}
       data-rotate={t("Turn your phone sideways to play")}
+      // where the site has a fullscreen button (root.jsx: not iPhone Safari)
+      data-rotate-full={
+        document.fullscreenEnabled
+          ? t(
+              "Turn your phone sideways to play, and go full screen for a better experience",
+            )
+          : undefined
+      }
     >
       <div
         className="board"

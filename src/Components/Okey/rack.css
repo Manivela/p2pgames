@@ -1525,13 +1525,14 @@ html:has(.fit) {
   background: #2e7d32;
 }
 
-/* there's no room for 13 tiles across a phone held upright */
+/* there's no room for 13 tiles across a phone held upright: over every
+   layer of the table (the piles' counts, the flights), under its ⋯ menu */
 @media (orientation: portrait) and (max-width: 600px) {
   .fit::after {
     content: attr(data-rotate);
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 39;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1539,6 +1540,10 @@ html:has(.fit) {
     text-align: center;
     font-size: 1.6rem;
     color: #fff;
+  }
+  /* full screen too, until it is (Board.jsx) */
+  :root:not(:fullscreen) .fit[data-rotate-full]::after {
+    content: attr(data-rotate-full);
   }
 }
 
