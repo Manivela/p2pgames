@@ -85,6 +85,17 @@ function copy(html) {
 
 const place = (r, s) => `translate(${r.left}px, ${r.top}px) scale(${s})`;
 
+// where a tile leaves or lands: a box holding tiles (a meld) or slots (the
+// rack of a player you watch, its tiles hidden) is one of them in its
+// middle, or the copy would be as wide as all of them
+function tileRect(el) {
+  const r = el.getBoundingClientRect();
+  const t = el.querySelector(".tile, .slot")?.getBoundingClientRect();
+  if (!t) return r;
+  const { width: w, height: h } = t;
+  return new DOMRect(r.x + (r.width - w) / 2, r.y + (r.height - h) / 2, w, h);
+}
+
 const land = (el) =>
   el.animate(
     [
@@ -98,7 +109,7 @@ const land = (el) =>
 // until it lands; `into` a seat, it shrinks and fades into the avatar.
 function fly(from, to, { html, delay = 0, duration = 360, into = false }) {
   if (!from || !to) return;
-  const b = to.getBoundingClientRect();
+  const b = tileRect(to);
   const el = copy(html ?? to.outerHTML);
   if (import.meta.env.DEV) window.okeyFlights = (window.okeyFlights ?? 0) + 1;
   // its own size, before scaling (an svg has no offsetWidth)
@@ -300,7 +311,7 @@ export function useMoves() {
               : from.p === me && from.in === "hand"
                 ? slotEl(from.i)
                 : seatEl(from.p);
-      const fromRect = fromEl?.getBoundingClientRect();
+      const fromRect = fromEl && tileRect(fromEl);
       const upFrom = from.in === "discard" || from.in === "meld";
 
       if (to.in === "hand" && to.p === me) {
