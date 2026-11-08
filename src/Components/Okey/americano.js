@@ -92,6 +92,7 @@ export function standUp(state, player) {
   leaver.user = null;
   leaver.userKey = null;
   delete leaver.away; // nobody sits back down in it by themselves
+  delete leaver.awayName;
   return s;
 }
 

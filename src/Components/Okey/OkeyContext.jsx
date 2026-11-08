@@ -675,6 +675,7 @@ export function OkeyProvider({ children }) {
       seat.user = currentUser;
       seat.userKey = localID;
       delete seat.away;
+      delete seat.awayName;
 
       setOkeyState({
         ...newState,
@@ -824,6 +825,7 @@ export function OkeyProvider({ children }) {
       if (alone) continue;
       leaver = player.user?.name || "Someone";
       player.away = player.user?.id; // theirs to come back to (sit)
+      player.awayName = player.user?.name; // on the seat meanwhile
       player.user = null;
       player.userKey = null;
       changed = true;

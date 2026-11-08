@@ -1592,6 +1592,10 @@ test("a bot plays for someone gone, and makes way when they're back", async ({
   const back = other.context();
   await other.close({ runBeforeUnload: true });
   await expect.poll(async () => (await state(page)).players[1].away).toBe(bora);
+  // marked away, under their name: not an empty seat
+  await expect(
+    page.locator(".playerName", { hasText: "Bora" }).locator(".badge.away"),
+  ).toHaveText(/^(away|yok)$/);
   await page.getByRole("button", { name: BOT }).click();
   await table(page, "play", 1);
   await expect
@@ -1645,8 +1649,9 @@ test("a bot plays on when the page that added it closes", async ({
   await expect
     .poll(async () => (await state(bora)).players[0].away)
     .toBeTruthy();
+  // her seat keeps her name, marked away
   await bora
-    .locator(".playerName", { hasText: /(Player|Oyuncu) 1(?!\d)/ })
+    .locator(".playerName", { hasText: "Ayşe" })
     .getByRole("button", { name: BOT })
     .click();
   await expect.poll(async () => (await state(bora)).currentPlayer).toBe(2);

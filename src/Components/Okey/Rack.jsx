@@ -73,11 +73,14 @@ function Name({ player, avatarSits, children }) {
   const sitHere = !isAlreadySitting && (!seat.user || bot) && (
     <button onClick={() => sit(player)}>{t("Sit")}</button>
   );
+  // a seat whose player dropped out shows who it's waiting for
   if (!seat.user) {
+    const away = seat.away && seat.awayName;
     return (
       <h1 className="playerName">
-        {t(`Player ${player}`)}{" "}
+        {away ? <span className="name">{away}</span> : t(`Player ${player}`)}{" "}
         <span className="badges">
+          {seat.away && <span className="badge away">{t("away")}</span>}
           {sitHere}
           <button aria-label={t("Add a bot")} onClick={() => seatBot(player)}>
             🤖
