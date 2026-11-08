@@ -8,7 +8,7 @@ import { useAuthStore } from "../../hooks/useStore";
 import * as game from "./game";
 import * as americano from "./americano";
 import * as bots from "./bot";
-import { readState, replaceState, writeState } from "./sync";
+import { readState, replaceState, wentBack, writeState } from "./sync";
 import { t } from "../../i18n";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
@@ -18,6 +18,25 @@ import { panOf, playKnock } from "./knock";
 
 export const OkeyContext = createContext({});
 const NONE_SPUN = {};
+
+// to Sentry on the deployed site (main.jsx loads it), the console here
+function reportWentBack(why, tags, data) {
+  const title = `okey: the turn went back (${why})`;
+  console.warn(title, tags, data);
+  const { Sentry } = window;
+  if (!Sentry) return;
+  Sentry.onLoad(() =>
+    Sentry.withScope((scope) => {
+      scope.setTags(tags);
+      scope.addAttachment({
+        filename: "turns.json",
+        data: JSON.stringify(data),
+      });
+      Sentry.captureMessage(title, "warning");
+    }),
+  );
+  Sentry.forceLoad?.();
+}
 
 // a claim's ghost only goes back to the discard pile or around the rack
 const ghost = (tile) => tile.source.startsWith("claim-");
@@ -92,6 +111,54 @@ export function OkeyProvider({ children }) {
     (value) => writeState(map, shared, value),
     [map, shared],
   );
+
+  // A turn written from an older state than the one it replaced (sync.js
+  // wentBack: a penalty lost from the score sheet) is reported once a deal,
+  // with who wrote it and the last turns this page saw before it
+  const seenTurns = React.useRef([]);
+  React.useEffect(() => {
+    const reported = new Set();
+    const observer = (event, txn) => {
+      const deal = map.get("deal");
+      for (const [key, change] of event.changes.keys) {
+        if (key !== "deal" && !key.endsWith("/turn")) continue;
+        const after = map.get(key);
+        // the client that wrote it, by Yjs's own record (its internals)
+        const writer = map._map.get(key)?.id.client;
+        const seen = seenTurns.current;
+        seen.push({
+          key,
+          writer,
+          local: txn.local,
+          at: Date.now(),
+          ...(key !== "deal" &&
+            _.pick(after, ["discards", "currentPlayer", "drawn", "penalties"])),
+        });
+        if (seen.length > 10) seen.shift();
+        if (change.action !== "update" || !key.startsWith(`${deal}/`)) continue;
+        const why = wentBack(change.oldValue, after);
+        if (!why || reported.has(deal)) continue;
+        reported.add(deal);
+        const state = readState(map);
+        const seatOf = (id) => state.players.find((p) => p.userKey === id);
+        const peers = [...provider.awareness.getStates()];
+        reportWentBack(
+          why,
+          {
+            room: roomId,
+            local: txn.local,
+            writer: seatOf(writer)?.user?.name ?? String(writer),
+            me: seatOf(provider.awareness.clientID)?.user?.name,
+            build: BUILD,
+            writerBuild: peers.find(([id]) => id === writer)?.[1]?.build,
+          },
+          { before: change.oldValue, after, seen: [...seen], state, peers },
+        );
+      }
+    };
+    map.observe(observer);
+    return () => map.unobserve(observer);
+  }, [map, roomId, provider]);
 
   if (import.meta.env.DEV) {
     window.okey = {
@@ -394,7 +461,7 @@ export function OkeyProvider({ children }) {
     (tile) => {
       const group = picking
         ? americano
-            .groupsOf(myHand(me), game.rowOf(okeyState))
+            .groupsOf(myHand(me), game.rowOf(okeyState, me))
             .find((g) => g.some((t) => t.id === tile.id))
             .map((t) => t.id)
         : [tile.id];
@@ -488,11 +555,6 @@ export function OkeyProvider({ children }) {
     return () => awareness.off("change", onChange);
   }, [provider]);
 
-  const showIndicator = useCallback(
-    (tile) => act(americano.showIndicator, me, tile.id),
-    [act, me],
-  );
-
   const playOnMeld = useCallback(
     (tile, meldIndex, atEnd) =>
       !ghost(tile) && act(americano.playOnMeld, me, tile.id, meldIndex, atEnd),
@@ -515,6 +577,8 @@ export function OkeyProvider({ children }) {
     () => act(americano.returnDiscard, me),
     [act, me],
   );
+  // your own rack rows (null: the table's), from the Rules
+  const setRow = useCallback((slots) => act(game.setRow, me, slots), [act, me]);
 
   // a tile I added to a meld this turn, back on my rack
   const takeBack = useCallback(
@@ -891,11 +955,11 @@ export function OkeyProvider({ children }) {
       openAll,
       layMelds,
       addPick,
-      showIndicator,
       playOnMeld,
       claimDiscard,
       catchDiscard,
       returnDiscard,
+      setRow,
       takeBack,
       nextRound,
       redealRound,
@@ -947,11 +1011,11 @@ export function OkeyProvider({ children }) {
       openAll,
       layMelds,
       addPick,
-      showIndicator,
       playOnMeld,
       claimDiscard,
       catchDiscard,
       returnDiscard,
+      setRow,
       takeBack,
       nextRound,
       redealRound,

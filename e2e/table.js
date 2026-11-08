@@ -175,14 +175,6 @@ export function seriAndEnds() {
   return ends;
 }
 
-// the indicator's twin in my first slot (101's gösterge)
-export function twinFirst() {
-  const s = structuredClone(window.okey.get());
-  const [kind, copy] = s.okeyTile.id.split("-");
-  intoMyFirstSlot(s, `${kind}-${1 - copy}`);
-  window.okey.set(s);
-}
-
 // n more runs on the table, for a crowded one (only shown: they don't come
 // out of anyone's hand)
 export function crowd(n = 8) {

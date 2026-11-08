@@ -12,11 +12,10 @@ import { colorMap } from "./constants";
 // its tile once opened, or before when that opens its hand, opens (101 with
 // pairs when the points aren't there), lays and adds what it can, catches
 // a tile thrown that fits the table (botCatches times in 100, decided once
-// a tile: it's no hawk), shows the gösterge when it pays,
-// finishes, and otherwise throws the tile that helps it least.
+// a tile: it's no hawk), finishes, and otherwise throws the tile that helps it least.
 //
 // It can slip: each chance it gets (a discard to take, a claim, a catch, an
-// okey, an opening, the gösterge, the best tile to throw) it misses the
+// okey, an opening, the best tile to throw) it misses the
 // rules' botMistakes times in 100, decided once per chance so a second look
 // doesn't undo it. A game from before the setting: never (NaN).
 const mistakesOf = (state) => state.rules.botMistakes / 100;
@@ -192,7 +191,7 @@ const ok = (s) => (s && typeof s !== "string" ? s : null);
 // end, then the rest: the rules that read the rack as it lies (101's
 // opening, a finish from the hand) see the melds. Null if they don't fit.
 function arrange(state, player, melds, rest) {
-  const row = game.rowOf(state);
+  const row = game.rowOf(state, player);
   const slots = Array(2 * row).fill(null);
   let i = 0;
   for (const { tiles } of melds) {
@@ -452,14 +451,6 @@ function takeOkey(state, player) {
   }
 }
 
-// 101's gösterge, when it scores for the bot (a minus)
-function showIndicator(state, player) {
-  if (!(state.rules.indicatorScore < 0) || state.indicatorShown) return;
-  const kind = state.okeyTile.id.split("-")[0];
-  const twin = hand(state, player).find((t) => t.id.split("-")[0] === kind);
-  return twin && americano.showIndicator(state, player, twin.id);
-}
-
 // sets and runs from the rack, keeping a tile to finish with
 function lay(state, player) {
   if (state.openedWithPairs?.[player]) return layPairs(state, player);
@@ -565,8 +556,6 @@ export function step(
   if (state.gameState !== "play" || state.currentPlayer !== player) return;
   if (game.pileOut(state, player)) return game.shuffleDiscards(state, player);
   const slip = (what) => slips(state, mistakes, player, what);
-  const shown = !slip("gösterge") && ok(showIndicator(state, player));
-  if (shown) return shown;
   if (!state.drawn) return draw(state, player, now, mistakes);
   const tiles = hand(state, player);
   const opened = state.opened?.[player];

@@ -409,21 +409,6 @@ test("El aç: it picks what it would open, a tap picks a whole group, and it sta
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 
-test("101: the indicator's twin dropped on it is shown to the table", async ({
-  page,
-}, info) => {
-  anySize(info);
-  await sitDown(page);
-  await table(page, "start", 4, "101");
-  await table(page, "twinFirst");
-  // tiles still sliding into place would be picked up instead
-  await page.waitForFunction(() =>
-    document.getAnimations().every((a) => !a.effect.target?.matches(".tile")),
-  );
-  await drag(page, slot(page, 0).locator(".tile"), page.locator(".indicator"));
-  await expect.poll(async () => (await state(page)).penalties[1]).toBe(-101);
-});
-
 test("101: once opened, El aç picks the runs on the rack and lays them", async ({
   page,
 }, info) => {
@@ -647,6 +632,33 @@ test("the rules can be changed mid-game, for the whole table", async ({
   await expect(
     other.getByText(/^(Ayşe changed the rules|Ayşe kuralları değiştirdi)$/),
   ).toBeVisible();
+});
+
+// your own rack's rows, apart from the table's: yours to set any time, in
+// the Rules, your hand laid out on them
+test("your own rack's rows are set mid-round, and your hand moves onto them", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 2);
+  const tiles = (await handIds(page)).filter(Boolean).length;
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: RULES }).click();
+  // Americano's: a hand, a draw and three takes want 11 at least
+  const rows = page.getByLabel(
+    /^(Slots in each row of your own rack|Kendi ıstakanın her sırasındaki)/,
+  );
+  await rows.fill("10");
+  await page.locator(".settings .start").click();
+  await expect(
+    page.getByText(/^(Make the rack's rows longer|Istaka sıralarını uzat)$/),
+  ).toBeVisible();
+  await rows.fill("11");
+  await page.locator(".settings .start").click();
+  await expect(page.locator(".rack:not(.mini) .top > *")).toHaveCount(11);
+  expect((await handIds(page)).filter(Boolean)).toHaveLength(tiles);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
 // the settings: a game set up any way, started from them and kept on this
@@ -1147,6 +1159,18 @@ test("on the pair round a tap spreads a discard pile out", async ({ page }) => {
   // a tap anywhere else puts it back
   await page.mouse.click(4, height / 2);
   await expect(page.locator(".peek")).toHaveCount(0);
+  // any round, once someone's opened with pairs (101's peekWithPairs)
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    window.okey.set({
+      ...s,
+      round: 1,
+      rules: { ...s.rules, peekWithPairs: true },
+      openedWithPairs: { 2: true },
+    });
+  });
+  await piles.first().locator(".slot").click();
+  await expect(page.locator(".peek")).toHaveCount(1);
 });
 
 test("the sound level is set in the menu and kept", async ({ page }) => {

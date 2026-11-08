@@ -116,6 +116,10 @@ const GROUPS = [
         "peekPairRounds",
         "On a round that opens with pairs, a tap on a discard pile spreads its tiles out to look through",
       ],
+      [
+        "peekWithPairs",
+        "Once someone has opened with pairs, a tap on a discard pile spreads its tiles out to look through",
+      ],
     ],
   ],
   [
@@ -139,10 +143,6 @@ const GROUPS = [
       [
         "okeyDiscardPenalty",
         "Written for throwing the okey, unless it's the last tile; 0: none",
-      ],
-      [
-        "indicatorScore",
-        "Written for showing the indicator's twin on your first turn (a minus takes it off); 0: none",
       ],
       [
         "notOpenedHand",
@@ -545,10 +545,15 @@ function Settings({ base, changed, start, onClose }) {
 // default, as the lobby's are.
 const DEALT = "The table";
 export function TableSettings({ onClose }) {
-  const { okeyState, setRules } = useContext(OkeyContext);
+  const { okeyState, setRules, me, setRow } = useContext(OkeyContext);
   const [opened] = useState({ ...DEFAULTS, ...okeyState.rules });
   const [draft, setDraft] = useState(opened);
+  // your own rack's rows, apart from the table's rules (null: the table's)
+  const mine = okeyState.players.find((p) => p.id === me)?.rowSlots ?? null;
+  const [row, setRowDraft] = useState(mine);
   const apply = () => {
+    // the rows that don't fit say why (game.setRow), and the dialog stays
+    if (row !== mine && !setRow(row)) return;
     const changes = pickBy(draft, (v, k) => !isEqual(v, opened[k]));
     if (isEmpty(changes)) return onClose();
     const rules = { ...DEFAULTS, ...okeyState.rules, ...changes };
@@ -559,6 +564,24 @@ export function TableSettings({ onClose }) {
   };
   return (
     <Dialog title={t("Rules")} className="settings" onClose={onClose}>
+      {me && (
+        <>
+          <h4>{t("Just for you")}</h4>
+          <div className="group">
+            <label>
+              <span>
+                {t("Slots in each row of your own rack; empty: the table's")}
+              </span>
+              <input
+                type="number"
+                placeholder={String(okeyState.rules.rowSlots)}
+                value={row ?? ""}
+                onChange={(e) => setRowDraft(number(e.target.value))}
+              />
+            </label>
+          </div>
+        </>
+      )}
       <Groups
         groups={GROUPS.filter(([heading]) => heading !== DEALT)}
         setup={draft}

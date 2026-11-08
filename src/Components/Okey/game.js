@@ -2,6 +2,7 @@ import _, { cloneDeep } from "lodash";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 import { createTile } from "./utils";
+import { rowFits } from "./rulesets";
 
 // Game rules as pure functions: (state, player, ...args) => new state,
 // an error string to show the player, or undefined for "nothing changed".
@@ -124,8 +125,9 @@ const handTile = (tile, player) => ({
   source: `hand-${player}`,
 });
 
-// slots a rack row has: the ruleset's, or 13
-export const rowOf = (state) => state.rules?.rowSlots ?? 13;
+// slots a rack row has: the player's own (setRow), the ruleset's, or 13
+export const rowOf = (state, player) =>
+  seat(state, player)?.rowSlots ?? state.rules?.rowSlots ?? 13;
 
 // ids: optional fixed hand (tile ids, null for a gap) instead of a random
 // one; `slots`: the rack's, both rows
@@ -319,7 +321,7 @@ export function dealRound(state, drawPile, deal, starter = 0) {
       p.id,
       i === starter ? size + 1 : size,
       deal?.hands?.[i],
-      2 * rowOf(state),
+      2 * rowOf(state, p.id),
     );
     hand.forEach((t) => t && taken.add(t.id));
     return { ...p, hand, discardPile: [], inbox: [], claim: null, caught: [] };
@@ -384,7 +386,7 @@ export function drawTile(state, player, tile, toIndex) {
 
   myPlayer.hand = placeTiles(
     myPlayer.hand,
-    rowOf(state),
+    rowOf(state, player),
     [handTile(tile, player)],
     toIndex,
   );
@@ -422,7 +424,7 @@ export function restore(saved, now) {
 }
 
 // A save code: the state deflated and base64'd, so nobody reads the hands
-// at a glance or edits their own. Deflating also makes it ~10x shorter.
+// at a glance or edits their own. Deflating also makes it ~5x shorter.
 // ponytail: obfuscation, not encryption; anyone who knows deflate can open
 // it, and every phone at the table holds the whole state anyway
 export async function encodeSave(state) {
@@ -457,8 +459,61 @@ export function moveTiles(state, player, ids, toIndex, held) {
   if (!myPlayer) return;
   const tiles = myPlayer.hand.filter((t) => t && ids.includes(t.id));
   if (!tiles.length) return;
-  myPlayer.hand = placeTiles(myPlayer.hand, rowOf(state), tiles, toIndex, held);
+  myPlayer.hand = placeTiles(
+    myPlayer.hand,
+    rowOf(state, player),
+    tiles,
+    toIndex,
+    held,
+  );
   return newState;
+}
+
+// A player's own rack rows (null: the table's), set any time from the
+// Rules: their hand laid out on them again (resizeRows). Only for rows long
+// enough for the most a hand holds (rowFits).
+export function setRow(state, player, slots) {
+  const me = seat(state, player);
+  if (!me || (me.rowSlots ?? null) === slots) return;
+  if (slots !== null && !rowFits(state.rules, slots)) {
+    return "Make the rack's rows longer";
+  }
+  const s = cloneDeep(state);
+  const mine = seat(s, player);
+  if (slots === null) delete mine.rowSlots;
+  else mine.rowSlots = slots;
+  mine.hand = resizeRows(me.hand, rowOf(state, player), rowOf(s, player));
+  return s;
+}
+
+// A hand on rows of `from` slots laid out on rows of `to`: each row keeps
+// its tiles in their slots, a longer one more gaps at its end; a shorter
+// one loses its gaps at the end first, then one of two side by side, then
+// one before its first tile, then any (two groups meet); a tile still past
+// its end goes to the last free slot.
+export function resizeRows(hand, from, to) {
+  const over = hand.slice(2 * from).filter(Boolean);
+  const rows = [0, from].map((start) => {
+    const row = Array.from({ length: from }, (_, i) => hand[start + i] ?? null);
+    while (row.length > to) {
+      const gap = [
+        row.at(-1) === null ? row.length - 1 : -1,
+        row.findLastIndex((t, i) => t === null && row[i - 1] === null),
+        row[0] === null ? 0 : -1,
+        row.lastIndexOf(null),
+      ].find((i) => i >= 0);
+      if (gap === undefined) over.unshift(row.pop());
+      else row.splice(gap, 1);
+    }
+    return [...row, ...Array(to - row.length).fill(null)];
+  });
+  const out = rows.flat();
+  for (const t of over.reverse()) {
+    const free = out.lastIndexOf(null);
+    if (free === -1) out.push(t);
+    else out[free] = t;
+  }
+  return out;
 }
 
 export function discardTile(state, player, tile) {

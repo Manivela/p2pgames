@@ -2,7 +2,8 @@ import { assert, test } from "vitest";
 import * as americano from "./americano";
 import * as game from "./game";
 import { isOkey, meldOrder } from "./melds";
-import { AMERICANO, ONE_O_ONE } from "./rulesets";
+import { ONE_O_ONE } from "./rulesets";
+import { wentBack } from "./sync";
 import { createTile } from "./utils";
 
 const indicator = createTile("blue", 13, 1); // okey is blue1, fake okey = blue1
@@ -315,6 +316,34 @@ test("101: a discard taken must go into a meld that turn, or back on its pile", 
   assertAllTiles(s);
 });
 
+test("101: a turn written from before the tile went back is told from a move", () => {
+  let s = start();
+  s = americano.discardTile(s, 1, tileIn(s, 1, "black9-0"));
+  const took = americano.drawTile(s, 2, player(s, 1).discardPile.at(-1), 25);
+  const back = americano.returnDiscard(took, 2);
+  const drawn = americano.drawTile(back, 2, back.drawPile.at(-1), 25);
+  const passed = americano.discardTile(
+    drawn,
+    2,
+    tileIn(drawn, 2, "yellow12-0"),
+  );
+  // the hand going on
+  for (const [a, b] of [
+    [s, took],
+    [took, back],
+    [back, drawn],
+    [drawn, passed],
+  ]) {
+    assert.isNull(wentBack(a, b));
+  }
+  // an older state written over it
+  assert.equal(wentBack(back, took), "penalties");
+  assert.equal(wentBack(passed, s), "discards");
+  const opened = americano.openHand(start(), 1, [opening]);
+  assert.equal(wentBack(opened, start()), "melds");
+  assert.equal(wentBack({ ...s, gameState: "roundEnd" }, s), "gameState");
+});
+
 test("101: a table okey goes to whoever holds its tile, once they've opened", () => {
   let s = americano.openHand(start(), 1, [opening]);
   s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
@@ -396,7 +425,7 @@ test("101: a pairs opener adds 2 tiles a turn; once someone opens with pairs, an
   assert.equal(s.melds.at(-1).type, "pair");
 });
 
-test("101: a discard is caught until the next player draws, and never by a partner", () => {
+test("101: a discard is caught until the next one, and never by a partner", () => {
   const partners = { ...ONE_O_ONE, partners: true };
   assert.equal(
     americano.startGame(seated(3), undefined, partners).message,
@@ -411,8 +440,18 @@ test("101: a discard is caught until the next player draws, and never by a partn
   assert.deepEqual(player(americano.catchDiscard(s, 1), 1).caught, [
     "yellow4-0",
   ]);
+  // P3 drawing doesn't end it, as in Americano (catchUntilDraw would)
   s = americano.drawTile(s, 3, s.drawPile.at(-1), 25);
-  assert.equal(americano.catchDiscard(s, 1), "Too late to catch it");
+  assert.deepEqual(player(americano.catchDiscard(s, 1), 1).caught, [
+    "yellow4-0",
+  ]);
+  assert.equal(
+    americano.catchDiscard(
+      { ...s, rules: { ...s.rules, catchUntilDraw: true } },
+      1,
+    ),
+    "Too late to catch it",
+  );
 });
 
 test("101: a caught tile can still be taken, its penalty staying with the thrower; a thrown okey isn't caught again", () => {
@@ -437,36 +476,6 @@ test("101: a caught tile can still be taken, its penalty staying with the throwe
   assert.equal(
     americano.catchDiscard(s, 1),
     "The okey's penalty is already written",
-  );
-});
-
-test("101: the indicator's twin shown on your first turn takes 101 off, once", () => {
-  // the indicator is blue 13-1; P1 holds blue 13-0 in the 13s
-  let s = start();
-  assert.equal(
-    americano.showIndicator(s, 1, "black13-0"),
-    "That's not the indicator's twin",
-  );
-  assert.equal(americano.showIndicator(s, 2, "blue13-0"), "Not your turn");
-  s = americano.showIndicator(s, 1, "blue13-0");
-  assert.equal(americano.penaltiesSoFar(s, 1), -101);
-  assert.equal(s.message, "P1 showed the indicator: -101");
-  assert.equal(
-    americano.showIndicator(s, 1, "blue13-0"),
-    "The indicator's been shown",
-  );
-  // the next lap is too late
-  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow4-0"));
-  s = americano.drawTile(s, 1, s.drawPile.at(-1), 25);
-  assert.equal(
-    americano.showIndicator(s, 1, "blue13-0"),
-    "Only on your first turn",
-  );
-  // Americano has no gösterge
-  assert.isUndefined(
-    americano.showIndicator(start(2, seri, AMERICANO), 1, "blue13-0"),
   );
 });
 

@@ -52,7 +52,6 @@ export function startGame(state, deal, rules = AMERICANO) {
     tookDiscard: null,
     tookOkey: null,
     discards: 0,
-    indicatorShown: null,
   };
 }
 
@@ -169,7 +168,6 @@ export function nextRound(state, deal) {
       replay: false,
       tookDiscard: null,
       discards: 0,
-      indicatorShown: null,
     },
     game.shuffledPile(game.setsOf(state)),
     deal,
@@ -301,7 +299,7 @@ export function groupsOf(slots, row) {
 // the opening counts them
 export const rackPoints = (state, player) =>
   sum(
-    groupsOf(seat(state, player)?.hand ?? [], game.rowOf(state)).map(
+    groupsOf(seat(state, player)?.hand ?? [], game.rowOf(state, player)).map(
       (g) => asLaid(g, state.okeyTile).total,
     ),
   );
@@ -325,7 +323,7 @@ function openingOf(state, player, ids, withPairs) {
   const hand = seat(state, player).hand;
   const groups = groupsOf(
     hand.map((t) => (ids.includes(t?.id) ? t : null)),
-    game.rowOf(state),
+    game.rowOf(state, player),
   );
   const laid = groups.map((g) => asLaid(g, ind));
   const melds = laid.flatMap((l) => l.melds);
@@ -409,7 +407,7 @@ export function meldsToLay(state, player) {
   const hand = seat(state, player)?.hand ?? [];
   if (state.gameState !== "play" || state.openedWithPairs?.[player]) return [];
   if (state.opened[player]) {
-    return groupsOf(hand, game.rowOf(state))
+    return groupsOf(hand, game.rowOf(state, player))
       .flatMap((g) => asLaid(g, state.okeyTile).melds)
       .flatMap((m) => m.tiles.map((t) => t.id));
   }
@@ -517,7 +515,7 @@ export function takeBack(state, player, tileId, toIndex) {
   s.melds[k].tiles.splice(i, 1);
   const me = seat(s, player);
   const tile = { ...tiles[i], source: `hand-${player}`, hidden: false };
-  me.hand = game.placeTiles(me.hand, game.rowOf(s), [tile], toIndex);
+  me.hand = game.placeTiles(me.hand, game.rowOf(s, player), [tile], toIndex);
   game.unlog(s, "added", tileId);
   return s;
 }
@@ -917,7 +915,7 @@ const isCaught = (state, tileId) =>
 
 // what a player owes for this hand before it's scored: their tiles caught
 // on their pile, and the penalties during play (an okey thrown, a caught
-// tile taken off the pile, a discard put back, the gösterge's minus); shown
+// tile taken off the pile, a discard put back); shown
 // on the score sheet as it happens, added to the hand's score at its end
 export function penaltiesSoFar(state, player) {
   const caught = state.players.flatMap((p) => p.caught ?? []);
@@ -952,30 +950,6 @@ export function returnDiscard(state, player) {
     penalize(s, player, cost);
     s.message = `${me.user?.name} put the tile back: +${cost}`;
   }
-  return s;
-}
-
-// 101's gösterge (the user's, not the PDF's): the indicator's twin, shown
-// on your first turn of a hand, scores indicatorScore once
-export function showIndicator(state, player, tileId) {
-  const score = state.rules.indicatorScore;
-  if (!score) return;
-  if (roundOver(state)) return roundOver(state);
-  if (state.currentPlayer !== player) return "Not your turn";
-  if (state.indicatorShown) return "The indicator's been shown";
-  // a turn ends with a discard: the first lap is the first n of them
-  if ((state.discards ?? 0) >= state.players.length) {
-    return "Only on your first turn";
-  }
-  const kind = (id) => id.split("-")[0];
-  const tile = seat(state, player).hand.find((t) => t?.id === tileId);
-  if (!tile || kind(tile.id) !== kind(state.okeyTile.id)) {
-    return "That's not the indicator's twin";
-  }
-  const s = cloneDeep(state);
-  s.indicatorShown = player;
-  penalize(s, player, score);
-  s.message = `${seat(s, player).user?.name} showed the indicator: ${score}`;
   return s;
 }
 

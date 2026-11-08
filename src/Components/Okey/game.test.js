@@ -162,7 +162,8 @@ test("a save code hides the state and loads it back", async () => {
   const s = americano.startGame(seated(4));
   const code = await game.encodeSave(s);
   assert.match(code, /^[A-Za-z0-9+/=]+$/); // no JSON, no tile ids
-  assert.isBelow(code.length, JSON.stringify(s).length / 5);
+  // deflated, about a fifth of the JSON (4.9 to 5.2 over random deals)
+  assert.isBelow(code.length, JSON.stringify(s).length / 4);
   assert.deepEqual(await game.decodeSave(code), s);
   assert.isNull(await game.decodeSave("hello"));
   assert.isNull(await game.decodeSave(JSON.stringify(s)));
@@ -405,4 +406,53 @@ test("a game keeps its ruleset, synced and saved", async () => {
   );
   // an older build's, not played in rounds, isn't loaded
   assert.isNull(await game.decodeSave(await game.encodeSave(seated(2))));
+});
+
+test("a hand laid out on longer or shorter rack rows keeps its tiles and groups", () => {
+  const rows = (text) =>
+    text.split(" ").map((id) => (id === "_" ? null : { id }));
+  const ids = (hand) => hand.map((t) => t?.id ?? "_").join(" ");
+  // 9 a row; longer, the gaps come at each row's end, and shorter again
+  // they go
+  const hand = rows("a b c _ d e _ _ f _ _ _ g _ _ _ _ _");
+  const long = game.resizeRows(hand, 9, 11);
+  assert.equal(ids(long), "a b c _ d e _ _ f _ _ _ _ _ g _ _ _ _ _ _ _");
+  assert.equal(ids(game.resizeRows(long, 11, 9)), ids(hand));
+  // a row with no gap at its end: one of two side by side goes first,
+  // then the one between two groups
+  const gaps = rows("a _ _ b _ c _ _ _ _ _ _");
+  assert.equal(ids(game.resizeRows(gaps, 6, 5)), "a _ b _ c _ _ _ _ _");
+  assert.equal(ids(game.resizeRows(gaps, 6, 4)), "a _ b c _ _ _ _");
+  // a row of more tiles than the new one holds: its last goes to the last
+  // free slot
+  const full = rows("a b c d e f _ _");
+  assert.equal(ids(game.resizeRows(full, 4, 3)), "a b c e f d");
+});
+
+test("your own rack rows, set mid-round, lay out only your hand, and sync", () => {
+  let s = americano.startGame(seated(2));
+  const before = player(s, 1).hand.filter(Boolean).length;
+  // Americano's hand, a draw and three takes: rows of 11 at least
+  assert.equal(game.setRow(s, 1, 10), "Make the rack's rows longer");
+  s = game.setRow(s, 1, 11);
+  assert.equal(game.rowOf(s, 1), 11);
+  assert.equal(game.rowOf(s, 2), 13);
+  assert.equal(player(s, 1).hand.length, 22);
+  assert.equal(count(s, 1), before);
+  assertAllTiles(s);
+  // a move reads your rows: slot 11 starts the bottom one
+  const first = player(s, 1).hand.find(Boolean);
+  const moved = game.moveTiles(s, 1, [first.id], 11);
+  assert.equal(player(moved, 1).hand[11].id, first.id);
+  // synced in its own key, not the seats someone else may be writing
+  const map = new Y.Doc().getMap("okey-state");
+  replaceState(map, s);
+  assert.equal(readState(map).players[0].rowSlots, 11);
+  assert.notProperty(map.get(`${map.get("deal")}/seats`)[0], "rowSlots");
+  assert.notProperty(readState(map).players[1], "rowSlots");
+  // back to the table's
+  s = game.setRow(s, 1, null);
+  assert.notProperty(player(s, 1), "rowSlots");
+  assert.equal(player(s, 1).hand.length, 26);
+  assert.equal(count(s, 1), before);
 });

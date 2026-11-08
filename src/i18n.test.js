@@ -51,10 +51,6 @@ test("messages with names and numbers translate both ways", () => {
     "Çift açtın: elde en fazla 2 taş işlersin",
   );
   assert.equal(t("Ali & Can win with 38", true), "Ali & Can kazandı: 38");
-  assert.equal(
-    t("Ayşe showed the indicator: -101", true),
-    "Ayşe göstergeyi gösterdi: -101",
-  );
   assert.equal(t("Elden", false), "from hand");
   assert.equal(t("Elden", true), "Elden");
 });

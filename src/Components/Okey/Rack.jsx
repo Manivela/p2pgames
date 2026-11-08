@@ -160,7 +160,7 @@ function Rack({ player, hands }) {
   // hands are shown
   const over = ended(okeyState);
   const hand = me === player && !over ? myHand(player) : [];
-  const width = rowOf(okeyState);
+  const width = rowOf(okeyState, player);
 
   // A tile held over a slot shows what dropping it there would do
   // (placeTiles): the tiles in its way slide aside, the moved ones leave
@@ -302,8 +302,8 @@ function Hands({ players }) {
             </span>
             <b className="score">{score > 0 ? `+${score}` : score}</b>
             <div className="tiles">
-              {[0, rowOf(okeyState)].map((from) => {
-                const row = hand.slice(from, from + rowOf(okeyState));
+              {[0, rowOf(okeyState, player)].map((from) => {
+                const row = hand.slice(from, from + rowOf(okeyState, player));
                 return (
                   <span key={from} className="half">
                     {row
@@ -354,8 +354,14 @@ export function DiscardPile({ player, small }) {
   // look through; another tap, there or anywhere, puts them back
   const [peek, setPeek] = useState(false);
   const pileRef = useRef();
+  // on the pair round (peekPairRounds), or once someone's opened with
+  // pairs (peekWithPairs, 101)
+  const { rules, openedWithPairs } = okeyState;
   const canPeek =
-    pairRound(okeyState) && okeyState.rules.peekPairRounds && pile.length > 1;
+    pile.length > 1 &&
+    ((pairRound(okeyState) && rules.peekPairRounds) ||
+      (rules.peekWithPairs &&
+        Object.values(openedWithPairs ?? {}).some(Boolean)));
   useEffect(() => {
     if (!peek) return;
     const away = (e) => !pileRef.current?.contains(e.target) && setPeek(false);

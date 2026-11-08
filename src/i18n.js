@@ -23,10 +23,6 @@ const TR = [
   [/^Open your hand first$/, "Önce elini aç"],
   [/^Pick the pairs to open with$/, "Açacağın çiftleri seç"],
   [/^The okey's penalty is already written$/, "Okeyin cezası zaten yazıldı"],
-  [/^The indicator's been shown$/, "Gösterge zaten gösterildi"],
-  [/^Only on your first turn$/, "Yalnızca ilk turunda"],
-  [/^That's not the indicator's twin$/, "Bu taş göstergenin aynısı değil"],
-  [/^(.+) showed the indicator: (-?\d+)$/, "$1 göstergeyi gösterdi: $2"],
   [
     /^You can lay more from next turn$/,
     "Daha fazlasını sonraki turda açabilirsin",
@@ -165,6 +161,15 @@ const TR = [
     /^On a round that opens with pairs, a tap on a discard pile spreads its tiles out to look through$/,
     "Çiftle açılan elde, atılan taşlara dokununca hepsi açılır, bakılabilir",
   ],
+  [/^Just for you$/, "Yalnız senin için"],
+  [
+    /^Slots in each row of your own rack; empty: the table's$/,
+    "Kendi ıstakanın her sırasındaki yuva; boşsa masanınki",
+  ],
+  [
+    /^Once someone has opened with pairs, a tap on a discard pile spreads its tiles out to look through$/,
+    "Biri çifte gidince atılan taşlara dokununca hepsi açılır, herkes bakabilir",
+  ],
   [
     /^Not opening scores the okeys held too, and doubles with the rest$/,
     "Açamayana elindeki okeyler de yazılır, katlamada o da katlanır",
@@ -223,10 +228,6 @@ const TR = [
   [
     /^Written for taking the discard and putting it back$/,
     "Yandan alıp geri bırakana yazılan",
-  ],
-  [
-    /^Written for showing the indicator's twin on your first turn \(a minus takes it off\); 0: none$/,
-    "İlk turunda göstergenin eşini gösterene yazılan (eksi sayı düşer); 0: yok",
   ],
   [
     /^Times in 100 a bot misses a good move: a discard to take, a catch, an opening, the best tile to throw; 0: it plays its best$/,

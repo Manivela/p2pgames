@@ -234,11 +234,6 @@ html:has(.fit) {
     8px 10px 14px rgba(0, 0, 0, 0.45);
 }
 
-/* the indicator's drop target, without a box of its own */
-.draw .twin {
-  display: contents;
-}
-
 .draw .indicator {
   rotate: 6deg;
 }

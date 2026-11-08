@@ -36,6 +36,7 @@ export const DEFAULTS = {
   catchWaitSeconds: 2, // before the next player may take the discard
   takeCaught: false,
   peekPairRounds: false,
+  peekWithPairs: false,
   pairsForAll: false,
   pairsAddMax: 0, // no limit
   finishInOne: false,
@@ -54,7 +55,6 @@ export const DEFAULTS = {
   catchPenalty: 20,
   okeyDiscardPenalty: 0,
   returnPenalty: 0,
-  indicatorScore: 0,
   // bots (bot.js): times in 100 one misses a good move
   botMistakes: 0,
   botCatches: 30, // times in 100 one catches a tile it could
@@ -169,8 +169,9 @@ export const ONE_O_ONE = {
   notOpenedScore: 202,
   notOpenedCounts: true, // and the okeys held, doubled too
   okeyInHandScore: 101,
-  catchPenalty: 101, // işler taş, caught with the Catch button
-  catchUntilDraw: true, // before the next player draws
+  // işler taş, caught with the Catch button until the next discard, as in
+  // Americano (the PDF: until the next player draws; the user's call)
+  catchPenalty: 101,
   takeCaught: true, // and, caught, the next player can still take it
   okeyDiscardPenalty: 101, // discarding the okey, unless it's your last tile
   // the previous discard can be taken only to use it in a meld that turn,
@@ -179,11 +180,9 @@ export const ONE_O_ONE = {
   returnPenalty: 101,
   pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn
   pairsForAll: true, // once someone opens with pairs, everyone lays pairs
+  peekWithPairs: true, // and anyone can look through the discards
   finishInOne: true, // open all but one tile at once and finish, under 101 too
   pileOutCounts: true, // a pile that runs out ends the hand, scored as usual
-  // gösterge, which the PDF leaves out: the indicator's twin dropped on it
-  // on your first turn takes this off your hand's score
-  indicatorScore: -101,
   // a table okey goes to whoever holds its tile, once they've opened
   swapOkeys: true,
   buildWhenOpening: true,
@@ -220,6 +219,12 @@ export const SIZES = { kut: [3, 4], seri: [3, 13], pair: [2, 2] };
 const whole = (n, lo, hi = Infinity) =>
   Number.isInteger(n) && n >= lo && n <= hi;
 
+// Rack rows of `slots` hold the most a hand can: the hand, a draw and two
+// tiles a take, with a gap to spare
+export const rowFits = (r, slots) =>
+  whole(slots, 2, 20) &&
+  r.handSize + 2 + (r.outOfTurnTakes ? 2 * r.maxTakes : 0) <= 2 * slots;
+
 // What keeps a ruleset made in the editor from being played, or nothing:
 // the rules read it without checking, at every table it's played at.
 export function invalid(r) {
@@ -232,11 +237,7 @@ export function invalid(r) {
     return "Not enough tiles for those hands";
   }
   if (r.outOfTurnTakes && !whole(r.maxTakes, 1)) return "Fill in every number";
-  // the hand, a draw and two tiles a take, with a gap to spare
-  const most = handSize + 2 + (r.outOfTurnTakes ? 2 * r.maxTakes : 0);
-  if (!whole(rowSlots, 2, 20) || most > 2 * rowSlots) {
-    return "Make the rack's rows longer";
-  }
+  if (!rowFits(r, rowSlots)) return "Make the rack's rows longer";
   if (!whole(r.rounds?.length, 1, 50)) return "1 to 50 rounds";
   const from = r.okeySwapFromRound;
   if (from != null && !whole(from, 1)) return "Fill in every number";

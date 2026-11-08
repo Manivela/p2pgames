@@ -5,7 +5,7 @@ import { isEqual, omit } from "lodash";
 // moved by its owner, the draw pile and turn by the player whose turn it is,
 // seats by whoever sits or leaves, a claim by its claimer, and an inbox is
 // filled at a discard and emptied by its owner, and a caught list by its
-// catcher, and the lobby's settings (`setup`, the ruleset the next game
+// catcher, a player's own rack rows by them, and the lobby's settings (`setup`, the ruleset the next game
 // starts with) by anyone in the room. Start / new game / reset go
 // under fresh keys behind one "deal" pointer, so a move racing them can't mix
 // in. Two writes to the *same* key at once still resolve last-writer-wins.
@@ -15,7 +15,7 @@ import { isEqual, omit } from "lodash";
 function parts(s) {
   return {
     seats: s.players.map((p) =>
-      omit(p, ["hand", "discardPile", "inbox", "claim", "caught"]),
+      omit(p, ["hand", "discardPile", "inbox", "claim", "caught", "rowSlots"]),
     ),
     turn: omit(s, ["deal", "players", "message", "drawPile", "rules", "setup"]),
     // the same all game: apart, so it isn't sent again with every move
@@ -30,6 +30,7 @@ function parts(s) {
         [`inbox-${p.id}`, p.inbox ?? []],
         [`claim-${p.id}`, p.claim ?? null],
         [`caught-${p.id}`, p.caught ?? []],
+        [`row-${p.id}`, p.rowSlots ?? null],
       ]),
     ),
   };
@@ -54,6 +55,7 @@ export function readState(map) {
         inbox: get(`inbox-${seat.id}`) ?? [],
         claim: get(`claim-${seat.id}`) ?? null,
         caught: get(`caught-${seat.id}`) ?? [],
+        ...(get(`row-${seat.id}`) && { rowSlots: get(`row-${seat.id}`) }),
       })),
     }
   );
@@ -69,6 +71,27 @@ export function replaceState(map, next) {
     }
     map.set("deal", deal);
   });
+}
+
+// What a `turn` written over another took back, if anything: within a deal
+// the discards, melds, openings and penalties only grow, and a round's end
+// doesn't go back to play, so less of any is a write made from an older
+// state than the one it replaced (a page that slept, a move racing
+// another). OkeyContext reports it, to find who writes it. Doesn't see a
+// penalty's value going back at the same discard (202 to 101): only one
+// that's gone.
+export function wentBack(before, after) {
+  if (!before || !after) return null;
+  if ((after.discards ?? 0) < (before.discards ?? 0)) return "discards";
+  if ((after.melds?.length ?? 0) < (before.melds?.length ?? 0)) return "melds";
+  for (const key of ["penalties", "opened"]) {
+    const kept = after[key] ?? {};
+    if (Object.keys(before[key] ?? {}).some((id) => !(id in kept))) return key;
+  }
+  if (before.gameState !== "play" && after.gameState === "play") {
+    return "gameState";
+  }
+  return null;
 }
 
 // Writes only the keys `next` changed relative to `prev`, the state it was

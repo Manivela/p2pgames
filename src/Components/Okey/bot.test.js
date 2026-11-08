@@ -10,9 +10,11 @@ const indicator = createTile("blue", 13, 1); // the okey is blue1
 const t = (color, rank, i = 0) => createTile(color, rank, i);
 const ids = (tiles) => tiles.map((x) => x.id).sort();
 
+// the pile unshuffled, so a bot draws the same tiles every run
 function seated(count) {
   return {
     ...game.initialState,
+    drawPile: game.tiles.map((t) => ({ ...t, hidden: true })),
     players: game.initialState.players.map((p) =>
       p.id <= count
         ? { ...p, user: { id: `u${p.id}`, name: `P${p.id}` }, userKey: p.id }
@@ -392,18 +394,6 @@ test("a bot catches a tile thrown that fits the table", () => {
   s = bot.catchTile({ ...s, rules: { ...s.rules, botCatches: 100 } }, 2, 0);
   assert.deepEqual(game.seat(s, 2).caught, ["yellow13-0"]);
   assert.isUndefined(bot.catchTile(s, 2, 0)); // caught already
-});
-
-test("in 101 a bot shows the gösterge on its first turn", () => {
-  const deal = {
-    okeyTile: "red7-0",
-    hands: [["black1-0"], ["red7-1", "blue2-0"]],
-  };
-  let s = americano.startGame(seated(2), deal, ONE_O_ONE);
-  s = { ...s, currentPlayer: 2, drawn: false };
-  s = bot.step(s, 2, 1e6, 0);
-  assert.equal(s.indicatorShown, 2);
-  assert.equal(s.penalties[2], ONE_O_ONE.indicatorScore);
 });
 
 test("a bot keeps its rack in order: its melds, then the rest", () => {

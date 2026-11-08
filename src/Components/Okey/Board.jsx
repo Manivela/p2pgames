@@ -1,6 +1,5 @@
 import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useDrop } from "react-dnd";
 import { OkeyContext } from "./OkeyContext";
 import Rack, { DiscardPile, Seat } from "./Rack";
 import Slot from "./Slot";
@@ -104,15 +103,9 @@ function usePileAside(deal) {
   return [ref, aside];
 }
 
-// the draw pile as a stack, its count, and the indicator beside it (101's
-// gösterge: its twin dropped on it)
+// the draw pile as a stack, its count, and the indicator beside it
 function DrawPile() {
-  const { okeyState, nextDrawTile, finishGame, showIndicator } =
-    useContext(OkeyContext);
-  const [, show] = useDrop(
-    () => ({ accept: "TILE", drop: (e) => void showIndicator(e.tile) }),
-    [showIndicator],
-  );
+  const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
   return (
     <div className="draw">
       <Slot
@@ -124,9 +117,7 @@ function DrawPile() {
       />
       <span className="count">{okeyState.drawPile.length}</span>
       {okeyState.okeyTile && (
-        <div ref={show} className="twin">
-          <Tile className="indicator" tile={okeyState.okeyTile} disabled />
-        </div>
+        <Tile className="indicator" tile={okeyState.okeyTile} disabled />
       )}
       {/* the tile someone finished with */}
       {okeyState.finishTile && (
@@ -340,7 +331,7 @@ function useKnock() {
 }
 
 function Board() {
-  const { okeyState, myIndex } = useContext(OkeyContext);
+  const { okeyState, myIndex, me } = useContext(OkeyContext);
   // you first, then round the table: right, across, left
   const players = tableSeats(okeyState);
   const [mine, ...rest] =
@@ -349,7 +340,8 @@ function Board() {
       : players;
   // left to right: the one before you first
   const others = rest.reverse();
-  const fit = useTileSize(rowOf(okeyState) + 3.8);
+  // your own rack's rows set the tiles' size (rowOf)
+  const fit = useTileSize(rowOf(okeyState, me) + 3.8);
   const [table, pileAside] = usePileAside(okeyState.deal);
   useMoves();
   const onKnock = useKnock();
