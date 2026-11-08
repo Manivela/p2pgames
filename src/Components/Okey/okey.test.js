@@ -549,6 +549,26 @@ test("a seat whose page has gone is away, and sat back down in by its player", (
   assert.equal(okey.seatToSitBack(kept, bora, new Set([1, 9])), 2);
 });
 
+test("your own tiles flip while the round is played; laying waits for the draw", () => {
+  let s = okey.startGame(seated(2));
+  const mine = player(s, 1).hand.find(Boolean);
+  const theirs = player(s, 2).hand.find(Boolean);
+  const flipped = okey.flipTile(s, 1, mine.id);
+  assert.isTrue(tileIn(flipped, 1, mine.id).hidden);
+  assert.isFalse(tileIn(okey.flipTile(flipped, 1, mine.id), 1, mine.id).hidden);
+  assert.isUndefined(okey.flipTile(s, 1, theirs.id));
+  assert.isUndefined(
+    okey.flipTile({ ...s, gameState: "roundEnd" }, 1, mine.id),
+  );
+  // the starter's extra tile is its draw; the next player lays once drawn
+  assert.isTrue(okey.canLay(s, 1));
+  assert.isFalse(okey.canLay(s, 2));
+  s = okey.discardTile(s, 1, mine, Infinity);
+  assert.isFalse(okey.canLay(s, 2));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  assert.isTrue(okey.canLay(s, 2));
+});
+
 test("standing up mid-round leaves the hand for a friend to sit down to", () => {
   let s = okey.startGame(seated(3));
   s = okey.standUp(s, 2);
