@@ -415,7 +415,8 @@ export function Scores() {
           <tbody>
             {rules.rounds.map((r, i) => (
               <tr
-                key={r.name}
+                // by place: 101's eleven rounds all have the same name
+                key={i}
                 // rounds still to come, dimmed
                 className={
                   i === live
