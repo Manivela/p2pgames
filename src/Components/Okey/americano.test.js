@@ -510,7 +510,12 @@ test("a round dealt again: seats change in between, scores stay, its penalties g
   const { gameId, currentPlayer } = s;
   assert.isOk(gameId);
   s = americano.discardTile(s, currentPlayer, player(s, currentPlayer).hand[0]);
-  s = { ...s, penalties: { [currentPlayer]: [20] } };
+  s = {
+    ...s,
+    penalties: { [currentPlayer]: [20] },
+    // an okey taken off a meld before opening, the table it'd go back to gone
+    tookOkeys: [{ player: currentPlayer, meld: 0, tileId: "yellow3-0" }],
+  };
 
   s = americano.redealRound(s);
   assert.equal(s.gameState, "roundEnd");
@@ -529,6 +534,7 @@ test("a round dealt again: seats change in between, scores stay, its penalties g
   assert.equal(s.gameId, gameId);
   assert.deepEqual(s.scores, { 1: [10], 2: [30], 3: [-20] });
   assert.deepEqual(s.penalties, {});
+  assert.deepEqual(s.tookOkeys, []);
   assertAllTiles(s);
 });
 

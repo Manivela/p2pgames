@@ -126,6 +126,11 @@ test("101: the sets and runs as they lie on the rack count as the opening would"
   });
   assert.equal(americano.rackPoints(across(12), 2), 9);
   assert.equal(americano.rackPoints(across(13), 2), 0);
+  // 12-13-1 counts only where runs wrap (wrapRuns)
+  const wrapping = holding(s, 1, ["red12-0", "red13-0", "red1-0"]);
+  assert.equal(americano.rackPoints(wrapping, 1), 0);
+  const on = { ...wrapping, rules: { ...s.rules, wrapRuns: true } };
+  assert.equal(americano.rackPoints(on, 1), 12 + 13 + 1);
 });
 
 test("101: runs don't wrap, and a pair is two of a tile or an okey and any", () => {

@@ -5,6 +5,7 @@ import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
 import {
+  cantCatch,
   discardWait,
   isElden,
   pairRound,
@@ -387,7 +388,7 @@ export function DiscardPile({ player, small }) {
     okeyState.gameState === "play" &&
     me &&
     thrower &&
-    thrower.id !== me &&
+    !cantCatch(okeyState, me, thrower.id) &&
     okeyState.melds.length > 0 &&
     !caughtAny(latest);
   return (

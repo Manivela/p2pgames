@@ -167,6 +167,7 @@ export function nextRound(state, deal) {
       penalties: {},
       replay: false,
       tookDiscard: null,
+      tookOkeys: [],
       discards: 0,
     },
     game.shuffledPile(game.setsOf(state)),
@@ -261,7 +262,7 @@ const points = (meld, ind) =>
 // The sets and runs a row of picked tiles makes as it lies on the rack (an
 // okey counts where it stands), the most points it can; a tile that fits
 // none stays on the rack.
-function asLaid(row, ind) {
+function asLaid(row, ind, wrapRuns) {
   const best = [{ total: 0, melds: [] }]; // for the row up to each tile
   row.forEach((_, i) => {
     const keep = (j, total, melds) => {
@@ -270,7 +271,7 @@ function asLaid(row, ind) {
     keep(i + 1, best[i].total, best[i].melds); // tile i stays
     for (let j = i + 3; j <= row.length; j++) {
       const g = row.slice(i, j);
-      const seri = meldOrder(g, "seri", ind, false);
+      const seri = meldOrder(g, "seri", ind, wrapRuns);
       const kut = !seri && meldOrder(g, "kut", ind);
       const meld = seri
         ? { type: "seri", tiles: seri }
@@ -300,7 +301,7 @@ export function groupsOf(slots, row) {
 export const rackPoints = (state, player) =>
   sum(
     groupsOf(seat(state, player)?.hand ?? [], game.rowOf(state, player)).map(
-      (g) => asLaid(g, state.okeyTile).total,
+      (g) => asLaid(g, state.okeyTile, wrap(state)).total,
     ),
   );
 
@@ -325,7 +326,7 @@ function openingOf(state, player, ids, withPairs) {
     hand.map((t) => (ids.includes(t?.id) ? t : null)),
     game.rowOf(state, player),
   );
-  const laid = groups.map((g) => asLaid(g, ind));
+  const laid = groups.map((g) => asLaid(g, ind, wrap(state)));
   const melds = laid.flatMap((l) => l.melds);
   // all but the tile to finish with opens under the points too (finishInOne)
   const allButOne =
@@ -408,7 +409,7 @@ export function meldsToLay(state, player) {
   if (state.gameState !== "play" || state.openedWithPairs?.[player]) return [];
   if (state.opened[player]) {
     return groupsOf(hand, game.rowOf(state, player))
-      .flatMap((g) => asLaid(g, state.okeyTile).melds)
+      .flatMap((g) => asLaid(g, state.okeyTile, wrap(state)).melds)
       .flatMap((m) => m.tiles.map((t) => t.id));
   }
   const s = openAll({ ...state, currentPlayer: player, drawn: true }, player);
