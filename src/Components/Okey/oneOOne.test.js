@@ -625,7 +625,7 @@ test("101: a game set up mid-hand starts clean", () => {
       penalties: { 2: 101 },
       replay: true,
       tookDiscard: { player: 1, from: 2, tileId: "red5-0" },
-      tookOkey: { player: 1, meld: 0, tileId: "blue1-0" },
+      tookOkeys: [{ player: 1, meld: 0, tileId: "blue1-0" }],
     },
     3,
     { 1: 50, 2: 120 },
@@ -637,5 +637,5 @@ test("101: a game set up mid-hand starts clean", () => {
   assert.deepEqual(s.penalties, {});
   assert.isFalse(s.replay);
   assert.isNull(s.tookDiscard);
-  assert.isNull(s.tookOkey);
+  assert.deepEqual(s.tookOkeys, []);
 });

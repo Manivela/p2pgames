@@ -963,8 +963,8 @@ test("from round 6, a real tile swaps out a table okey, which can open the same 
 });
 
 // okey is blue1, standing for the yellow 3 in yellow 1-2-okey-4 on the
-// table; it's P2's turn and they've drawn
-function okeyOnTable(round) {
+// table; it's P2's turn and they've drawn (the top of the pile, or `draw`)
+function okeyOnTable(round, draw) {
   const seri = ["yellow1-0", "yellow2-0", "blue1-0", "yellow4-0"];
   let s = americano.startGame(seated(2), {
     okeyTile: "blue13-1",
@@ -989,7 +989,8 @@ function okeyOnTable(round) {
     melds: [{ type: "seri", owner: 1, tiles: onTable }],
   };
   s = americano.discardTile(s, 1, tileIn(s, 1, "black5-0"));
-  return [game.drawTile(s, 2, s.drawPile.at(-1), 20), seri];
+  const tile = s.drawPile.find((x) => x.id === draw) ?? s.drawPile.at(-1);
+  return [game.drawTile(s, 2, tile, 20), seri];
 }
 
 test("a table okey keeps its place: only the tile it stands for takes it", () => {
@@ -1157,6 +1158,37 @@ test("an okey taken before opening (round 6+) means opening that turn, or puttin
   assert.deepEqual(ids(s.melds[0].tiles), seri);
   assert.isOk(tileIn(s, 2, "yellow3-0"));
   assert.notDeepInclude(turn(s), [2, "swapped", "yellow3-0"]); // taken back
+  s = americano.discardTile(s, 2, tileIn(s, 2, "black7-0"));
+  assert.equal(s.currentPlayer, 1);
+  assertAllTiles(s);
+});
+
+test("two okeys taken before opening both go back before the discard", () => {
+  let [s, seri] = okeyOnTable(6, "black10-1");
+  // the other okey, standing for the yellow 5 in yellow 4-okey-6
+  const seri2 = ["yellow4-1", "blue1-1", "yellow6-0"];
+  s = {
+    ...s,
+    drawPile: s.drawPile.filter((x) => !seri2.includes(x.id)),
+    melds: [
+      ...s.melds,
+      { type: "seri", owner: 1, tiles: seri2.map((id) => lying(id, "table")) },
+    ],
+  };
+  s = americano.playOnMeld(s, 2, "yellow3-0", 0);
+  s = americano.playOnMeld(s, 2, "yellow5-0", 1);
+  assert.isOk(tileIn(s, 2, "blue1-0"));
+  assert.isOk(tileIn(s, 2, "blue1-1"));
+  // one back isn't enough
+  s = americano.playOnMeld(s, 2, "blue1-1", 1);
+  assert.deepEqual(ids(s.melds[1].tiles), seri2);
+  assert.match(
+    americano.discardTile(s, 2, tileIn(s, 2, "black7-0")),
+    /open your hand, or put the okey back/,
+  );
+  s = americano.playOnMeld(s, 2, "blue1-0", 0);
+  assert.deepEqual(ids(s.melds[0].tiles), seri);
+  assert.deepEqual(turn(s), []);
   s = americano.discardTile(s, 2, tileIn(s, 2, "black7-0"));
   assert.equal(s.currentPlayer, 1);
   assertAllTiles(s);

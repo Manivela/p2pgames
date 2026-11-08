@@ -50,7 +50,7 @@ export function startGame(state, deal, rules = AMERICANO) {
     penalties: {},
     replay: false,
     tookDiscard: null,
-    tookOkey: null,
+    tookOkeys: [],
     discards: 0,
   };
 }
@@ -108,7 +108,7 @@ export function freeSeat(state, player) {
     s.drawn = false;
     s.turnMoves = [];
     s.justOpened = null;
-    s.tookOkey = null;
+    s.tookOkeys = [];
     s.offer = null;
   }
   if (s.offer?.from === player) s.offer = null;
@@ -616,23 +616,23 @@ export function swapOkey(state, player, tileId, meldIndex) {
   s.melds[meldIndex].tiles[i] = tableTile(tile);
   const me = seat(s, player);
   me.hand = me.hand.map((t) => (t?.id === tileId ? okey : t));
-  if (!opened) s.tookOkey = { player, meld: meldIndex, tileId };
+  if (!opened) {
+    s.tookOkeys = [...(s.tookOkeys ?? []), { player, meld: meldIndex, tileId }];
+  }
   game.logMove(s, player, "swapped", [tile]);
   return s;
 }
 
 // an okey taken before opening goes back where it came from, the real tile
-// back to the hand, if you can't open with it after all
+// back to the hand, if you can't open with it after all: every one taken
+// this turn (tookOkeys) goes back before the discard, any okey in the hand
+// for any of them
 function putOkeyBack(state, player, tileId, meldIndex) {
-  const took = state.tookOkey;
+  const took = state.tookOkeys?.findLast(
+    (t) => t.player === player && t.meld === meldIndex,
+  );
   const okey = seat(state, player).hand.find((t) => t?.id === tileId);
-  if (
-    took?.player !== player ||
-    took.meld !== meldIndex ||
-    state.opened[player] ||
-    !okey ||
-    !isOkey(okey, state.okeyTile)
-  ) {
+  if (!took || state.opened[player] || !okey || !isOkey(okey, state.okeyTile)) {
     return;
   }
   const s = cloneDeep(state);
@@ -642,7 +642,7 @@ function putOkeyBack(state, player, tileId, meldIndex) {
   tiles[i] = tableTile(okey);
   const me = seat(s, player);
   me.hand = me.hand.map((t) => (t?.id === tileId ? real : t));
-  s.tookOkey = null;
+  s.tookOkeys = s.tookOkeys.filter((t) => t.tileId !== took.tileId);
   game.unlog(s, "swapped", took.tileId);
   return s;
 }
@@ -866,7 +866,10 @@ export function discardTile(state, player, tile, now = Date.now()) {
 function throwTile(state, player, tile, now = Date.now()) {
   const wait = claimWait(state, player, now);
   if (wait) return `Give the others ${Math.ceil(wait)}s to take the discard`;
-  if (state.tookOkey?.player === player && !state.opened[player]) {
+  if (
+    state.tookOkeys?.some((t) => t.player === player) &&
+    !state.opened[player]
+  ) {
     return "You took an okey: open your hand, or put the okey back";
   }
   const took = state.tookDiscard;
@@ -880,7 +883,7 @@ function throwTile(state, player, tile, now = Date.now()) {
   const s = game.discardTile(state, player, tile);
   if (!s || typeof s === "string") return s;
   s.justOpened = null;
-  s.tookOkey = null;
+  s.tookOkeys = [];
   s.tookDiscard = null;
   s.discards = (s.discards ?? 0) + 1;
   if (!seat(s, player).hand.some(Boolean)) {
