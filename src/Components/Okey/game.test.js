@@ -1,7 +1,7 @@
 import { assert, test } from "vitest";
 import * as Y from "yjs";
 import * as game from "./game";
-import * as americano from "./americano";
+import * as okey from "./okey";
 import { readState, replaceState, writeState } from "./sync";
 import { AMERICANO } from "./rulesets";
 
@@ -159,7 +159,7 @@ test("a loaded game seats whoever sits there now", () => {
 });
 
 test("a save code hides the state and loads it back", async () => {
-  const s = americano.startGame(seated(4));
+  const s = okey.startGame(seated(4));
   const code = await game.encodeSave(s);
   assert.match(code, /^[A-Za-z0-9+/=]+$/); // no JSON, no tile ids
   // deflated, about a fifth of the JSON (4.9 to 5.2 over random deals)
@@ -363,9 +363,9 @@ test("a rejoining player who sits before syncing can't reset the game", () => {
 });
 
 test("a claim made while the current player moves survives sync", () => {
-  let start = americano.startGame(seated(3));
-  start = americano.discardTile(start, 1, player(start, 1).hand.find(Boolean));
-  start = americano.drawTile(start, 2, start.drawPile.at(-1), 25);
+  let start = okey.startGame(seated(3));
+  start = okey.discardTile(start, 1, player(start, 1).hand.find(Boolean));
+  start = okey.drawTile(start, 2, start.drawPile.at(-1), 25);
   const { mapA, mapB, sync } = twoPeers(start);
 
   // P2 tidies their rack on one peer while P3 claims on the other
@@ -375,12 +375,12 @@ test("a claim made while the current player moves survives sync", () => {
     s,
     game.moveTiles(s, 2, [player(s, 2).hand.find(Boolean).id], 24),
   );
-  writeState(mapB, s, americano.claimDiscard(s, 3, 25));
+  writeState(mapB, s, okey.claimDiscard(s, 3, 25));
   sync();
 
   const merged = readState(mapA);
   assert.equal(player(merged, 3).claim.id, merged.offer.id);
-  const done = americano.discardTile(
+  const done = okey.discardTile(
     merged,
     2,
     player(merged, 2).hand.find(Boolean),
@@ -390,7 +390,7 @@ test("a claim made while the current player moves survives sync", () => {
 });
 
 test("a game keeps its ruleset, synced and saved", async () => {
-  const s = americano.startGame(seated(2));
+  const s = okey.startGame(seated(2));
   assert.deepEqual(s.rules, AMERICANO);
   const map = new Y.Doc().getMap("okey-state");
   replaceState(map, s);
@@ -400,7 +400,7 @@ test("a game keeps its ruleset, synced and saved", async () => {
   const loaded = await game.decodeSave(await game.encodeSave(s));
   assert.deepEqual(loaded.rules, AMERICANO);
   assert.equal(
-    americano.discardTile(loaded, 1, player(loaded, 1).hand.find(Boolean))
+    okey.discardTile(loaded, 1, player(loaded, 1).hand.find(Boolean))
       .currentPlayer,
     2,
   );
@@ -430,7 +430,7 @@ test("a hand laid out on longer or shorter rack rows keeps its tiles and groups"
 });
 
 test("your own rack rows, set mid-round, lay out only your hand, and sync", () => {
-  let s = americano.startGame(seated(2));
+  let s = okey.startGame(seated(2));
   const before = player(s, 1).hand.filter(Boolean).length;
   // Americano's hand, a draw and three takes: rows of 11 at least
   assert.equal(game.setRow(s, 1, 10), "Make the rack's rows longer");

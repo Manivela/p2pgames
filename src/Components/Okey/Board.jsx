@@ -10,8 +10,8 @@ import { t } from "../../i18n";
 import TableMenu from "./TableMenu";
 import { Lobby } from "./GameSettings";
 import { useMoves } from "./moves";
-import { ended, pileOut, rowOf, tableSeats } from "./game";
-import { isElden } from "./americano";
+import * as okey from "./okey";
+import { ended, isElden, pileOut, rowOf, tableSeats } from "./okey";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -136,7 +136,7 @@ function NextStep() {
     me,
     newGame,
     nextRound,
-    shuffleDiscards,
+    act,
     selected,
     picking,
     startPicking,
@@ -151,7 +151,9 @@ function NextStep() {
       // the pile ran out (reshuffle): before drawing, play on
       if (pileOut(okeyState, me)) {
         return (
-          <button onClick={shuffleDiscards}>{t("Shuffle and play on")}</button>
+          <button onClick={() => act(okey.shuffleDiscards, me)}>
+            {t("Shuffle and play on")}
+          </button>
         );
       }
       // El aç, all hand long: pressed once, it picks what it would lay down

@@ -293,7 +293,7 @@ export const seatAt = (state, player) =>
   seat(state, player) ?? initialState.players.find((p) => p.id === player);
 
 // Mid-round, someone sitting down in an empty seat is dealt a hand from the
-// middle pile (americano.sit), while it holds one; not with partners, who
+// middle pile (okey.sit), while it holds one; not with partners, who
 // are four
 export const dealsIn = (state) =>
   state.gameState === "play" &&
@@ -571,7 +571,7 @@ export function discardTile(state, player, tile) {
 
 // The pile ran out, in a ruleset that reshuffles: before drawing, the
 // player whose turn it is shuffles every discard into a new pile and plays
-// on, or ends the round (americano.endPile).
+// on, or ends the round (okey.endPile).
 export const pileOut = (state, player) =>
   state.gameState === "play" &&
   state.currentPlayer === player &&

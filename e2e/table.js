@@ -1,8 +1,7 @@
 // Loaded in the page by the e2e tests (the dev server serves it): sets up
 // positions through the real rules with the dev-only window.okey, and finds
 // elements that overlap or fall off the screen.
-import * as game from "../src/Components/Okey/game.js";
-import * as americano from "../src/Components/Okey/americano.js";
+import * as okey from "../src/Components/Okey/okey.js";
 import {
   AMERICANO,
   CLASSIC,
@@ -50,7 +49,7 @@ export function start(n, mode = "americano", options = {}) {
   const preset = { americano: AMERICANO, 101: ONE_O_ONE, classic: CLASSIC };
   const rules = { ...preset[mode], ...options };
   const size = rules.handSize;
-  const tiles = game.tileSet(rules.tileSets);
+  const tiles = okey.tileSet(rules.tileSets);
   const drawPile = tiles.map((_, i) => ({
     ...tiles[(i * 37) % tiles.length],
     hidden: true,
@@ -60,7 +59,7 @@ export function start(n, mode = "americano", options = {}) {
   for (let i = 1; i < n; i++) hands.push(rest.splice(0, size));
   const deal = { okeyTile: rest.find((id) => !id.includes("👌")), hands };
   const s = { ...window.okey.get(), drawPile };
-  window.okey.set(ok(americano.startGame(s, deal, rules)));
+  window.okey.set(ok(okey.startGame(s, deal, rules)));
 }
 
 // whoever's turn it is draws from the pile and throws their last tile
@@ -68,10 +67,10 @@ function turn(s) {
   const id = s.currentPlayer;
   if (!s.drawn) {
     const slot = seat(s, id).hand.indexOf(null);
-    s = ok(americano.drawTile(s, id, s.drawPile.at(-1), slot, 0));
+    s = ok(okey.drawTile(s, id, s.drawPile.at(-1), slot, 0));
   }
   const last = seat(s, id).hand.findLast(Boolean);
-  return ok(americano.discardTile(s, id, last, Infinity));
+  return ok(okey.discardTile(s, id, last, Infinity));
 }
 
 export function play(turns) {
@@ -86,7 +85,7 @@ export function toMyTurn(draw = true) {
   let s = turn(window.okey.get());
   while (s.currentPlayer !== 1) s = turn(s);
   const slot = seat(s, 1).hand.indexOf(null);
-  if (draw) s = ok(americano.drawTile(s, 1, s.drawPile.at(-1), slot, 0));
+  if (draw) s = ok(okey.drawTile(s, 1, s.drawPile.at(-1), slot, 0));
   window.okey.set(s);
 }
 
@@ -94,11 +93,11 @@ export function toMyTurn(draw = true) {
 export function claim(id) {
   const s = window.okey.get();
   const slot = seat(s, id).hand.indexOf(null);
-  window.okey.set(ok(americano.claimDiscard(s, id, slot)));
+  window.okey.set(ok(okey.claimDiscard(s, id, slot)));
 }
 
 export function openKut() {
-  window.okey.set(ok(americano.openHand(window.okey.get(), 1, [KUT])));
+  window.okey.set(ok(okey.openHand(window.okey.get(), 1, [KUT])));
 }
 
 // nobody finishes: the round ends when the pile runs out
@@ -146,13 +145,13 @@ export function runFirst() {
 export function okeyAndSeri() {
   const s = structuredClone(window.okey.get());
   const name = (id) => id.replace(/\d+-\d+$/, "");
-  const okey = `${name(s.okeyTile.id)}${(s.okeyTile.rank % 13) + 1}-0`;
-  intoMyFirstSlot(s, okey);
+  const wild = `${name(s.okeyTile.id)}${(s.okeyTile.rank % 13) + 1}-0`;
+  intoMyFirstSlot(s, wild);
   const color = ["red", "blue", "black", "yellow"].find(
-    (c) => c !== name(okey),
+    (c) => c !== name(wild),
   );
   const tiles = [6, 7, 8].map((r) => ({
-    ...game.tiles.find((t) => t.id === `${color}${r}-1`),
+    ...okey.tiles.find((t) => t.id === `${color}${r}-1`),
     source: "table",
     hidden: false,
   }));
@@ -160,7 +159,7 @@ export function okeyAndSeri() {
   s.opened = { ...s.opened, 1: true };
   s.justOpened = null;
   window.okey.set(s);
-  return okey;
+  return wild;
 }
 
 // okeyAndSeri, and the tiles either side of its seri in my slots 1 and 2
@@ -180,7 +179,7 @@ export function seriAndEnds() {
 export function crowd(n = 8) {
   const s = window.okey.get();
   const tile = (id) => ({
-    ...game.tiles.find((t) => t.id === id),
+    ...okey.tiles.find((t) => t.id === id),
     source: "table",
     hidden: false,
   });

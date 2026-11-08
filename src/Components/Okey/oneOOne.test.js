@@ -1,5 +1,5 @@
 import { assert, test } from "vitest";
-import * as americano from "./americano";
+import * as okey from "./okey";
 import * as game from "./game";
 import { isOkey, meldOrder } from "./melds";
 import { ONE_O_ONE } from "./rulesets";
@@ -71,7 +71,7 @@ const deal = (first = seri) => ({
   hands: [hand1(first), p2Hand],
 });
 const start = (n = 2, first, rules = ONE_O_ONE) =>
-  americano.startGame(seated(n), deal(first), rules);
+  okey.startGame(seated(n), deal(first), rules);
 const lying = (id, source) => ({
   ...game.tiles.find((x) => x.id === id),
   source,
@@ -95,7 +95,7 @@ const holding = (s, id, ids) => ({
 const opening = [...seri, ...kut, ...yellow];
 
 test("101: 22 tiles for the starter, 21 for the others, the rules kept", () => {
-  const s = americano.startGame(seated(3), undefined, ONE_O_ONE);
+  const s = okey.startGame(seated(3), undefined, ONE_O_ONE);
   assert.deepEqual(
     s.players.map((p) => p.hand.filter(Boolean).length),
     [22, 21, 21],
@@ -108,9 +108,9 @@ test("101: 22 tiles for the starter, 21 for the others, the rules kept", () => {
 test("101: the sets and runs as they lie on the rack count as the opening would", () => {
   const s = start();
   // the okey counts as the 12; the rest of P1's rack makes nothing
-  assert.equal(americano.rackPoints(s, 1), 33 + 52 + 18);
+  assert.equal(okey.rackPoints(s, 1), 33 + 52 + 18);
   // rows of 15: blue 2-3-4 and the 12s
-  assert.equal(americano.rackPoints(s, 2), 9 + 36);
+  assert.equal(okey.rackPoints(s, 2), 9 + 36);
   assert.equal(player(s, 2).hand.length, 30);
   // a row's end splits a run: blue 2-3 | 4
   const across = (from) => ({
@@ -124,13 +124,13 @@ test("101: the sets and runs as they lie on the rack count as the opening would"
       return { ...p, hand };
     }),
   });
-  assert.equal(americano.rackPoints(across(12), 2), 9);
-  assert.equal(americano.rackPoints(across(13), 2), 0);
+  assert.equal(okey.rackPoints(across(12), 2), 9);
+  assert.equal(okey.rackPoints(across(13), 2), 0);
   // 12-13-1 counts only where runs wrap (wrapRuns)
   const wrapping = holding(s, 1, ["red12-0", "red13-0", "red1-0"]);
-  assert.equal(americano.rackPoints(wrapping, 1), 0);
+  assert.equal(okey.rackPoints(wrapping, 1), 0);
   const on = { ...wrapping, rules: { ...s.rules, wrapRuns: true } };
-  assert.equal(americano.rackPoints(on, 1), 12 + 13 + 1);
+  assert.equal(okey.rackPoints(on, 1), 12 + 13 + 1);
 });
 
 test("101: runs don't wrap, and a pair is two of a tile or an okey and any", () => {
@@ -154,10 +154,10 @@ test("101: runs don't wrap, and a pair is two of a tile or an okey and any", () 
 test("101: open with 101 points as laid out on the rack, an okey where it stands", () => {
   let s = start();
   assert.equal(
-    americano.openHand(s, 1, [[...seri, ...kut]]),
+    okey.openHand(s, 1, [[...seri, ...kut]]),
     "Open with 101+ or 5 pairs",
   );
-  s = americano.openHand(s, 1, [opening]);
+  s = okey.openHand(s, 1, [opening]);
   assert.isTrue(s.opened[1]);
   assert.deepEqual(
     s.melds.map((m) => ids(m.tiles)),
@@ -166,7 +166,7 @@ test("101: open with 101 points as laid out on the rack, an okey where it stands
   // the okey left of the 10 is the 9: 30 + 52 + 18 = 100
   const okeyFirst = ["blue1-0", "red10-0", "red11-0"];
   assert.equal(
-    americano.openHand(start(2, okeyFirst), 1, [opening]),
+    okey.openHand(start(2, okeyFirst), 1, [opening]),
     "Open with 101+ or 5 pairs",
   );
 });
@@ -174,23 +174,23 @@ test("101: open with 101 points as laid out on the rack, an okey where it stands
 test("101: katlamalı: an opening with points beats the highest so far", () => {
   const rules = { ...ONE_O_ONE, raiseOpening: true };
   let s = start(2, seri, rules);
-  assert.equal(americano.pointsToOpen(s), 101);
+  assert.equal(okey.pointsToOpen(s), 101);
   // after an opening of 103, 103 doesn't open
   assert.equal(
-    americano.openHand({ ...s, highestOpening: 103 }, 1, [opening]),
+    okey.openHand({ ...s, highestOpening: 103 }, 1, [opening]),
     "Open with 104+ or 5 pairs",
   );
-  s = americano.openHand(s, 1, [opening]);
+  s = okey.openHand(s, 1, [opening]);
   assert.equal(s.highestOpening, 103);
-  assert.equal(americano.pointsToOpen(s), 104);
+  assert.equal(okey.pointsToOpen(s), 104);
   // without it, 101 as ever; and the next hand starts over
-  assert.equal(americano.pointsToOpen({ ...s, rules: ONE_O_ONE }), 101);
+  assert.equal(okey.pointsToOpen({ ...s, rules: ONE_O_ONE }), 101);
 });
 
 test("101: picked tiles that fit no set or run stay on the rack", () => {
   // the red 3 right after red 10-11-okey, and a black 2 on its own
   let s = start(2, [...seri, "red3-0"]);
-  s = americano.openHand(s, 1, [[...opening, "red3-0", "black2-0"]]);
+  s = okey.openHand(s, 1, [[...opening, "red3-0", "black2-0"]]);
   assert.isTrue(s.opened[1]);
   assert.deepEqual(
     s.melds.map((m) => ids(m.tiles)),
@@ -201,18 +201,18 @@ test("101: picked tiles that fit no set or run stay on the rack", () => {
   assertAllTiles(s);
   // the 13s and yellows alone are 70
   assert.equal(
-    americano.openHand(start(), 1, [[...kut, ...yellow, "black2-0"]]),
+    okey.openHand(start(), 1, [[...kut, ...yellow, "black2-0"]]),
     "Open with 101+ or 5 pairs",
   );
   // P2: six pairs out of more picked tiles, all six laid
-  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
   const sixPairs = [...fivePairs, "black6-0", "black6-1"];
-  assert.isNotOk(americano.canPeek(s));
-  s = americano.openHand(s, 2, [[...sixPairs, "blue2-0", "yellow4-0"]]);
+  assert.isNotOk(okey.canPeek(s));
+  s = okey.openHand(s, 2, [[...sixPairs, "blue2-0", "yellow4-0"]]);
   assert.isTrue(s.openedWithPairs[2]);
   // opened with pairs: everyone may look through the discards
-  assert.isOk(americano.canPeek(s));
+  assert.isOk(okey.canPeek(s));
   assert.deepEqual(
     s.melds.flatMap((m) => ids(m.tiles)).sort(),
     [...sixPairs].sort(),
@@ -222,93 +222,93 @@ test("101: picked tiles that fit no set or run stay on the rack", () => {
 });
 
 test("101: El aç with nothing picked opens the sets and runs on the rack, never pairs", () => {
-  let s = americano.openAll(start(), 1);
+  let s = okey.openAll(start(), 1);
   assert.deepEqual(
     s.melds.map((m) => ids(m.tiles)),
     [seri, kut, yellow],
   );
   assert.equal(player(s, 1).hand.filter(Boolean).length, 22 - 10);
   // P2's six pairs open only when picked
-  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  assert.equal(americano.openAll(s, 2), "Open with 101+ or 5 pairs");
+  s = okey.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  assert.equal(okey.openAll(s, 2), "Open with 101+ or 5 pairs");
 });
 
 test("101: El aç's first press picks what it would lay: the opening, then the sets and runs on the rack, never pairs", () => {
   // P1's opening, seen on P2's turn too
-  assert.sameMembers(americano.meldsToLay(start(), 1), opening);
-  let s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
-  assert.sameMembers(americano.meldsToLay(s, 1), opening);
+  assert.sameMembers(okey.meldsToLay(start(), 1), opening);
+  let s = okey.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  assert.sameMembers(okey.meldsToLay(s, 1), opening);
   // P2's six pairs aren't picked
-  assert.deepEqual(americano.meldsToLay(s, 2), []);
+  assert.deepEqual(okey.meldsToLay(s, 2), []);
   // once opened: the run as it lies, not the loose tiles
-  s = americano.openHand(start(), 1, [opening]);
+  s = okey.openHand(start(), 1, [opening]);
   s = holding(s, 1, ["red3-0", "red4-0", "red5-0", null, "black2-0"]);
-  assert.deepEqual(americano.meldsToLay(s, 1), ["red3-0", "red4-0", "red5-0"]);
+  assert.deepEqual(okey.meldsToLay(s, 1), ["red3-0", "red4-0", "red5-0"]);
   // a pairs opener lays pairs by hand
-  s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  s = americano.openHand(s, 2, [fivePairs]);
-  assert.deepEqual(americano.meldsToLay(s, 2), []);
+  s = okey.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.openHand(s, 2, [fivePairs]);
+  assert.deepEqual(okey.meldsToLay(s, 2), []);
 });
 
 test("101: open with 5 pairs; then only pairs, or adding to sets and runs", () => {
-  let s = americano.openHand(start(), 1, [opening]);
+  let s = okey.openHand(start(), 1, [opening]);
   // laying more right after opening is allowed (this just isn't a meld)
   assert.equal(
-    americano.layMelds(s, 1, [["black2-0", "black3-0", "yellow1-0"]]),
+    okey.layMelds(s, 1, [["black2-0", "black3-0", "yellow1-0"]]),
     "That's not a küt or a seri",
   );
-  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
 
   assert.equal(
-    americano.openHand(s, 2, [fivePairs.slice(0, 8)]),
+    okey.openHand(s, 2, [fivePairs.slice(0, 8)]),
     "Open with 101+ or 5 pairs",
   );
-  s = americano.openHand(s, 2, [fivePairs]);
+  s = okey.openHand(s, 2, [fivePairs]);
   assert.isTrue(s.openedWithPairs[2]);
   assert.equal(s.melds.length, 3 + 5);
   // the same turn: more pairs, and extending P1's run, but no new runs
   assert.match(
-    americano.layMelds(s, 2, [["blue2-0", "blue3-0", "blue4-0"]]),
+    okey.layMelds(s, 2, [["blue2-0", "blue3-0", "blue4-0"]]),
     /You opened with pairs/,
   );
-  s = americano.layMelds(s, 2, [["black6-0", "black6-1"]]);
+  s = okey.layMelds(s, 2, [["black6-0", "black6-1"]]);
   assert.equal(s.melds.at(-1).type, "pair");
-  s = americano.addToMeld(s, 2, "yellow4-0", 2);
+  s = okey.addToMeld(s, 2, "yellow4-0", 2);
   assert.deepEqual(ids(s.melds[2].tiles), ["yellow4-0", ...yellow]);
   // a pair doesn't grow
   assert.equal(s.melds[3].type, "pair");
   assert.equal(
-    americano.addToMeld(s, 2, "black11-0", 3),
+    okey.addToMeld(s, 2, "black11-0", 3),
     "That tile doesn't fit there",
   );
   assertAllTiles(s);
 });
 
 test("101: no out-of-turn takes", () => {
-  let s = americano.openHand(start(3), 1, [opening]);
-  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
-  assert.isNull(americano.upForClaim(s));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  let s = okey.openHand(start(3), 1, [opening]);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
+  assert.isNull(okey.upForClaim(s));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
   assert.isNull(s.offer);
-  assert.equal(americano.claimDiscard(s, 3, 25), "Nothing to take right now");
+  assert.equal(okey.claimDiscard(s, 3, 25), "Nothing to take right now");
 });
 
 test("101: a discard taken must go into a meld that turn, or back on its pile", () => {
   let s = start();
-  s = americano.discardTile(s, 1, tileIn(s, 1, "black9-0"));
+  s = okey.discardTile(s, 1, tileIn(s, 1, "black9-0"));
   const taken = player(s, 1).discardPile.at(-1);
-  s = americano.drawTile(s, 2, taken, 25);
+  s = okey.drawTile(s, 2, taken, 25);
   assert.equal(
-    americano.discardTile(s, 2, tileIn(s, 2, "yellow12-0")),
+    okey.discardTile(s, 2, tileIn(s, 2, "yellow12-0")),
     "Use the tile you took from the discard, or put it back",
   );
 
   assert.deepEqual(s.turnMoves, [{ by: 2, move: "took", tiles: ["black9-0"] }]);
   // put back: P2 draws from the pile instead
-  const back = americano.returnDiscard(s, 2);
+  const back = okey.returnDiscard(s, 2);
   assert.deepEqual(back.penalties, { 2: 101 });
   assert.equal(back.message, "P2 put the tile back: +101");
   assert.deepEqual(back.turnMoves, []);
@@ -318,23 +318,19 @@ test("101: a discard taken must go into a meld that turn, or back on its pile", 
   assertAllTiles(back);
 
   // or used in the opening, here a sixth pair
-  s = americano.openHand(s, 2, [[...fivePairs, "black9-0", "black9-1"]]);
-  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow12-0"));
+  s = okey.openHand(s, 2, [[...fivePairs, "black9-0", "black9-1"]]);
+  s = okey.discardTile(s, 2, tileIn(s, 2, "yellow12-0"));
   assert.equal(s.currentPlayer, 1);
   assertAllTiles(s);
 });
 
 test("101: a turn written from before the tile went back is told from a move", () => {
   let s = start();
-  s = americano.discardTile(s, 1, tileIn(s, 1, "black9-0"));
-  const took = americano.drawTile(s, 2, player(s, 1).discardPile.at(-1), 25);
-  const back = americano.returnDiscard(took, 2);
-  const drawn = americano.drawTile(back, 2, back.drawPile.at(-1), 25);
-  const passed = americano.discardTile(
-    drawn,
-    2,
-    tileIn(drawn, 2, "yellow12-0"),
-  );
+  s = okey.discardTile(s, 1, tileIn(s, 1, "black9-0"));
+  const took = okey.drawTile(s, 2, player(s, 1).discardPile.at(-1), 25);
+  const back = okey.returnDiscard(took, 2);
+  const drawn = okey.drawTile(back, 2, back.drawPile.at(-1), 25);
+  const passed = okey.discardTile(drawn, 2, tileIn(drawn, 2, "yellow12-0"));
   // the hand going on
   for (const [a, b] of [
     [s, took],
@@ -347,21 +343,18 @@ test("101: a turn written from before the tile went back is told from a move", (
   // an older state written over it
   assert.equal(wentBack(back, took), "penalties");
   assert.equal(wentBack(passed, s), "discards");
-  const opened = americano.openHand(start(), 1, [opening]);
+  const opened = okey.openHand(start(), 1, [opening]);
   assert.equal(wentBack(opened, start()), "melds");
   assert.equal(wentBack({ ...s, gameState: "roundEnd" }, s), "gameState");
 });
 
 test("101: a table okey goes to whoever holds its tile, once they've opened", () => {
-  let s = americano.openHand(start(), 1, [opening]);
-  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  let s = okey.openHand(start(), 1, [opening]);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
   // red12 is what the okey in red 10-11-okey stands for
-  assert.equal(
-    americano.playOnMeld(s, 2, "red12-0", 0),
-    "Open your hand first",
-  );
-  s = americano.playOnMeld(
+  assert.equal(okey.playOnMeld(s, 2, "red12-0", 0), "Open your hand first");
+  s = okey.playOnMeld(
     { ...s, opened: { ...s.opened, 2: true } },
     2,
     "red12-0",
@@ -394,95 +387,88 @@ test("101: open all but one tile at once and finish, under 101 too", () => {
     ]);
   // a tile more, short of 101, doesn't open
   assert.equal(
-    americano.openHand(one(["blue10-1"]), 1, [melds]),
+    okey.openHand(one(["blue10-1"]), 1, [melds]),
     "Open with 101+ or 5 pairs",
   );
-  let s = americano.openHand(one([]), 1, [melds]);
+  let s = okey.openHand(one([]), 1, [melds]);
   assert.isTrue(s.opened[1]);
-  s = americano.finishGame(s, 1, tileIn(s, 1, "blue9-1"));
+  s = okey.finishGame(s, 1, tileIn(s, 1, "blue9-1"));
   assert.equal(s.scores[1][0], -101);
   // doubling (the PDF's): nobody else had opened, so that's twice over
   s = holding(start(), 1, [...melds, null, "blue9-1"]);
-  s = americano.openHand(s, 1, [melds]);
-  s = americano.finishGame(s, 1, tileIn(s, 1, "blue9-1"));
+  s = okey.openHand(s, 1, [melds]);
+  s = okey.finishGame(s, 1, tileIn(s, 1, "blue9-1"));
   assert.equal(s.scores[1][0], -202);
   assert.equal(s.scores[2][0], 404);
 });
 
 test("101: a pairs opener adds 2 tiles a turn; once someone opens with pairs, anyone lays pairs", () => {
-  let s = americano.openHand(start(), 1, [opening]);
-  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  s = americano.openHand(s, 2, [fivePairs]);
+  let s = okey.openHand(start(), 1, [opening]);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.openHand(s, 2, [fivePairs]);
   // red 4, 3 and 2 for a run of red 5-6-7
   const run = ["red5-1", "red6-1", "red7-1"].map((x) => lying(x, "table"));
   s = { ...s, melds: [...s.melds, { type: "seri", owner: 1, tiles: run }] };
   s = holding(s, 2, ["red4-1", "red3-1", "red2-1", "blue2-0", "blue3-0"]);
   const at = s.melds.length - 1;
-  s = americano.addToMeld(s, 2, "red4-1", at);
-  s = americano.addToMeld(s, 2, "red3-1", at);
+  s = okey.addToMeld(s, 2, "red4-1", at);
+  s = okey.addToMeld(s, 2, "red3-1", at);
   assert.equal(
-    americano.addToMeld(s, 2, "red2-1", at),
+    okey.addToMeld(s, 2, "red2-1", at),
     "You opened with pairs: 2 tiles a turn",
   );
   // P1 lays a pair now that P2 opened with them
-  s = americano.discardTile(s, 2, tileIn(s, 2, "blue2-0"));
-  s = americano.drawTile(s, 1, s.drawPile.at(-1), 25);
+  s = okey.discardTile(s, 2, tileIn(s, 2, "blue2-0"));
+  s = okey.drawTile(s, 1, s.drawPile.at(-1), 25);
   s = holding(s, 1, ["red2-0", "red2-1", "black3-0"]);
-  s = americano.layMelds(s, 1, [["red2-0", "red2-1"]]);
+  s = okey.layMelds(s, 1, [["red2-0", "red2-1"]]);
   assert.equal(s.melds.at(-1).type, "pair");
 });
 
 test("101: a discard is caught until the next one, and never by a partner", () => {
   const partners = { ...ONE_O_ONE, partners: true };
   assert.equal(
-    americano.startGame(seated(3), undefined, partners).message,
+    okey.startGame(seated(3), undefined, partners).message,
     "Partners take four players",
   );
-  let s = americano.openHand(start(4, seri, partners), 1, [opening]);
-  s = americano.discardTile(s, 1, tileIn(s, 1, "black2-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
+  let s = okey.openHand(start(4, seri, partners), 1, [opening]);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "black2-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
   // yellow 4 fits P1's yellow 5-6-7; P4 is P2's partner
-  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow4-0"));
-  assert.equal(americano.catchDiscard(s, 4), "That's your partner's tile");
-  assert.deepEqual(player(americano.catchDiscard(s, 1), 1).caught, [
-    "yellow4-0",
-  ]);
+  s = okey.discardTile(s, 2, tileIn(s, 2, "yellow4-0"));
+  assert.equal(okey.catchDiscard(s, 4), "That's your partner's tile");
+  assert.deepEqual(player(okey.catchDiscard(s, 1), 1).caught, ["yellow4-0"]);
   // P3 drawing doesn't end it, as in Americano (catchUntilDraw would)
-  s = americano.drawTile(s, 3, s.drawPile.at(-1), 25);
-  assert.deepEqual(player(americano.catchDiscard(s, 1), 1).caught, [
-    "yellow4-0",
-  ]);
+  s = okey.drawTile(s, 3, s.drawPile.at(-1), 25);
+  assert.deepEqual(player(okey.catchDiscard(s, 1), 1).caught, ["yellow4-0"]);
   assert.equal(
-    americano.catchDiscard(
-      { ...s, rules: { ...s.rules, catchUntilDraw: true } },
-      1,
-    ),
+    okey.catchDiscard({ ...s, rules: { ...s.rules, catchUntilDraw: true } }, 1),
     "Too late to catch it",
   );
 });
 
 test("101: a caught tile can still be taken, its penalty staying with the thrower; a thrown okey isn't caught again", () => {
-  let s = americano.openHand(start(3), 1, [opening]);
-  s = americano.discardTile(s, 1, tileIn(s, 1, "black2-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  s = americano.discardTile(s, 2, tileIn(s, 2, "yellow4-0"));
-  s = americano.catchDiscard(s, 1);
-  assert.equal(americano.penaltiesSoFar(s, 2), 101);
-  const taken = americano.drawTile(s, 3, player(s, 2).discardPile.at(-1), 25);
+  let s = okey.openHand(start(3), 1, [opening]);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "black2-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.discardTile(s, 2, tileIn(s, 2, "yellow4-0"));
+  s = okey.catchDiscard(s, 1);
+  assert.equal(okey.penaltiesSoFar(s, 2), 101);
+  const taken = okey.drawTile(s, 3, player(s, 2).discardPile.at(-1), 25);
   assert.isOk(tileIn(taken, 3, "yellow4-0"));
-  assert.equal(americano.penaltiesSoFar(taken, 2), 101);
+  assert.equal(okey.penaltiesSoFar(taken, 2), 101);
   // put back, it's on the pile again: still 101, and 101 for putting it back
-  const back = americano.returnDiscard(taken, 3);
-  assert.equal(americano.penaltiesSoFar(back, 2), 101);
-  assert.equal(americano.penaltiesSoFar(back, 3), 101);
+  const back = okey.returnDiscard(taken, 3);
+  assert.equal(okey.penaltiesSoFar(back, 2), 101);
+  assert.equal(okey.penaltiesSoFar(back, 3), 101);
   // the okey thrown: 101 once
-  s = americano.drawTile(s, 3, s.drawPile.at(-1), 25);
+  s = okey.drawTile(s, 3, s.drawPile.at(-1), 25);
   s = holding(s, 3, ["blue1-1", "red3-0"]);
-  s = americano.discardTile(s, 3, tileIn(s, 3, "blue1-1"));
-  assert.equal(americano.penaltiesSoFar(s, 3), 101);
+  s = okey.discardTile(s, 3, tileIn(s, 3, "blue1-1"));
+  assert.equal(okey.penaltiesSoFar(s, 3), 101);
   assert.equal(
-    americano.catchDiscard(s, 1),
+    okey.catchDiscard(s, 1),
     "The okey's penalty is already written",
   );
 });
@@ -496,7 +482,7 @@ function finished({
   p4 = ["red9-0"],
   round = 1,
 } = {}) {
-  let s = americano.startGame(
+  let s = okey.startGame(
     seated(4),
     { okeyTile: "blue13-1" }, // the okey is blue1
     rules,
@@ -518,7 +504,7 @@ function finished({
     penalties: { 2: 101 },
     players: s.players.map((p) => ({ ...p, hand: hands[p.id] })),
   };
-  return americano.finishGame(s, 1, player(s, 1).hand[0]);
+  return okey.finishGame(s, 1, player(s, 1).hand[0]);
 }
 const scoresOf = (s) =>
   Object.fromEntries(s.players.map((p) => [p.id, s.scores[p.id].at(-1)]));
@@ -564,40 +550,40 @@ test("101: scoring a hand, as it is or doubling, alone or in pairs", () => {
 });
 
 test("101: discarding the okey costs 101", () => {
-  let s = americano.openHand(start(), 1, [opening]);
-  s = americano.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
-  const okey = { ...game.tiles.find((x) => x.id === "blue1-1") };
+  let s = okey.openHand(start(), 1, [opening]);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "yellow11-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  const wild = { ...game.tiles.find((x) => x.id === "blue1-1") };
   s = {
     ...s,
-    drawPile: s.drawPile.filter((x) => x.id !== okey.id),
+    drawPile: s.drawPile.filter((x) => x.id !== wild.id),
     players: s.players.map((p) =>
       p.id === 2
         ? {
             ...p,
             hand: p.hand.map((x, i) =>
-              i === 24 ? { ...okey, source: "hand-2", hidden: false } : x,
+              i === 24 ? { ...wild, source: "hand-2", hidden: false } : x,
             ),
           }
         : p,
     ),
   };
-  s = americano.discardTile(s, 2, tileIn(s, 2, "blue1-1"));
+  s = okey.discardTile(s, 2, tileIn(s, 2, "blue1-1"));
   assert.deepEqual(s.penalties, { 2: 101 });
 });
 
 test("101: a pile that runs out ends the hand as usual; it's dealt again only if everyone opened with pairs", () => {
   // P2 threw the okey earlier in the hand
   let s = {
-    ...americano.startGame(seated(3), undefined, ONE_O_ONE),
+    ...okey.startGame(seated(3), undefined, ONE_O_ONE),
     penalties: { 2: 101 },
   };
   while (s.gameState === "play") {
     const p = s.currentPlayer;
     if (!s.drawn) {
-      s = americano.drawTile(s, p, s.drawPile.at(-1), 25);
+      s = okey.drawTile(s, p, s.drawPile.at(-1), 25);
     }
-    s = americano.discardTile(s, p, player(s, p).hand.find(Boolean));
+    s = okey.discardTile(s, p, player(s, p).hand.find(Boolean));
   }
   assert.equal(s.gameState, "roundEnd");
   assert.isFalse(s.replay);
@@ -610,7 +596,7 @@ test("101: a pile that runs out ends the hand as usual; it's dealt again only if
       202 + 101 * okeys(p) + (s.penalties[p.id] ?? 0),
     );
   }
-  assert.equal(americano.nextRound(s).round, 2);
+  assert.equal(okey.nextRound(s).round, 2);
 
   // everyone opened with pairs: nobody could finish
   let p = start();
@@ -620,13 +606,13 @@ test("101: a pile that runs out ends the hand as usual; it's dealt again only if
     openedWithPairs: { 1: true, 2: true },
     drawPile: [],
   };
-  p = americano.discardTile(p, 1, tileIn(p, 1, "black2-0"));
+  p = okey.discardTile(p, 1, tileIn(p, 1, "black2-0"));
   assert.isTrue(p.replay);
   assert.equal(p.message, "Round 1: no tiles left, dealt again");
 });
 
 test("101: a game set up mid-hand starts clean", () => {
-  const s = americano.setUp(
+  const s = okey.setUp(
     {
       ...start(),
       openedWithPairs: { 1: true },

@@ -10,6 +10,33 @@ import {
 } from "./melds";
 import { AMERICANO } from "./rulesets";
 
+// The one module the table, the bots and scripts play by: these are
+// game.js's own (a hand's moves that need nothing more, and the table's
+// facts); its draw, discard and finish are only whole as wrapped here.
+export {
+  allSeats,
+  decodeSave,
+  encodeSave,
+  ended,
+  initialState,
+  moveTiles,
+  partner,
+  pileOut,
+  placeTiles,
+  previous,
+  restore,
+  rowOf,
+  seat,
+  seatAt,
+  setRow,
+  setsOf,
+  shuffleDiscards,
+  shuffledPile,
+  tableSeats,
+  tiles,
+  tileSet,
+} from "./game";
+
 // Every game, played in rounds, each opening (el açma) its own way: with
 // the melds it asks for (Americano's), with points or pairs (101's), or
 // not at all, finished from the hand (Elden, classic). Same shape as
@@ -22,6 +49,19 @@ export const roundOf = (state) => state.rules.rounds[state.round - 1];
 // a round finished from the hand: nothing is laid down
 export const isElden = (state) =>
   !roundOf(state).melds && !roundOf(state).opening;
+// A tile on your own rack turned face down, or up again, while the round is
+// played: once it's over, the hands show as they ended
+export const canFlip = (state, player, tile) =>
+  state.gameState === "play" && tile.source === `hand-${player}`;
+export function flipTile(state, player, tileId) {
+  const tile = seat(state, player)?.hand.find((t) => t?.id === tileId);
+  if (!tile || !canFlip(state, player, tile)) return;
+  const s = cloneDeep(state);
+  const flipped = seat(s, player).hand.find((t) => t?.id === tileId);
+  flipped.hidden = !flipped.hidden;
+  return s;
+}
+
 // Whether `player` may lay tiles down now: on their turn, once drawn, in a
 // round that lays (not Elden)
 export const canLay = (state, player) =>

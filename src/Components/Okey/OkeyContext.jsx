@@ -1,12 +1,11 @@
 import React, { createContext, useMemo, useCallback } from "react";
-import _, { cloneDeep } from "lodash";
+import _ from "lodash";
 import { useAwareness, useDoc, useMap, useWebRtc } from "../../vendor/y-react";
 import { toast } from "react-hot-toast";
 import useSound from "use-sound";
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "../../hooks/useStore";
-import * as game from "./game";
-import * as americano from "./americano";
+import * as okey from "./okey";
 import * as bots from "./bot";
 import { readState, replaceState, wentBack, writeState } from "./sync";
 import { t } from "../../i18n";
@@ -94,7 +93,7 @@ export function OkeyProvider({ children }) {
   const map = useDoc().getMap("okey-state");
   const shared = readState(map);
   // as this build plays it, whichever build wrote it
-  const okeyState = shared ?? game.initialState;
+  const okeyState = shared ?? okey.initialState;
   // an easter egg: anyone's right click turns a fake okey upside down, or
   // back, for the whole room and every game in it (apart from the game state)
   const spun = map.get("spun") ?? NONE_SPUN;
@@ -182,7 +181,7 @@ export function OkeyProvider({ children }) {
   );
 
   // the lobby's pile is already its settings' sets (setSetup)
-  const sets = game.setsOf(
+  const sets = okey.setsOf(
     okeyState.gameState === "start" ? { rules: okeyState.setup } : okeyState,
   );
   const duplicates = useMemo(
@@ -273,12 +272,12 @@ export function OkeyProvider({ children }) {
     [okeyState, me, setOkeyState],
   );
   // when the turn last reached this device: the others' time to take the
-  // discard runs from then (americano.drawTile), as the turn timer does
+  // discard runs from then (okey.drawTile), as the turn timer does
   const turnStart = React.useRef(Infinity);
   React.useEffect(() => {
     if (okeyState.currentPlayer === me) turnStart.current = Date.now();
   }, [okeyState.currentPlayer, okeyState.deal, me]);
-  // A move made while the rules say wait (americano.waitBefore: the
+  // A move made while the rules say wait (okey.waitBefore: the
   // others' time to take or catch the discard), local only, not shared: a
   // draw waits as a ghost in the slot it was dropped on, a discard on my
   // pile, out of my rack, and is made when the wait is up. Dragging a held
@@ -291,11 +290,11 @@ export function OkeyProvider({ children }) {
       dragged.current = tile.id;
       const [now, at] = [Date.now(), turnStart.current];
       const wait =
-        player === me && americano.waitBefore(okeyState, player, tile, now, at);
+        player === me && okey.waitBefore(okeyState, player, tile, now, at);
       const args = [tile, toIndex, now, at];
-      if (!wait) return act(americano.drawTile, player, ...args);
+      if (!wait) return act(okey.drawTile, player, ...args);
       // anything else that would stop it is said now, not when it's drawn
-      const next = americano.drawTile(okeyState, player, ...args);
+      const next = okey.drawTile(okeyState, player, ...args);
       if (typeof next === "string") toast(t(next));
       if (!next || typeof next === "string") return false;
       setHold({ tile, toIndex });
@@ -352,7 +351,7 @@ export function OkeyProvider({ children }) {
     (player, tile, toIndex) => {
       dragged.current = tile.id;
       if (tile.id === held) setHold(null);
-      return act(game.moveTiles, player, movedWith(tile), toIndex, tile.id);
+      return act(okey.moveTiles, player, movedWith(tile), toIndex, tile.id);
     },
     [act, movedWith, held],
   );
@@ -360,11 +359,11 @@ export function OkeyProvider({ children }) {
   const discardTile = useCallback(
     (player, tile) => {
       dragged.current = tile.id;
-      if (player !== me || !americano.waitBefore(okeyState, player, tile)) {
-        return act(americano.discardTile, player, tile);
+      if (player !== me || !okey.waitBefore(okeyState, player, tile)) {
+        return act(okey.discardTile, player, tile);
       }
       // anything else that would stop it is said now, not when it's thrown
-      const next = americano.discardTile(okeyState, player, tile, Infinity);
+      const next = okey.discardTile(okeyState, player, tile, Infinity);
       if (typeof next === "string") toast(t(next));
       if (!next || typeof next === "string") return false;
       setHold({ tile });
@@ -393,15 +392,15 @@ export function OkeyProvider({ children }) {
     const move = () => {
       const now = Date.now();
       const at = turnStart.current;
-      const wait = americano.waitBefore(okeyState, me, tile, now, at);
+      const wait = okey.waitBefore(okeyState, me, tile, now, at);
       if (wait) {
         timer = setTimeout(move, wait * 1000);
         return;
       }
       setHold(null);
       dragged.current = tile.id;
-      if (discard) act(americano.discardTile, me, tile);
-      else act(americano.drawTile, me, tile, toIndex, now, at);
+      if (discard) act(okey.discardTile, me, tile);
+      else act(okey.drawTile, me, tile, toIndex, now, at);
     };
     move();
     return () => clearTimeout(timer);
@@ -411,7 +410,7 @@ export function OkeyProvider({ children }) {
     (tile) => {
       if (ghost(tile)) return false;
       dragged.current = tile.id;
-      return act(americano.finishGame, me, tile);
+      return act(okey.finishGame, me, tile);
     },
     [act, me],
   );
@@ -419,7 +418,7 @@ export function OkeyProvider({ children }) {
   // rules: a ruleset (rulesets.js)
   const startGame = useCallback(
     (rules) => {
-      const next = americano.startGame(okeyState, undefined, rules);
+      const next = okey.startGame(okeyState, undefined, rules);
       // a failed start would still replace the table, seats and all
       if (next.gameState !== "play") toast(t(next.message));
       else replaceState(map, next);
@@ -430,8 +429,8 @@ export function OkeyProvider({ children }) {
   const toggleSelected = useCallback(
     (tile) => {
       const group = picking
-        ? americano
-            .groupsOf(myHand(me), game.rowOf(okeyState, me))
+        ? okey
+            .groupsOf(myHand(me), okey.rowOf(okeyState, me))
             .find((g) => g.some((t) => t.id === tile.id))
             .map((t) => t.id)
         : [tile.id];
@@ -463,9 +462,7 @@ export function OkeyProvider({ children }) {
   // (meldsToLay) unless you've picked tiles yourself
   const startPicking = useCallback(() => {
     setPicking(true);
-    setSelected((ids) =>
-      ids.length ? ids : americano.meldsToLay(okeyState, me),
-    );
+    setSelected((ids) => (ids.length ? ids : okey.meldsToLay(okeyState, me)));
   }, [okeyState, me]);
   const laid = useCallback((ok) => {
     if (!ok) return;
@@ -473,21 +470,21 @@ export function OkeyProvider({ children }) {
     setPicking(false);
   }, []);
   const openHand = useCallback(
-    () => laid(act(americano.openHand, me, picked())),
+    () => laid(act(okey.openHand, me, picked())),
     [act, me, picked, laid],
   );
   const openAll = useCallback(
-    () => laid(act(americano.openAll, me)),
+    () => laid(act(okey.openAll, me)),
     [act, me, laid],
   );
   const layMelds = useCallback(
-    () => laid(act(americano.layMelds, me, picked())),
+    () => laid(act(okey.layMelds, me, picked())),
     [act, me, picked, laid],
   );
   // the pick dropped on a meld: added to it, or laid down
   const addPick = useCallback(
     (meldIndex, atEnd) =>
-      laid(act(americano.addPick, me, picked(), meldIndex, atEnd)),
+      laid(act(okey.addPick, me, picked(), meldIndex, atEnd)),
     [act, me, picked, laid],
   );
 
@@ -506,7 +503,7 @@ export function OkeyProvider({ children }) {
   // as this render has the table and the sound level
   const hear = React.useRef();
   hear.current = (k) =>
-    playKnock(panOf(k, game.tableSeats(okeyState), me), volume);
+    playKnock(panOf(k, okey.tableSeats(okeyState), me), volume);
   React.useEffect(() => {
     const { awareness } = provider;
     const heard = new Map(
@@ -527,34 +524,15 @@ export function OkeyProvider({ children }) {
 
   const playOnMeld = useCallback(
     (tile, meldIndex, atEnd) =>
-      !ghost(tile) && act(americano.playOnMeld, me, tile.id, meldIndex, atEnd),
+      !ghost(tile) && act(okey.playOnMeld, me, tile.id, meldIndex, atEnd),
     [act, me],
   );
-
-  // slot: where the ghost goes on my rack; null takes the claim back
-  const claimDiscard = useCallback(
-    (slot = null) => act(americano.claimDiscard, me, slot),
-    [act, me],
-  );
-
-  const catchDiscard = useCallback(
-    () => act(americano.catchDiscard, me),
-    [act, me],
-  );
-
-  // the discard I took goes back on its pile
-  const returnDiscard = useCallback(
-    () => act(americano.returnDiscard, me),
-    [act, me],
-  );
-  // your own rack rows (null: the table's), from the Rules
-  const setRow = useCallback((slots) => act(game.setRow, me, slots), [act, me]);
 
   // a tile I added to a meld this turn, back on my rack
   const takeBack = useCallback(
     (tile, toIndex) => {
       dragged.current = tile.id;
-      return act(americano.takeBack, me, tile.id, toIndex);
+      return act(okey.takeBack, me, tile.id, toIndex);
     },
     [act, me],
   );
@@ -562,42 +540,34 @@ export function OkeyProvider({ children }) {
   // tiles won out of turn wait in my inbox; move them onto my rack
   const inboxSize = okeyState.players.find((p) => p.id === me)?.inbox?.length;
   React.useEffect(() => {
-    if (inboxSize) act(americano.collectInbox, me);
+    if (inboxSize) act(okey.collectInbox, me);
   }, [inboxSize, act, me]);
 
   const nextRound = useCallback(() => {
-    const next = americano.nextRound(okeyState);
+    const next = okey.nextRound(okeyState);
     if (typeof next === "string") toast(t(next));
     else if (next) replaceState(map, next);
   }, [map, okeyState]);
   // someone stands or sits mid-round: the round void, dealt again once the
   // seats are right; the whole table changes, like the next round's deal
   const redealRound = useCallback(() => {
-    const next = americano.redealRound(okeyState);
+    const next = okey.redealRound(okeyState);
     if (typeof next === "string") toast(t(next));
     else replaceState(map, next);
   }, [map, okeyState]);
-
-  // the pile ran out (reshuffle): a new one from the discards, or the end
-  // of the round
-  const shuffleDiscards = useCallback(
-    () => act(game.shuffleDiscards, me),
-    [act, me],
-  );
-  const endGame = useCallback(() => act(americano.endPile, me), [act, me]);
 
   // a saved or set-up game replaces the table whole
   const loadGame = useCallback((next) => replaceState(map, next), [map]);
 
   const resetGame = useCallback(() => {
-    replaceState(map, game.initialState);
+    replaceState(map, okey.initialState);
   }, [map]);
 
   // the next game set up as this one was played
   const newGame = useCallback(() => {
     replaceState(map, {
-      ...game.initialState,
-      players: game.allSeats(okeyState.players).map((p) => ({
+      ...okey.initialState,
+      players: okey.allSeats(okeyState.players).map((p) => ({
         ...p,
         discardPile: [],
         hand: [],
@@ -610,9 +580,9 @@ export function OkeyProvider({ children }) {
   // of as many sets as they play
   const setSetup = useCallback(
     (setup) => {
-      const sets = game.setsOf({ rules: setup });
-      const pile = okeyState.drawPile.length !== game.tileSet(sets).length && {
-        drawPile: game.shuffledPile(sets),
+      const sets = okey.setsOf({ rules: setup });
+      const pile = okeyState.drawPile.length !== okey.tileSet(sets).length && {
+        drawPile: okey.shuffledPile(sets),
       };
       setOkeyState({ ...okeyState, setup, ...pile });
     },
@@ -653,14 +623,8 @@ export function OkeyProvider({ children }) {
 
   const sit = useCallback(
     (player) =>
-      currentUser &&
-      write(americano.sit(okeyState, player, currentUser, localID)),
+      currentUser && write(okey.sit(okeyState, player, currentUser, localID)),
     [okeyState, currentUser, localID, write],
-  );
-
-  const isAlreadySitting = useMemo(
-    () => okeyState.players.find((p) => p?.user?.id === currentUser?.id),
-    [okeyState.players, currentUser?.id],
   );
 
   // back after a reload (a new version, a phone that slept): sit down again
@@ -670,7 +634,7 @@ export function OkeyProvider({ children }) {
   // to the first)
   React.useEffect(() => {
     if (!currentUser) return;
-    const seat = americano.seatToSitBack(okeyState, currentUser, states);
+    const seat = okey.seatToSitBack(okeyState, currentUser, states);
     if (seat) sit(seat);
   }, [currentUser, okeyState, states, sit]);
 
@@ -692,13 +656,13 @@ export function OkeyProvider({ children }) {
     }
     if (me || out.current || !currentUser || stored("watch")) return;
     if (!shared) return;
-    const empty = americano.seatToJoin(okeyState, currentUser);
+    const empty = okey.seatToJoin(okeyState, currentUser);
     if (empty) sit(empty);
   }, [me, table, okeyState, currentUser, shared, sit]);
 
   // a new name (the sidebar) goes on your seat, and nothing else changes
   React.useEffect(() => {
-    const next = currentUser && americano.rename(okeyState, currentUser);
+    const next = currentUser && okey.rename(okeyState, currentUser);
     if (next) setOkeyState(next);
   }, [currentUser, okeyState, setOkeyState]);
 
@@ -736,27 +700,22 @@ export function OkeyProvider({ children }) {
   // next deal unless someone does, unlike a phone that slept
   const stand = useCallback(
     (player) => {
-      const next = americano.standUp(okeyState, player);
+      const next = okey.standUp(okeyState, player);
       if (next) setOkeyState(next);
     },
     [okeyState, setOkeyState],
   );
-  // the seat out of the game (americano.freeSeat); mid-round the whole table
+  // the seat out of the game (okey.freeSeat); mid-round the whole table
   // changes, as at a deal, so a move racing it can't pass the turn to the
   // seat that's gone
   const freeSeat = useCallback(
-    (player) => write(americano.freeSeat(okeyState, player)),
+    (player) => write(okey.freeSeat(okeyState, player)),
     [okeyState, write],
   );
 
-  // seats whose page has gone: away, or a bot played on (americano.markGone)
+  // seats whose page has gone: away, or a bot played on (okey.markGone)
   React.useEffect(() => {
-    const next = americano.markGone(
-      okeyState,
-      states,
-      localID,
-      currentUser?.id,
-    );
+    const next = okey.markGone(okeyState, states, localID, currentUser?.id);
     if (next) setOkeyState(next);
   }, [states, localID, okeyState, currentUser?.id, setOkeyState]);
 
@@ -774,7 +733,7 @@ export function OkeyProvider({ children }) {
     for (const p of okeyState.players) {
       if (!p.user?.bot || p.userKey !== localID) continue;
       const next = p.inbox?.length
-        ? americano.collectInbox(okeyState, p.id)
+        ? okey.collectInbox(okeyState, p.id)
         : bots.claim(okeyState, p.id) || bots.catchTile(okeyState, p.id);
       if (next) {
         setOkeyState(next);
@@ -797,7 +756,7 @@ export function OkeyProvider({ children }) {
     if (botTurn.current.turn !== turn) {
       botTurn.current = { turn, at: Date.now() };
     }
-    const wait = americano.catchWait(
+    const wait = okey.catchWait(
       okeyState,
       p.id,
       false,
@@ -814,23 +773,9 @@ export function OkeyProvider({ children }) {
     return () => clearTimeout(timer);
   }, [okeyState, localID, pace, setOkeyState]);
 
-  const toggleHidden = useCallback(
-    (tile) => {
-      const newState = cloneDeep(okeyState);
-      for (const player of newState.players) {
-        if (!player.hand) continue;
-        const foundTile = player.hand.find((h) => h?.id === tile.id);
-        if (foundTile) foundTile.hidden = !foundTile.hidden;
-      }
-      setOkeyState({
-        ...newState,
-      });
-    },
-    [okeyState, setOkeyState],
-  );
-
   const contextValue = useMemo(
     () => ({
+      act,
       okeyState,
       nextDrawTile,
       isMyTurn,
@@ -848,13 +793,11 @@ export function OkeyProvider({ children }) {
       stand,
       freeSeat,
       seatBot,
-      isAlreadySitting,
       resetGame,
       newGame,
       loadGame,
       me,
       currentUser,
-      toggleHidden,
       spun,
       spin,
       knock,
@@ -871,21 +814,16 @@ export function OkeyProvider({ children }) {
       layMelds,
       addPick,
       playOnMeld,
-      claimDiscard,
-      catchDiscard,
-      returnDiscard,
-      setRow,
       takeBack,
       nextRound,
       redealRound,
-      shuffleDiscards,
-      endGame,
       dragged,
       newVersion,
       volume,
       setVolume,
     }),
     [
+      act,
       okeyState,
       nextDrawTile,
       isMyTurn,
@@ -903,13 +841,11 @@ export function OkeyProvider({ children }) {
       stand,
       freeSeat,
       seatBot,
-      isAlreadySitting,
       resetGame,
       newGame,
       loadGame,
       me,
       currentUser,
-      toggleHidden,
       spun,
       spin,
       knock,
@@ -926,15 +862,9 @@ export function OkeyProvider({ children }) {
       layMelds,
       addPick,
       playOnMeld,
-      claimDiscard,
-      catchDiscard,
-      returnDiscard,
-      setRow,
       takeBack,
       nextRound,
       redealRound,
-      shuffleDiscards,
-      endGame,
       newVersion,
       volume,
     ],

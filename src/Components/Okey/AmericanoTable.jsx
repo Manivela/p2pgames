@@ -10,8 +10,9 @@ import {
   penaltiesSoFar,
   playOnMeld as onMeld,
   upForClaim,
-} from "./americano";
-import { allSeats, partner } from "./game";
+  allSeats,
+  partner,
+} from "./okey";
 import { colorOf, isOkey, okeyStandsFor, rankOf } from "./melds";
 import { colorMap, seatColors, symbols } from "./constants";
 import Tile, { TileFace, lastTurn, markOf } from "./Tile";
@@ -376,7 +377,7 @@ export function Scores() {
     team.some((p) => scores?.[p.id])
       ? sum(team.map((p) => sum(scores?.[p.id] ?? [])))
       : null;
-  // the lowest total leads (americano.js's winner), unless all are level
+  // the lowest total leads (okey.js's winner), unless all are level
   const totals = columns.map(total).filter((v) => v !== null);
   const lead = totals.some((v) => v !== totals[0]) && Math.min(...totals);
   return (

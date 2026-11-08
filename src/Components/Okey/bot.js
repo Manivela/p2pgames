@@ -1,6 +1,5 @@
 import { cloneDeep, maxBy, minBy, sortBy, sum } from "lodash";
-import * as game from "./game";
-import * as americano from "./americano";
+import * as okey from "./okey";
 import { colorOf, isOkey, rankOf } from "./melds";
 import { colorMap } from "./constants";
 
@@ -33,13 +32,13 @@ const slips = (state, mistakes, ...key) =>
 // of one who's gone (away), whose player sits back down when they're back;
 // `runner` is the page playing it
 export function seatBot(state, player, runner) {
-  if (game.seat(state, player)?.user) return;
+  if (okey.seat(state, player)?.user) return;
   const bot = {
     id: `bot-${player}-${runner}`,
     name: `🤖 Bot ${player}`,
     bot: true,
   };
-  return americano.sit(state, player, bot, runner);
+  return okey.sit(state, player, bot, runner);
 }
 
 const keyOf = (t, ind) => `${colorOf(t, ind)}|${rankOf(t, ind)}`;
@@ -179,7 +178,7 @@ export function bestMelds(tiles, ind, wrap, by = "tiles") {
   return { melds, rest: pool, covered: found.covered, points: found.points };
 }
 
-const hand = (state, player) => game.seat(state, player).hand.filter(Boolean);
+const hand = (state, player) => okey.seat(state, player).hand.filter(Boolean);
 const wrap = (state) => state.rules.wrapRuns;
 const ok = (s) => (s && typeof s !== "string" ? s : null);
 
@@ -187,7 +186,7 @@ const ok = (s) => (s && typeof s !== "string" ? s : null);
 // end, then the rest: the rules that read the rack as it lies (101's
 // opening, a finish from the hand) see the melds. Null if they don't fit.
 function arrange(state, player, melds, rest) {
-  const row = game.rowOf(state, player);
+  const row = okey.rowOf(state, player);
   const slots = Array(2 * row).fill(null);
   let i = 0;
   for (const { tiles } of melds) {
@@ -204,7 +203,7 @@ function arrange(state, player, melds, rest) {
     slots[at] = t;
   }
   const s = cloneDeep(state);
-  game.seat(s, player).hand = slots;
+  okey.seat(s, player).hand = slots;
   return s;
 }
 
@@ -256,7 +255,7 @@ function live(t, tiles, state, left) {
 // a round opened with pairs (Americano's 4 çift) this bot hasn't opened:
 // twins are what it keeps
 const pairing = (state, player) =>
-  americano.pairRound(state) && !state.opened?.[player];
+  okey.pairRound(state) && !state.opened?.[player];
 const twinned = (t, tiles, ind) =>
   tiles.some(
     (u) => u !== t && !isOkey(u, ind) && keyOf(u, ind) === keyOf(t, ind),
@@ -269,9 +268,7 @@ const twinned = (t, tiles, ind) =>
 // holds is there for all to see)
 function partnerWorth(state, player) {
   const counts =
-    americano.isElden(state) ||
-    state.opened?.[player] ||
-    state.rules.notOpenedHand;
+    okey.isElden(state) || state.opened?.[player] || state.rules.notOpenedHand;
   if (!counts) return 100;
   const fewest = Math.min(
     ...state.players
@@ -301,7 +298,7 @@ function worst(state, player, mistakes) {
   const slip = slips(state, mistakes, player, "throw");
   const least = (pool) => {
     if (slip) return sortBy(pool, score)[1] ?? pool[0];
-    const safe = pool.filter((t) => !americano.fitsTable(state, t));
+    const safe = pool.filter((t) => !okey.fitsTable(state, t));
     return minBy(safe.length ? safe : pool, score);
   };
   if (pairing(state, player)) {
@@ -344,9 +341,9 @@ function usable(state, player, tile) {
   if (state.opened?.[player]) {
     return has(bestMelds(tiles, state.okeyTile, wrap(state)));
   }
-  if (!americano.roundOf(state).opening) return false;
+  if (!okey.roundOf(state).opening) return false;
   const best = bestMelds(tiles, state.okeyTile, wrap(state), "points");
-  return best.points >= americano.pointsToOpen(state) && has(best);
+  return best.points >= okey.pointsToOpen(state) && has(best);
 }
 
 // 101: the discard just taken leaves the hand as the turn plays on (no
@@ -363,56 +360,56 @@ function uses(state, player, now) {
 }
 
 function draw(state, player, now, mistakes) {
-  const slot = Math.max(0, game.seat(state, player).hand.indexOf(null));
-  const top = game.previous(state.players, player).discardPile.at(-1);
+  const slot = Math.max(0, okey.seat(state, player).hand.indexOf(null));
+  const top = okey.previous(state.players, player).discardPile.at(-1);
   const wanted =
     top &&
     (state.rules.takeMustBeUsed
       ? usable(state, player, top)
       : gain(state, player, top) > 0);
   if (wanted && !slips(state, mistakes, player, "take")) {
-    const took = ok(americano.drawTile(state, player, top, slot, now));
+    const took = ok(okey.drawTile(state, player, top, slot, now));
     if (took && (!state.rules.takeMustBeUsed || uses(took, player, now))) {
       return took;
     }
   }
-  return americano.drawTile(state, player, state.drawPile.at(-1), slot, now);
+  return okey.drawTile(state, player, state.drawPile.at(-1), slot, now);
 }
 
-// Out of turn, the discard up for claim (americano.claimDiscard), when it
+// Out of turn, the discard up for claim (okey.claimDiscard), when it
 // makes a new meld: a take costs a tile from the pile, so one that only
 // lengthens a meld isn't worth it. Undefined when it lets it go or has
 // already claimed it.
 export function claim(state, player, mistakes = mistakesOf(state)) {
-  const offer = americano.upForClaim(state);
-  const seat = game.seat(state, player);
+  const offer = okey.upForClaim(state);
+  const seat = okey.seat(state, player);
   if (!offer || seat.claim?.id === offer.id) return;
   if (player === state.currentPlayer || player === offer.from) return;
   if ((state.takes?.[player] ?? 0) >= state.rules.maxTakes) return;
-  const tile = game.seat(state, offer.from).discardPile.at(-1);
+  const tile = okey.seat(state, offer.from).discardPile.at(-1);
   if (tile?.id !== offer.tileId || gain(state, player, tile) < 2) return;
   if (slips(state, mistakes, player, "claim", offer.id)) return;
-  return ok(americano.claimDiscard(state, player, seat.hand.indexOf(null)));
+  return ok(okey.claimDiscard(state, player, seat.hand.indexOf(null)));
 }
 
 // Out of turn too: the tile just thrown, when it fits the table (işler
-// taş), caught, its thrower paying for it (americano.catchDiscard)
+// taş), caught, its thrower paying for it (okey.catchDiscard)
 export function catchTile(state, player, mistakes = mistakesOf(state)) {
-  if (!state.discardFits || americano.cantCatch(state, player)) return;
+  if (!state.discardFits || okey.cantCatch(state, player)) return;
   const { gameId, round, discards, lastDiscard, rules } = state;
   const odds = chance(gameId, round, discards ?? 0, player, "eye", lastDiscard);
   if (!(odds < rules.botCatches / 100)) return;
   if (slips(state, mistakes, player, "catch", state.lastDiscard)) return;
-  return ok(americano.catchDiscard(state, player));
+  return ok(okey.catchDiscard(state, player));
 }
 
 function open(state, player) {
-  const { melds, opening } = americano.roundOf(state);
+  const { melds, opening } = okey.roundOf(state);
   const all = hand(state, player).map((t) => t.id);
   if (melds?.some(([type]) => type === "pair")) {
-    return americano.openHand(state, player, [all], true);
+    return okey.openHand(state, player, [all], true);
   }
-  if (melds) return americano.openAll(state, player);
+  if (melds) return okey.openAll(state, player);
   if (!opening) return;
   const best = bestMelds(
     hand(state, player),
@@ -421,26 +418,26 @@ function open(state, player) {
     "points",
   );
   // 101: the points, or as many pairs as it takes
-  if (best.points < americano.pointsToOpen(state)) {
+  if (best.points < okey.pointsToOpen(state)) {
     const ind = state.okeyTile;
     const twins = hand(state, player).filter(
       (t) => !isOkey(t, ind) && twinned(t, hand(state, player), ind),
     );
     if (twins.length / 2 < opening.pairs) return;
-    return americano.openHand(state, player, [all], true);
+    return okey.openHand(state, player, [all], true);
   }
   const s = arrange(state, player, best.melds, best.rest);
   const ids = best.melds.flatMap((m) => m.tiles.map((t) => t.id));
-  return s && americano.openHand(s, player, [ids], false);
+  return s && okey.openHand(s, player, [ids], false);
 }
 
 // Before opening, a table okey for the tile it stands for, when the okey
 // then opens the hand (an okey taken must open it or go back); once
-// opened, add() trades one as it goes (americano.playOnMeld)
+// opened, add() trades one as it goes (okey.playOnMeld)
 function takeOkey(state, player) {
   for (let i = 0; i < state.melds.length; i++) {
     for (const t of hand(state, player)) {
-      const s = ok(americano.swapOkey(state, player, t.id, i));
+      const s = ok(okey.swapOkey(state, player, t.id, i));
       if (s && ok(open(s, player))) return s;
     }
   }
@@ -456,7 +453,7 @@ function lay(state, player) {
   );
   const laid = rest.length ? melds : melds.slice(0, -1);
   if (!laid.length) return;
-  return americano.layMelds(
+  return okey.layMelds(
     state,
     player,
     laid.map((m) => m.tiles.map((t) => t.id)),
@@ -477,7 +474,7 @@ function layPairs(state, player) {
   }
   const all = pairs.length * 2 === hand(state, player).length;
   const laid = all ? pairs.slice(0, -1) : pairs;
-  return laid.length ? americano.layMelds(state, player, laid) : undefined;
+  return laid.length ? okey.layMelds(state, player, laid) : undefined;
 }
 
 // a tile onto a meld on the table, at either end
@@ -486,7 +483,7 @@ function add(state, player) {
   for (const t of hand(state, player).filter((t) => !isOkey(t, ind))) {
     for (let i = 0; i < state.melds.length; i++) {
       for (const atEnd of [true, false]) {
-        const s = ok(americano.playOnMeld(state, player, t.id, i, atEnd));
+        const s = ok(okey.playOnMeld(state, player, t.id, i, atEnd));
         if (s) return s;
       }
     }
@@ -505,7 +502,7 @@ function addOkey(state, player) {
   }
   for (let i = 0; i < state.melds.length; i++) {
     for (const atEnd of [true, false]) {
-      const s = ok(americano.playOnMeld(state, player, okeys[0].id, i, atEnd));
+      const s = ok(okey.playOnMeld(state, player, okeys[0].id, i, atEnd));
       if (s) return s;
     }
   }
@@ -514,11 +511,11 @@ function addOkey(state, player) {
 // A finish from the hand (Elden): every tile but one in melds, laid out on
 // the rack, and that one thrown to the middle
 function finishFromHand(state, player) {
-  if (!americano.isElden(state)) return;
+  if (!okey.isElden(state)) return;
   const best = bestMelds(hand(state, player), state.okeyTile, wrap(state));
   if (best.rest.length !== 1) return;
   const s = arrange(state, player, best.melds, best.rest);
-  return s && americano.finishGame(s, player, best.rest[0]);
+  return s && okey.finishGame(s, player, best.rest[0]);
 }
 
 // The rack as a player keeps it, laid out as the turn ends: the melds it
@@ -536,7 +533,7 @@ function tidy(state, player) {
 }
 
 const throwTile = (state, player, now, mistakes) =>
-  americano.discardTile(state, player, worst(state, player, mistakes), now);
+  okey.discardTile(state, player, worst(state, player, mistakes), now);
 
 // One move of the bot whose turn it is, through the rules: a new state, or
 // a message (nothing it may do yet: the others' time to take the discard).
@@ -549,7 +546,7 @@ export function step(
   mistakes = mistakesOf(state),
 ) {
   if (state.gameState !== "play" || state.currentPlayer !== player) return;
-  if (game.pileOut(state, player)) return game.shuffleDiscards(state, player);
+  if (okey.pileOut(state, player)) return okey.shuffleDiscards(state, player);
   const slip = (what) => slips(state, mistakes, player, what);
   if (!state.drawn) return draw(state, player, now, mistakes);
   const tiles = hand(state, player);
@@ -558,18 +555,17 @@ export function step(
   // taken would put it back, +101, and take it again, on and on
   const took =
     state.rules.takeMustBeUsed && state.tookDiscard?.player === player;
-  const opening =
-    !americano.isElden(state) && !opened && (took || !slip("open"));
+  const opening = !okey.isElden(state) && !opened && (took || !slip("open"));
   return (
     ok(finishFromHand(state, player)) ||
     (opening && ok(open(state, player))) ||
     (opening && ok(takeOkey(state, player))) ||
     (opened && ok(lay(state, player))) ||
     (opened && ok(add(state, player))) ||
-    (tiles.length === 1 && ok(americano.finishGame(state, player, tiles[0]))) ||
+    (tiles.length === 1 && ok(okey.finishGame(state, player, tiles[0]))) ||
     (opened && ok(addOkey(state, player))) ||
     // 101: a discard it took and couldn't use goes back
-    (took && ok(americano.returnDiscard(state, player))) ||
+    (took && ok(okey.returnDiscard(state, player))) ||
     throwTile(tidy(state, player), player, now, mistakes)
   );
 }

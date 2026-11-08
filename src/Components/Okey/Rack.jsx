@@ -6,6 +6,9 @@ import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
 import {
   canPeek as peekable,
+  catchDiscard,
+  claimDiscard,
+  returnDiscard,
   cantCatch,
   discardWait,
   isCaught,
@@ -14,10 +17,14 @@ import {
   rackPoints,
   roundOf,
   upForClaim,
-} from "./americano";
+  ended,
+  partner,
+  placeTiles,
+  rowOf,
+  seatAt,
+} from "./okey";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-import { ended, partner, placeTiles, rowOf, seatAt } from "./game";
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -67,11 +74,10 @@ function RackPoints({ player }) {
 // seat to sit in or put a bot in; a bot's seat is anyone's to take over
 // (a seat round the table, on its avatar: `avatarSits`)
 function Name({ player, avatarSits, children }) {
-  const { okeyState, me, sit, seatBot, isAlreadySitting } =
-    useContext(OkeyContext);
+  const { okeyState, me, sit, seatBot } = useContext(OkeyContext);
   const seat = seatAt(okeyState, player);
   const bot = seat.user?.bot && !avatarSits;
-  const sitHere = !isAlreadySitting && (!seat.user || bot) && (
+  const sitHere = !me && (!seat.user || bot) && (
     <button onClick={() => sit(player)}>{t("Sit")}</button>
   );
   // a seat whose player dropped out shows who it's waiting for
@@ -128,7 +134,7 @@ function Rack({ player, hands }) {
     drawTile,
     okeyState,
     me,
-    claimDiscard,
+    act,
     takeBack,
     held,
     heldDraw,
@@ -139,7 +145,7 @@ function Rack({ player, hands }) {
     tile.source.startsWith("claim-") ||
     (offer?.tileId === tile.id && me !== okeyState.currentPlayer);
   function onDrop(tile, toIndex) {
-    if (claim(tile)) claimDiscard(toIndex);
+    if (claim(tile)) act(claimDiscard, me, toIndex);
     else if (tile.source.includes("hand")) moveTile(player, tile, toIndex);
     else if (tile.source === "table") takeBack(tile, toIndex);
     else drawTile(player, tile, toIndex);
@@ -263,11 +269,11 @@ function Rack({ player, hands }) {
 // the Sit that takes it over: under its name, beside drew and opened, the
 // next pile would cover it.
 export function Seat({ player }) {
-  const { okeyState, sit, isAlreadySitting } = useContext(OkeyContext);
+  const { okeyState, sit, me } = useContext(OkeyContext);
   const user = seatAt(okeyState, player).user;
   const name = user?.name;
   const turn = turnOf(okeyState, player);
-  const takeOver = !isAlreadySitting && user?.bot;
+  const takeOver = !me && user?.bot;
   const Avatar = takeOver ? "button" : "div";
   return (
     <div className={`seat ${turn ? "turn" : ""}`} data-seat={player}>
@@ -340,17 +346,16 @@ export function DiscardPile({ player, small }) {
     myDiscardPile,
     isMyTurn,
     discardTile,
-    claimDiscard,
-    catchDiscard,
-    returnDiscard,
+    act,
     held,
     myHand,
   } = useContext(OkeyContext);
   function onDiscard(tile, index) {
     const took = okeyState.tookDiscard;
     if (tile.source.startsWith("claim-"))
-      claimDiscard(null); // put it back
-    else if (took?.tileId === tile.id && took.from === player) returnDiscard();
+      act(claimDiscard, me, null); // put it back
+    else if (took?.tileId === tile.id && took.from === player)
+      act(returnDiscard, me);
     else discardTile(player, tile, index);
   }
   const pile = myDiscardPile(player);
@@ -407,7 +412,7 @@ export function DiscardPile({ player, small }) {
         canDiscard={() => isMyTurn(player)}
       />
       {canCatch && (
-        <button className="catch" onClick={catchDiscard}>
+        <button className="catch" onClick={() => act(catchDiscard, me)}>
           {/* which tile: it may lie on another pile */}
           <TileFace id={latest} />
           {t("Catch")}

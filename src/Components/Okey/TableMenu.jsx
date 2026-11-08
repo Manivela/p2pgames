@@ -3,8 +3,7 @@ import { useParams } from "react-router-dom";
 import { sum, uniqBy } from "lodash";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
-import * as americano from "./americano";
-import * as game from "./game";
+import * as okey from "./okey";
 import { allRulesets } from "./rulesets";
 import { TableSettings } from "./GameSettings";
 import { t } from "../../i18n";
@@ -34,7 +33,7 @@ function useAutoSave() {
     if (okeyState.gameState === "start") return; // nothing to keep yet
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
-      const code = await game.encodeSave(okeyState);
+      const code = await okey.encodeSave(okeyState);
       const { gameId } = okeyState;
       const saves = [
         { room: roomId, at: Date.now(), game: gameId, code },
@@ -128,20 +127,20 @@ function LoadDialog({ onClose }) {
   const { roomId } = useParams();
   const [pasted, setPasted] = useState("");
   const load = (saved) => {
-    loadGame(game.restore(saved, okeyState));
+    loadGame(okey.restore(saved, okeyState));
     onClose();
   };
   // made up front: Safari only copies straight from the tap
   const [code, setCode] = useState("");
   useEffect(() => {
-    game.encodeSave(okeyState).then(setCode);
+    okey.encodeSave(okeyState).then(setCode);
   }, [okeyState]);
   // undefined until read
   const [saved, setSaved] = useState();
   useEffect(() => {
     Promise.all(
       readSaves().map((s) =>
-        game.decodeSave(s.code).then((state) => state && { ...s, state }),
+        okey.decodeSave(s.code).then((state) => state && { ...s, state }),
       ),
     ).then((saves) => setSaved(saves.filter(Boolean)));
   }, []);
@@ -149,7 +148,7 @@ function LoadDialog({ onClose }) {
   const [decoded, setDecoded] = useState({});
   useEffect(() => {
     let live = true;
-    game
+    okey
       .decodeSave(pasted)
       .then((state) => live && setDecoded({ pasted, state }));
     return () => (live = false);
@@ -233,7 +232,7 @@ function SetUpDialog({ onClose }) {
   );
   const [starter, setStarter] = useState(seated[0]?.id);
   const deal = () => {
-    const next = americano.setUp(okeyState, round, totals, starter, rules);
+    const next = okey.setUp(okeyState, round, totals, starter, rules);
     if (typeof next === "string") return toast(t(next));
     loadGame(next);
     onClose();
@@ -309,7 +308,7 @@ function SetUpDialog({ onClose }) {
 let feedback, form, saveCode;
 async function report(okeyState, tags) {
   const { Sentry } = window;
-  saveCode = await game.encodeSave(okeyState);
+  saveCode = await okey.encodeSave(okeyState);
   try {
     feedback ??= new Promise((loaded) => {
       Sentry.onLoad(loaded);
@@ -380,7 +379,7 @@ export default function TableMenu() {
     resetGame,
     newGame,
     redealRound,
-    endGame,
+    act,
     volume,
     setVolume,
     newVersion,
@@ -442,7 +441,7 @@ export default function TableMenu() {
             )}
           </div>
           {/* anyone's, gone or still here: mid-round every seat is in the
-              round, stood up from or not, and leaves it (americano.freeSeat) */}
+              round, stood up from or not, and leaves it (okey.freeSeat) */}
           <div className="group">
             {okeyState.players
               .filter((p) => (p.user || p.away || playing) && p.id !== me)
@@ -484,8 +483,11 @@ export default function TableMenu() {
               />
             )}
             {/* the pile ran out (reshuffle), and whoever's turn it is calls it */}
-            {game.pileOut(okeyState, me) && (
-              <Confirm label={t("End the round")} onConfirm={then(endGame)} />
+            {okey.pileOut(okeyState, me) && (
+              <Confirm
+                label={t("End the round")}
+                onConfirm={then(() => act(okey.endPile, me))}
+              />
             )}
             {/* someone stands or sits mid-round: back to before the deal */}
             {playing && (

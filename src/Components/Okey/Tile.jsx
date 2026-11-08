@@ -4,7 +4,8 @@ import { useContext, useRef, useState } from "react";
 import { OkeyContext } from "./OkeyContext";
 import { isOkey } from "./melds";
 import { symbols } from "./constants";
-import { ended } from "./game";
+import * as okey from "./okey";
+import { ended } from "./okey";
 
 // how far a finger can wander and still be holding a tile; past it, a drag
 export const SLOP = 8;
@@ -56,7 +57,7 @@ export const markOf = (moves, id) =>
   (id && moves.findIndex((m) => m.tiles.includes(id)) + 1) || null;
 
 function Tile({ tile, disabled, className, style, numbered = true }) {
-  const { me, toggleHidden, okeyState, selected, toggleSelected, spun, spin } =
+  const { me, act, okeyState, selected, toggleSelected, spun, spin } =
     useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
   const canSee = tile.source.includes("hand-") ? myTile : true;
@@ -70,7 +71,7 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
   const faceUp = (canSee || ended(okeyState)) && !tile.hidden && !okeyDown;
   // your tiles flip only while the round is played: once it's over, the
   // hands are shown as they ended
-  const canFlip = myTile && okeyState.gameState === "play";
+  const canFlip = myTile && okey.canFlip(okeyState, me, tile);
   function handleClick(e) {
     e.preventDefault();
     // Android long-presses fire contextmenu too; touch has its own hold below
@@ -81,7 +82,7 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
     if (touch) return;
     // the fake okey, wherever anyone sees it, turns instead (OkeyContext)
     if (faceUp && tile.rank === "👌") spin(tile);
-    else if (canFlip) toggleHidden(tile);
+    else if (canFlip) act(okey.flipTile, me, tile.id);
   }
   // phones have no right click: hold your tile still and let go to flip it.
   // Held long enough, it wiggles; a finger that moves drags it instead.
@@ -112,7 +113,7 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
   function endHold() {
     if (armed) {
       held.current = true;
-      toggleHidden(tile);
+      act(okey.flipTile, me, tile.id);
     }
     stopHold();
   }

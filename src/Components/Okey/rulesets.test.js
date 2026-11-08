@@ -1,6 +1,6 @@
 import { assert, test } from "vitest";
 import * as game from "./game";
-import * as americano from "./americano";
+import * as okey from "./okey";
 import {
   AMERICANO,
   CLASSIC,
@@ -77,40 +77,40 @@ test("a ruleset that would break a game isn't played", () => {
 
 test("classic is one hand; a pile that runs out is shuffled in, or the hand dealt again", () => {
   assert.equal(
-    americano.startGame(seated(5), undefined, CLASSIC).message,
+    okey.startGame(seated(5), undefined, CLASSIC).message,
     "Up to 4 players with these rules",
   );
-  let s = americano.startGame(seated(4), undefined, CLASSIC);
+  let s = okey.startGame(seated(4), undefined, CLASSIC);
   const hand = (p) => s.players.find((x) => x.id === p).hand;
   while (s.drawPile.length || s.currentPlayer === 1) {
     const p = s.currentPlayer;
-    if (!s.drawn) s = americano.drawTile(s, p, s.drawPile.at(-1), 27);
-    s = americano.discardTile(s, p, hand(p).find(Boolean));
+    if (!s.drawn) s = okey.drawTile(s, p, s.drawPile.at(-1), 27);
+    s = okey.discardTile(s, p, hand(p).find(Boolean));
   }
   // it waits for the player whose turn it is
   assert.equal(s.gameState, "play");
   const p = s.currentPlayer;
-  assert.isUndefined(americano.endPile(s, (p % 4) + 1));
+  assert.isUndefined(okey.endPile(s, (p % 4) + 1));
   assert.isAbove(game.shuffleDiscards(s, p).drawPile.length, 0);
-  const over = americano.endPile(s, p);
+  const over = okey.endPile(s, p);
   assert.isTrue(over.replay);
   assert.equal(over.message, "Round 1: no tiles left, dealt again");
   // without reshuffling, the round ends with the pile
-  s = americano.startGame(seated(4), undefined, {
+  s = okey.startGame(seated(4), undefined, {
     ...CLASSIC,
     reshuffle: false,
   });
   while (s.gameState === "play") {
     const p = s.currentPlayer;
-    if (!s.drawn) s = americano.drawTile(s, p, s.drawPile.at(-1), 27);
-    s = americano.discardTile(s, p, hand(p).find(Boolean));
+    if (!s.drawn) s = okey.drawTile(s, p, s.drawPile.at(-1), 27);
+    s = okey.discardTile(s, p, hand(p).find(Boolean));
   }
   assert.equal(s.gameState, "roundEnd");
 });
 
 test("eight play with four sets of tiles, every tile dealt once", () => {
   const rules = { ...AMERICANO, seats: 8, tileSets: 4 };
-  const s = americano.startGame(seated(8), undefined, rules);
+  const s = okey.startGame(seated(8), undefined, rules);
   assert.equal(s.gameState, "play");
   assert.equal(s.players.length, 8);
   assert.deepEqual(
@@ -125,7 +125,7 @@ test("eight play with four sets of tiles, every tile dealt once", () => {
   assert.equal(ids.length, 4 * 53);
   assert.equal(new Set(ids).size, 4 * 53);
   // the next round deals from four sets again
-  const next = americano.nextRound(americano.redealRound(s));
+  const next = okey.nextRound(okey.redealRound(s));
   assert.equal(next.drawPile.length, s.drawPile.length);
   // and a table of eight shows every seat once they're all taken
   const eight = (n) => ({ ...seated(n), setup: { ...AMERICANO, seats: 8 } });
@@ -153,22 +153,22 @@ test("finishing from the hand over several hands is scored", () => {
     okeyInHandScore: 25,
   };
   assert.isUndefined(invalid(rules));
-  let s = americano.startGame(
+  let s = okey.startGame(
     seated(2),
     { okeyTile: "blue13-1", hands: [winning, other] },
     rules,
   );
   const last = s.players[0].hand.find((t) => t?.id === "yellow2-0");
-  s = americano.finishGame(s, 1, last);
+  s = okey.finishGame(s, 1, last);
   assert.equal(s.gameState, "roundEnd");
   assert.deepEqual(s.scores, { 1: [-20], 2: [118] });
   // classic's one hand is just won
-  s = americano.startGame(
+  s = okey.startGame(
     seated(2),
     { okeyTile: "blue13-1", hands: [winning, other] },
     CLASSIC,
   );
-  s = americano.finishGame(s, 1, last);
+  s = okey.finishGame(s, 1, last);
   assert.equal(s.gameState, "finish");
   assert.equal(s.message, "P1 wins!");
 });

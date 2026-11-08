@@ -1,5 +1,5 @@
 import { assert, test } from "vitest";
-import * as americano from "./americano";
+import * as okey from "./okey";
 import * as bot from "./bot";
 import * as game from "./game";
 import { meldOrder } from "./melds";
@@ -94,7 +94,7 @@ test("by points, the melds worth the most", () => {
 });
 
 test("a 101 hand of 22 is read in good time", () => {
-  const s = americano.startGame(seated(4), undefined, ONE_O_ONE);
+  const s = okey.startGame(seated(4), undefined, ONE_O_ONE);
   const start = performance.now();
   for (const p of s.players) {
     const hand = p.hand.filter(Boolean);
@@ -109,7 +109,7 @@ function outOfTurn(s) {
   for (const p of s.players) {
     if (s.gameState !== "play") break;
     const next = p.inbox?.length
-      ? americano.collectInbox(s, p.id)
+      ? okey.collectInbox(s, p.id)
       : bot.claim(s, p.id) || bot.catchTile(s, p.id);
     if (next) s = next;
   }
@@ -136,7 +136,7 @@ function botsPlay(s) {
 test("bots play every Americano round to its end", () => {
   let finished = 0;
   for (let round = 1; round <= AMERICANO.rounds.length; round++) {
-    const s = americano.setUp(seated(4), round, {}, 1, AMERICANO);
+    const s = okey.setUp(seated(4), round, {}, 1, AMERICANO);
     const end = botsPlay(s);
     if (end.finishTile) finished++;
   }
@@ -146,9 +146,9 @@ test("bots play every Americano round to its end", () => {
 
 test("bots play 101 and the classic game to the end of a hand", () => {
   for (let i = 0; i < 10; i++) {
-    assert.isOk(botsPlay(americano.setUp(seated(4), 1, {}, 1, ONE_O_ONE)));
+    assert.isOk(botsPlay(okey.setUp(seated(4), 1, {}, 1, ONE_O_ONE)));
   }
-  assert.isOk(botsPlay(americano.startGame(seated(4), undefined, CLASSIC)));
+  assert.isOk(botsPlay(okey.startGame(seated(4), undefined, CLASSIC)));
 });
 
 test("a bot takes out of turn for a new meld, not to lengthen one", () => {
@@ -159,7 +159,7 @@ test("a bot takes out of turn for a new meld, not to lengthen one", () => {
     okeyTile: "blue13-1",
     hands: [["red5-0", "red9-0", "black12-0", "black13-0"], ["yellow1-0"], p3],
   };
-  let s = americano.startGame(seated(3), deal, AMERICANO);
+  let s = okey.startGame(seated(3), deal, AMERICANO);
   s = {
     ...s,
     players: s.players.map((p) =>
@@ -167,7 +167,7 @@ test("a bot takes out of turn for a new meld, not to lengthen one", () => {
     ),
   };
   const take = (s, tileId) => {
-    s = americano.discardTile(
+    s = okey.discardTile(
       s,
       1,
       game.seat(s, 1).hand.find((t) => t?.id === tileId),
@@ -183,9 +183,9 @@ test("a bot takes out of turn for a new meld, not to lengthen one", () => {
   assert.isUndefined(bot.claim(s, 3, 0)); // claimed already
   // P2 draws from the pile and throws: the red 5 goes to P3, with a tile
   // from the pile, and onto its rack
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 1, 0);
-  s = americano.discardTile(s, 2, game.seat(s, 2).hand[1], 0);
-  s = americano.collectInbox(s, 3);
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 1, 0);
+  s = okey.discardTile(s, 2, game.seat(s, 2).hand[1], 0);
+  s = okey.collectInbox(s, 3);
   const hand = game
     .seat(s, 3)
     .hand.filter(Boolean)
@@ -198,7 +198,7 @@ test("a bot takes out of turn for a new meld, not to lengthen one", () => {
     s = bot.step(s, 3, now, 0);
   }
   assert.isTrue(s.opened[3]);
-  s = americano.drawTile(s, 1, s.drawPile.at(-1), 5, 9e6);
+  s = okey.drawTile(s, 1, s.drawPile.at(-1), 5, 9e6);
   s = take(s, "red9-0");
   assert.isUndefined(bot.claim(s, 3, 0));
 });
@@ -215,7 +215,7 @@ test("a person who claims too gets their time, and the tile when first in line",
       ["black5-0", "yellow5-0", "red6-0"],
     ],
   };
-  let s = americano.startGame(seated(4), deal, AMERICANO);
+  let s = okey.startGame(seated(4), deal, AMERICANO);
   s = {
     ...s,
     players: s.players.map((p) =>
@@ -223,15 +223,15 @@ test("a person who claims too gets their time, and the tile when first in line",
     ),
   };
   const red5 = game.seat(s, 1).hand.find((t) => t?.id === "red5-0");
-  s = americano.discardTile(s, 1, red5);
+  s = okey.discardTile(s, 1, red5);
   s = bot.claim(s, 4, 0);
   assert.isOk(game.seat(s, 4).claim);
   // P2 draws: the discard waits for P3 all the same
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 1, 0);
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 1, 0);
   const throws = game.seat(s, 2).hand[1];
-  assert.isString(americano.discardTile(s, 2, throws, 1000));
-  s = americano.claimDiscard(s, 3, 1);
-  s = americano.discardTile(s, 2, throws, afterWait(s));
+  assert.isString(okey.discardTile(s, 2, throws, 1000));
+  s = okey.claimDiscard(s, 3, 1);
+  s = okey.discardTile(s, 2, throws, afterWait(s));
   // P3 comes first after P2: the red 5 is theirs, though the bot was quicker
   assert.include(
     game.seat(s, 3).inbox.map((t) => t.id),
@@ -251,7 +251,7 @@ test("a bot keeps a tile that fits the table rather than have it caught", () => 
       ["yellow13-0", "red2-0", "red7-0", "red8-0", "red9-0"],
     ],
   };
-  let s = americano.startGame(seated(2), deal, AMERICANO);
+  let s = okey.startGame(seated(2), deal, AMERICANO);
   s = { ...s, currentPlayer: 2, drawn: true };
   const thrown = (s) => game.seat(bot.step(s, 2, 1e6, 0), 2).discardPile.at(-1);
   assert.equal(thrown(s).id, "yellow13-0");
@@ -278,7 +278,7 @@ test("a bot breaks up a wait whose tiles are all out of the game", () => {
       ["yellow11-0", "red12-0", "red13-0", "red7-0", "red8-0", "red9-0"],
     ],
   };
-  let s = americano.startGame(seated(2), deal, AMERICANO);
+  let s = okey.startGame(seated(2), deal, AMERICANO);
   s = { ...s, currentPlayer: 2, drawn: true };
   const thrown = (s) => game.seat(bot.step(s, 2, 1e6, 0), 2).discardPile.at(-1);
   assert.equal(thrown(s).id, "yellow11-0");
@@ -302,7 +302,7 @@ test("a bot breaks up a wait whose tiles are all out of the game", () => {
 // küt on the table and, in a yellow run, an okey standing for the yellow 5
 function table13s(round, hand) {
   const deal = { okeyTile: "blue13-1", hands: [["black1-0"], hand] };
-  let s = americano.startGame(seated(2), deal, AMERICANO);
+  let s = okey.startGame(seated(2), deal, AMERICANO);
   const onTable = (ids) =>
     ids.map((id) => ({
       ...s.drawPile.find((t) => t.id === id),
@@ -383,7 +383,7 @@ test("a bot catches a tile thrown that fits the table", () => {
     ),
     drawPile: s.drawPile.filter((t) => t.id !== "yellow13-0"),
   };
-  s = americano.discardTile(s, 1, game.seat(s, 1).hand[1]);
+  s = okey.discardTile(s, 1, game.seat(s, 1).hand[1]);
   // botCatches times in 100 (30 unless the rules say), a draw a tile:
   // never, about 30 in 100, or every one
   const never = { ...s, rules: { ...s.rules, botCatches: 0 } };
@@ -402,7 +402,7 @@ test("a bot keeps its rack in order: its melds, then the rest", () => {
     ...["blue12-0", "black7-0", "black9-0"],
   ]);
   s = bot.step(s, 2, 1e6, 0);
-  const groups = americano
+  const groups = okey
     .groupsOf(game.seat(s, 2).hand, game.rowOf(s))
     .map((g) => g.map((t) => t.id));
   assert.deepEqual(groups.slice(0, 2), [
@@ -412,16 +412,16 @@ test("a bot keeps its rack in order: its melds, then the rest", () => {
 });
 
 test("nobody waits on a bot to take the discard", () => {
-  let s = americano.startGame(seated(3), undefined, AMERICANO);
-  s = americano.discardTile(s, 1, game.seat(s, 1).hand.find(Boolean));
-  s = americano.drawTile(s, 2, s.drawPile.at(-1), 25, 0); // P1's on offer
-  assert.isAbove(americano.claimWait(s, 2, 0), 0); // P3 could take it
+  let s = okey.startGame(seated(3), undefined, AMERICANO);
+  s = okey.discardTile(s, 1, game.seat(s, 1).hand.find(Boolean));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25, 0); // P1's on offer
+  assert.isAbove(okey.claimWait(s, 2, 0), 0); // P3 could take it
   const empty = (s) => ({
     ...s,
     players: s.players.map((p) => (p.id === 3 ? { ...p, user: null } : p)),
   });
   s = bot.seatBot(empty(s), 3, 7);
-  assert.equal(americano.claimWait(s, 2, 0), 0); // a bot won't
+  assert.equal(okey.claimWait(s, 2, 0), 0); // a bot won't
 });
 
 test("a bot sits in an empty seat, or in place of one who's gone", () => {
@@ -432,7 +432,7 @@ test("a bot sits in an empty seat, or in place of one who's gone", () => {
   assert.isUndefined(bot.seatBot(seated(3), 2, 7)); // someone's in it
   // mid-round, P2's phone slept: the bot plays their hand, and P2 can come
   // back to it
-  let s = americano.startGame(seated(3));
+  let s = okey.startGame(seated(3));
   const hand = game.seat(s, 2).hand;
   s = {
     ...s,

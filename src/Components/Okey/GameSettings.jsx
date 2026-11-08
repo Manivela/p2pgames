@@ -4,6 +4,7 @@ import { isEmpty, isEqual, pickBy, uniq } from "lodash";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
 import { Confirm, Dialog } from "./TableMenu";
+import { setRow } from "./okey";
 import {
   AMERICANO,
   CLASSIC,
@@ -545,15 +546,15 @@ function Settings({ base, changed, start, onClose }) {
 // default, as the lobby's are.
 const DEALT = "The table";
 export function TableSettings({ onClose }) {
-  const { okeyState, setRules, me, setRow } = useContext(OkeyContext);
+  const { okeyState, setRules, me, act } = useContext(OkeyContext);
   const [opened] = useState({ ...DEFAULTS, ...okeyState.rules });
   const [draft, setDraft] = useState(opened);
   // your own rack's rows, apart from the table's rules (null: the table's)
   const mine = okeyState.players.find((p) => p.id === me)?.rowSlots ?? null;
   const [row, setRowDraft] = useState(mine);
   const apply = () => {
-    // the rows that don't fit say why (game.setRow), and the dialog stays
-    if (row !== mine && !setRow(row)) return;
+    // the rows that don't fit say why (okey.setRow), and the dialog stays
+    if (row !== mine && !act(setRow, me, row)) return;
     const changes = pickBy(draft, (v, k) => !isEqual(v, opened[k]));
     if (isEmpty(changes)) return onClose();
     const rules = { ...DEFAULTS, ...okeyState.rules, ...changes };
