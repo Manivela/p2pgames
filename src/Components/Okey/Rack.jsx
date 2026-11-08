@@ -5,10 +5,11 @@ import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
 import {
+  canPeek as peekable,
   cantCatch,
   discardWait,
+  isCaught,
   isElden,
-  pairRound,
   pointsToOpen,
   rackPoints,
   roundOf,
@@ -147,7 +148,7 @@ function Rack({ player, hands }) {
   // my claim on the discard waits as a ghost in the slot I dropped it on
   const offered =
     offer &&
-    !okeyState.players.some((p) => p.caught?.includes(offer.tileId)) &&
+    !isCaught(okeyState, offer.tileId) &&
     okeyState.players.find((p) => p.id === offer.from)?.discardPile.at(-1);
   // and so does my draw while the others have time to catch the discard
   const ghost =
@@ -358,23 +359,14 @@ export function DiscardPile({ player, small }) {
   // look through; another tap, there or anywhere, puts them back
   const [peek, setPeek] = useState(false);
   const pileRef = useRef();
-  // on the pair round (peekPairRounds), or once someone's opened with
-  // pairs (peekWithPairs, 101)
-  const { rules, openedWithPairs } = okeyState;
-  const canPeek =
-    pile.length > 1 &&
-    ((pairRound(okeyState) && rules.peekPairRounds) ||
-      (rules.peekWithPairs &&
-        Object.values(openedWithPairs ?? {}).some(Boolean)));
+  const canPeek = pile.length > 1 && peekable(okeyState);
   useEffect(() => {
     if (!peek) return;
     const away = (e) => !pileRef.current?.contains(e.target) && setPeek(false);
     addEventListener("pointerdown", away);
     return () => removeEventListener("pointerdown", away);
   }, [peek]);
-  const caughtAny = (id) =>
-    okeyState.players.some((p) => p.caught?.includes(id));
-  const caught = caughtAny(top?.id);
+  const caught = isCaught(okeyState, top?.id);
   // my discard, waiting for the others' time to take the last one to end
   const ghost = held && player === me && myHand(me).find((t) => t?.id === held);
   // Catch for the latest discard, whoever threw it, always under the pile
@@ -382,18 +374,7 @@ export function DiscardPile({ player, small }) {
   // or on the tile you'd drag. Its pile glows (latest). Whether it fits a
   // meld is for them to see.
   const latest = okeyState.lastDiscard;
-  const thrower = okeyState.players.find(
-    (p) => p.discardPile.at(-1)?.id === latest,
-  );
-  const canCatch =
-    !small &&
-    player !== me &&
-    okeyState.gameState === "play" &&
-    me &&
-    thrower &&
-    !cantCatch(okeyState, me, thrower.id) &&
-    okeyState.melds.length > 0 &&
-    !caughtAny(latest);
+  const canCatch = !small && player !== me && me && !cantCatch(okeyState, me);
   return (
     <div
       ref={pileRef}

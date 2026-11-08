@@ -5,8 +5,8 @@ import { OkeyContext } from "./OkeyContext";
 // playOnMeld here is the rule, tried out for the ghost
 import {
   addedThisTurn,
+  canLay,
   claimants,
-  isElden,
   penaltiesSoFar,
   playOnMeld as onMeld,
   upForClaim,
@@ -266,24 +266,19 @@ export function Melds({ underPile }) {
 
   // Picked tiles open (or, once opened, lay down) when one of them is
   // dragged onto the table; a drop on a meld adds to that meld instead.
-  const canLay =
-    okeyState.gameState === "play" &&
-    okeyState.currentPlayer === me &&
-    okeyState.drawn &&
-    !isElden(okeyState) &&
-    selected.length > 0;
+  const laying = canLay(okeyState, me) && selected.length > 0;
   const [{ over }, drop] = useDrop(
     () => ({
       accept: "TILE",
       drop: (e, monitor) => {
-        if (monitor.didDrop() || !canLay || !selected.includes(e.tile.id)) {
+        if (monitor.didDrop() || !laying || !selected.includes(e.tile.id)) {
           return;
         }
         (opened[me] ? layMelds : openHand)();
       },
       collect: (monitor) => ({ over: monitor.isOver({ shallow: true }) }),
     }),
-    [canLay, selected, opened, me, openHand, layMelds],
+    [laying, selected, opened, me, openHand, layMelds],
   );
 
   // every meld stays in view: they all shrink until they fit the band
@@ -320,7 +315,7 @@ export function Melds({ underPile }) {
     const observer = new ResizeObserver(fit);
     observer.observe(el.parentElement);
     return () => observer.disconnect();
-  }, [layout, underPile, canLay, okeyState.gameState]);
+  }, [layout, underPile, laying, okeyState.gameState]);
 
   return (
     <div
@@ -328,9 +323,9 @@ export function Melds({ underPile }) {
         band.current = el;
         drop(el);
       }}
-      className={`melds ${canLay ? "droppable" : ""} ${over ? "over" : ""}`}
+      className={`melds ${laying ? "droppable" : ""} ${over ? "over" : ""}`}
     >
-      {canLay && (
+      {laying && (
         <span className="hint">
           {t(opened[me] ? "Drag here to lay down" : "Drag here to open")}
         </span>

@@ -22,6 +22,13 @@ export const roundOf = (state) => state.rules.rounds[state.round - 1];
 // a round finished from the hand: nothing is laid down
 export const isElden = (state) =>
   !roundOf(state).melds && !roundOf(state).opening;
+// Whether `player` may lay tiles down now: on their turn, once drawn, in a
+// round that lays (not Elden)
+export const canLay = (state, player) =>
+  state.gameState === "play" &&
+  state.currentPlayer === player &&
+  state.drawn &&
+  !isElden(state);
 const wrap = (state) => state.rules.wrapRuns;
 const pairsOf = (tiles) => Array(tiles.length / 2).fill(["pair", 2]);
 // a round that opens with pairs (Americano's 4 çift)
@@ -29,6 +36,13 @@ export const pairRound = (state) =>
   !!state.rules?.rounds?.[state.round - 1]?.melds?.some(
     ([type]) => type === "pair",
   );
+
+// Whether anyone may look through the discard piles: on a pair round
+// (peekPairRounds), or once someone's opened with pairs (peekWithPairs)
+export const canPeek = (state) =>
+  (pairRound(state) && state.rules.peekPairRounds) ||
+  (state.rules.peekWithPairs &&
+    Object.values(state.openedWithPairs ?? {}).some(Boolean));
 
 export function startGame(state, deal, rules = AMERICANO) {
   if (rules.partners && state.players.filter((p) => p.user).length !== 4) {
@@ -875,7 +889,7 @@ export function endPile(state, player) {
   return endRound(state, null);
 }
 
-const isCaught = (state, tileId) =>
+export const isCaught = (state, tileId) =>
   state.players.some((p) => p.caught?.includes(tileId));
 
 // what a player owes for this hand before it's scored: their tiles caught
@@ -918,16 +932,38 @@ export function returnDiscard(state, player) {
   return s;
 }
 
-// Why `player` can't catch `from`'s discard, if they can't: it's anyone
-// else's to catch, in 101 not their partner's, and only until the next
-// player draws (catchUntilDraw)
-export function cantCatch(state, player, from) {
-  if (player === from) return "That's your own tile";
-  if (state.rules.partners && game.partner(state.players, from).id === player) {
+// the latest discard and who threw it, while it's still on top of their pile
+function latestDiscard(state) {
+  const from = state.players.find(
+    (p) => p.discardPile.at(-1)?.id === state.lastDiscard,
+  );
+  return from ? [from, from.discardPile.at(-1)] : [];
+}
+
+// Why `player` can't catch the latest discard, if they can't, as anyone at
+// the table can tell (whether it fit is catchDiscard's to say): it's anyone
+// else's to catch, in 101 not their partner's, only until the next player
+// draws (catchUntilDraw), once, and not a thrown okey already paid for
+export function cantCatch(state, player) {
+  if (roundOver(state)) return roundOver(state);
+  const [from, tile] = latestDiscard(state);
+  if (!tile) return "Nothing to catch";
+  if (player === from.id) return "That's your own tile";
+  if (
+    state.rules.partners &&
+    game.partner(state.players, from.id).id === player
+  ) {
     return "That's your partner's tile";
   }
   if (state.rules.catchUntilDraw && state.drawn) return "Too late to catch it";
+  if (isCaught(state, tile.id)) return "Already caught";
+  // 101: a thrown okey already cost okeyDiscardPenalty
+  if (state.rules.okeyDiscardPenalty && isOkey(tile, state.okeyTile)) {
+    return "The okey's penalty is already written";
+  }
+  if (!state.melds.length) return DIDNT_FIT;
 }
+const DIDNT_FIT = "That tile didn't fit a meld when it was thrown";
 
 // Seconds the others still have to catch the latest discard before
 // `player`, whose turn it is, takes it, or draws at all when a draw ends the
@@ -944,20 +980,12 @@ export function catchWait(
   turnStart = now,
 ) {
   if (state.gameState !== "play" || state.currentPlayer !== player) return 0;
-  if (state.drawn || !state.melds.length) return 0;
+  if (state.drawn) return 0;
   if (fromPile && !state.rules.catchUntilDraw) return 0;
-  const id = state.lastDiscard;
-  const from = state.players.find((p) => p.discardPile.at(-1)?.id === id);
-  if (!from || isCaught(state, id)) return 0;
-  const tile = from.discardPile.at(-1);
-  if (state.rules.okeyDiscardPenalty && isOkey(tile, state.okeyTile)) return 0;
-  if (!(state.discardFits ?? fitsTable(state, tile))) return 0;
+  const [, tile] = latestDiscard(state);
+  if (!tile || !(state.discardFits ?? fitsTable(state, tile))) return 0;
   const catcher = state.players.some(
-    (p) =>
-      p.user &&
-      !p.user.bot &&
-      p.id !== player &&
-      !cantCatch(state, p.id, from.id),
+    (p) => p.user && !p.user.bot && p.id !== player && !cantCatch(state, p.id),
   );
   const wait = state.rules.catchWaitSeconds - (now - turnStart) / 1000;
   return catcher && wait > 0 ? wait : 0;
@@ -977,24 +1005,12 @@ export function fitsTable(state, tile) {
 // The latest discard, while it's still on top of its pile, can be caught by
 // anyone else if it fits a meld on the table.
 export function catchDiscard(state, player) {
-  if (roundOver(state)) return roundOver(state);
-  const from = state.players.find((p) =>
-    p.discardPile.some((t) => t.id === state.lastDiscard),
-  );
-  const tile = from?.discardPile.at(-1);
-  if (!tile || tile.id !== state.lastDiscard) return "Nothing to catch";
-  const no = cantCatch(state, player, from.id);
+  const no = cantCatch(state, player);
   if (no) return no;
-  if (isCaught(state, tile.id)) return "Already caught";
-  // 101: a thrown okey already cost okeyDiscardPenalty
-  if (state.rules.okeyDiscardPenalty && isOkey(tile, state.okeyTile)) {
-    return "The okey's penalty is already written";
-  }
+  const [from, tile] = latestDiscard(state);
   // the table as it lay when the tile was thrown: melds laid since (the
   // next player opening) don't count; a game from before kept no record
-  if (!(state.discardFits ?? fitsTable(state, tile))) {
-    return "That tile didn't fit a meld when it was thrown";
-  }
+  if (!(state.discardFits ?? fitsTable(state, tile))) return DIDNT_FIT;
   const s = cloneDeep(state);
   const me = seat(s, player);
   me.caught = [...(me.caught ?? []), tile.id];

@@ -208,8 +208,11 @@ test("101: picked tiles that fit no set or run stay on the rack", () => {
   s = americano.discardTile(start(), 1, tileIn(start(), 1, "yellow11-0"));
   s = americano.drawTile(s, 2, s.drawPile.at(-1), 25);
   const sixPairs = [...fivePairs, "black6-0", "black6-1"];
+  assert.isNotOk(americano.canPeek(s));
   s = americano.openHand(s, 2, [[...sixPairs, "blue2-0", "yellow4-0"]]);
   assert.isTrue(s.openedWithPairs[2]);
+  // opened with pairs: everyone may look through the discards
+  assert.isOk(americano.canPeek(s));
   assert.deepEqual(
     s.melds.flatMap((m) => ids(m.tiles)).sort(),
     [...sixPairs].sort(),

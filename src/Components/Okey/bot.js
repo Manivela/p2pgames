@@ -402,8 +402,7 @@ export function claim(state, player, mistakes = mistakesOf(state)) {
 // Out of turn too: the tile just thrown, when it fits the table (işler
 // taş), caught, its thrower paying for it (americano.catchDiscard)
 export function catchTile(state, player, mistakes = mistakesOf(state)) {
-  if (state.gameState !== "play" || !state.discardFits) return;
-  if (state.players.some((p) => p.caught?.includes(state.lastDiscard))) return;
+  if (!state.discardFits || americano.cantCatch(state, player)) return;
   const { gameId, round, discards, lastDiscard, rules } = state;
   const odds = chance(gameId, round, discards ?? 0, player, "eye", lastDiscard);
   if (!(odds < rules.botCatches / 100)) return;
