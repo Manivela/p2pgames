@@ -36,23 +36,7 @@ export function startGame(state, deal, rules = AMERICANO) {
   }
   const s = game.startGame({ ...state, rules }, deal);
   if (s.gameState !== "play") return s;
-  return {
-    ...s,
-    round: 1,
-    scores: {},
-    melds: [],
-    opened: {},
-    openedWithPairs: {},
-    highestOpening: 0,
-    justOpened: null,
-    offer: null,
-    takes: {},
-    penalties: {},
-    replay: false,
-    tookDiscard: null,
-    tookOkeys: [],
-    discards: 0,
-  };
+  return { ...s, round: 1, scores: {} };
 }
 
 // The round void, back to before it was dealt (its penalties too): seats can
@@ -105,11 +89,7 @@ export function freeSeat(state, player) {
   if (state.rules.partners) return "Partners take four players";
   if (state.players.length < 3) return "A round takes two players";
   if (s.currentPlayer === player) {
-    s.currentPlayer = game.next(s.players, player).id;
-    s.drawn = false;
-    s.turnMoves = [];
-    s.justOpened = null;
-    s.tookOkeys = [];
+    Object.assign(s, game.turnStart(game.next(s.players, player).id));
     s.offer = null;
   }
   if (s.offer?.from === player) s.offer = null;
@@ -153,24 +133,7 @@ export function nextRound(state, deal) {
       scores[p.id] = [...Array(state.round - 1).fill(null), worst];
   }
   return game.dealRound(
-    {
-      ...state,
-      players,
-      scores,
-      round,
-      melds: [],
-      opened: {},
-      openedWithPairs: {},
-      highestOpening: 0,
-      justOpened: null,
-      offer: null,
-      takes: {},
-      penalties: {},
-      replay: false,
-      tookDiscard: null,
-      tookOkeys: [],
-      discards: 0,
-    },
+    { ...state, players, scores, round },
     game.shuffledPile(game.setsOf(state)),
     deal,
     (round - 1) % players.length,
@@ -884,9 +847,6 @@ function throwTile(state, player, tile, now = Date.now()) {
   }
   const s = game.discardTile(state, player, tile);
   if (!s || typeof s === "string") return s;
-  s.justOpened = null;
-  s.tookOkeys = [];
-  s.tookDiscard = null;
   s.discards = (s.discards ?? 0) + 1;
   if (!seat(s, player).hand.some(Boolean)) {
     // the finishing tile lies in the middle, not on the pile

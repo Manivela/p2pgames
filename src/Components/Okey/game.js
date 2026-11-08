@@ -327,20 +327,41 @@ export function dealRound(state, drawPile, deal, starter = 0) {
     return { ...p, hand, discardPile: [], inbox: [], claim: null, caught: [] };
   });
 
+  // every hand starts here, whatever deals it: nothing laid, opened,
+  // taken or owed yet, the starter's turn with its extra tile as its draw
   return {
     ...state,
     gameState: "play",
     players,
     okeyTile,
-    currentPlayer: players[starter].id,
+    ...turnStart(players[starter].id),
     drawn: true,
     lastDiscard: null,
     finishTile: null,
-    turnMoves: [],
+    melds: [],
+    opened: {},
+    openedWithPairs: {},
+    highestOpening: 0,
+    offer: null,
+    takes: {},
+    penalties: {},
+    replay: false,
+    discards: 0,
     message: "",
     drawPile: drawPile.filter((t) => !taken.has(t.id)),
   };
 }
+
+// The turn passing to `to`, the one place it does: nothing drawn, laid or
+// taken yet this turn
+export const turnStart = (to) => ({
+  currentPlayer: to,
+  drawn: false,
+  turnMoves: [],
+  justOpened: null,
+  tookOkeys: [],
+  tookDiscard: null,
+});
 
 export function startGame(state, deal) {
   const players = state.players.filter((p) => p.user !== null);
@@ -527,10 +548,8 @@ export function discardTile(state, player, tile) {
 
   myPlayer.hand = removeItem(myPlayer.hand, tile);
   myPlayer.discardPile = [...myPlayer.discardPile, onPile(tile, player)];
-  newState.currentPlayer = next(newState.players, newState.currentPlayer).id;
-  newState.drawn = false;
+  Object.assign(newState, turnStart(next(newState.players, player).id));
   newState.lastDiscard = tile.id; // shown apart from the rest of the pile
-  newState.turnMoves = [];
   return newState;
 }
 
