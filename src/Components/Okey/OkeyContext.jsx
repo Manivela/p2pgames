@@ -278,24 +278,27 @@ export function OkeyProvider({ children }) {
   React.useEffect(() => {
     if (okeyState.currentPlayer === me) turnStart.current = Date.now();
   }, [okeyState.currentPlayer, okeyState.deal, me]);
-  // A draw made while the others still have time to catch the discard
-  // (local only, like a held discard): it waits as a ghost in the slot it
-  // was dropped on, and is drawn when the time is up.
-  const [heldDraw, setHeldDraw] = React.useState(null);
+  // A move made while the rules say wait (americano.waitBefore: the
+  // others' time to take or catch the discard), local only, not shared: a
+  // draw waits as a ghost in the slot it was dropped on, a discard on my
+  // pile, out of my rack, and is made when the wait is up. Dragging a held
+  // discard back cancels it.
+  const [hold, setHold] = React.useState(null); // { tile, toIndex }
+  const held = hold?.tile.source === `hand-${me}` ? hold.tile.id : null;
+  const heldDraw = hold && !held ? hold : null;
   const drawTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
-      const args = [tile, toIndex, Date.now(), turnStart.current];
-      const fromPile = tile.source === "draw-pile";
+      const [now, at] = [Date.now(), turnStart.current];
       const wait =
-        player === me &&
-        americano.catchWait(okeyState, player, fromPile, args[2], args[3]);
+        player === me && americano.waitBefore(okeyState, player, tile, now, at);
+      const args = [tile, toIndex, now, at];
       if (!wait) return act(americano.drawTile, player, ...args);
       // anything else that would stop it is said now, not when it's drawn
       const next = americano.drawTile(okeyState, player, ...args);
       if (typeof next === "string") toast(t(next));
       if (!next || typeof next === "string") return false;
-      setHeldDraw({ tile, toIndex });
+      setHold({ tile, toIndex });
       return true;
     },
     [act, okeyState, me],
@@ -339,11 +342,6 @@ export function OkeyProvider({ children }) {
     [inHand],
   );
 
-  // A discard made while the others still have time to take the last one
-  // (local only, not shared): it waits as a ghost on my pile, out of my
-  // rack, and is thrown when the wait ends. Dragging it back cancels it.
-  const [held, setHeld] = React.useState(null);
-
   // the tiles a drag along my rack moves: the picked ones, or just it
   const movedWith = useCallback(
     (tile) =>
@@ -353,7 +351,7 @@ export function OkeyProvider({ children }) {
   const moveTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
-      if (tile.id === held) setHeld(null);
+      if (tile.id === held) setHold(null);
       return act(game.moveTiles, player, movedWith(tile), toIndex, tile.id);
     },
     [act, movedWith, held],
@@ -362,80 +360,52 @@ export function OkeyProvider({ children }) {
   const discardTile = useCallback(
     (player, tile) => {
       dragged.current = tile.id;
-      if (!americano.claimWait(okeyState, player)) {
+      if (player !== me || !americano.waitBefore(okeyState, player, tile)) {
         return act(americano.discardTile, player, tile);
       }
       // anything else that would stop it is said now, not when it's thrown
-      const next =
-        player === me
-          ? americano.discardTile(okeyState, player, tile, Infinity)
-          : "Not your turn";
+      const next = americano.discardTile(okeyState, player, tile, Infinity);
       if (typeof next === "string") toast(t(next));
       if (!next || typeof next === "string") return false;
-      setHeld(tile.id);
+      setHold({ tile });
       setSelected((ids) => ids.filter((id) => id !== tile.id));
       return true;
     },
     [act, okeyState, me],
   );
 
-  // the held discard is thrown once the rules allow it (asked again when the
-  // timer fires, so an early tick just waits on); a new turn or deal drops it
-  React.useEffect(() => setHeld(null), [okeyState.deal]);
+  // the held move is made once the rules allow it (asked again when the
+  // timer fires, so an early tick just waits on); a new turn or deal, or a
+  // held discard gone from my rack, drops it
+  React.useEffect(() => setHold(null), [okeyState.deal]);
   React.useEffect(() => {
-    if (!held) return;
-    const tile = myHand(me).find((t) => t?.id === held);
-    if (!tile || !isMyTurn() || okeyState.gameState !== "play") {
-      setHeld(null);
+    if (!hold) return;
+    const { tile, toIndex } = hold;
+    const discard = tile.source === `hand-${me}`;
+    const still = discard
+      ? myHand(me).some((t) => t?.id === tile.id)
+      : !okeyState.drawn;
+    if (!still || !isMyTurn() || okeyState.gameState !== "play") {
+      setHold(null);
       return;
     }
     let timer;
-    const throwIt = () => {
-      const wait = americano.claimWait(okeyState, me);
-      if (wait) {
-        timer = setTimeout(throwIt, wait * 1000);
-        return;
-      }
-      setHeld(null);
-      dragged.current = tile.id;
-      act(americano.discardTile, me, tile);
-    };
-    throwIt();
-    return () => clearTimeout(timer);
-  }, [held, okeyState, me, act, myHand, isMyTurn]);
-
-  // the held draw is made once the others' time to catch is up (or someone
-  // caught it); a new turn or deal drops it
-  React.useEffect(() => setHeldDraw(null), [okeyState.deal]);
-  React.useEffect(() => {
-    if (!heldDraw) return;
-    if (!isMyTurn() || okeyState.drawn || okeyState.gameState !== "play") {
-      setHeldDraw(null);
-      return;
-    }
-    const { tile, toIndex } = heldDraw;
-    let timer;
-    const drawIt = () => {
-      const fromPile = tile.source === "draw-pile";
+    const move = () => {
       const now = Date.now();
-      const wait = americano.catchWait(
-        okeyState,
-        me,
-        fromPile,
-        now,
-        turnStart.current,
-      );
+      const at = turnStart.current;
+      const wait = americano.waitBefore(okeyState, me, tile, now, at);
       if (wait) {
-        timer = setTimeout(drawIt, wait * 1000);
+        timer = setTimeout(move, wait * 1000);
         return;
       }
-      setHeldDraw(null);
+      setHold(null);
       dragged.current = tile.id;
-      act(americano.drawTile, me, tile, toIndex, now, turnStart.current);
+      if (discard) act(americano.discardTile, me, tile);
+      else act(americano.drawTile, me, tile, toIndex, now, at);
     };
-    drawIt();
+    move();
     return () => clearTimeout(timer);
-  }, [heldDraw, okeyState, me, act, isMyTurn]);
+  }, [hold, okeyState, me, act, myHand, isMyTurn]);
 
   const finishGame = useCallback(
     (tile) => {

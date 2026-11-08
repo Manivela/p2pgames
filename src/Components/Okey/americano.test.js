@@ -829,6 +829,9 @@ test("the others' time to take a discard before the next one", () => {
   const soon = s.offer.at + 1000;
   assert.equal(americano.claimWait(s, 2, soon), 7);
   assert.equal(americano.claimWait(s, 2, afterWait(s)), 0);
+  // a tile from my rack waits that long too
+  const mine = player(s, 2).hand.find(Boolean);
+  assert.equal(americano.waitBefore(s, 2, mine, soon), 7);
   // nobody else could take it
   assert.equal(
     americano.claimWait({ ...s, takes: { 3: 3, 4: 3 } }, 2, soon),
@@ -882,6 +885,10 @@ test("the next player takes the discard once the others had time to catch it", (
   assert.equal(wait(s, true, turn, turn), 0);
   const until = { ...s.rules, catchUntilDraw: true };
   assert.equal(wait({ ...s, rules: until }, true, turn, turn), 2);
+  // and so does any tile drawn, by where it's drawn from
+  const [top, pile] = [player(s, 1).discardPile.at(-1), s.drawPile.at(-1)];
+  assert.equal(americano.waitBefore(s, 2, top, turn, turn), 2);
+  assert.equal(americano.waitBefore(s, 2, pile, turn, turn), 0);
   // not someone else's turn; nor caught already, nor only bots to catch it
   assert.equal(americano.catchWait(s, 3, false, turn, turn), 0);
   const as = (ids, change) => ({

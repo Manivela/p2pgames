@@ -1124,6 +1124,20 @@ export function catchWait(
   return catcher && wait > 0 ? wait : 0;
 }
 
+// Seconds `player`, whose turn it is, waits before moving `tile`: a discard
+// while the others may take the last one (claimWait), a draw while they may
+// catch it (catchWait), `turnStart` on their own clock
+export const waitBefore = (
+  state,
+  player,
+  tile,
+  now = Date.now(),
+  turnStart = now,
+) =>
+  tile.source === `hand-${player}`
+    ? claimWait(state, player, now)
+    : catchWait(state, player, tile.source === "draw-pile", now, turnStart);
+
 // `tile` could go on the table as it is: added without moving an okey, or in
 // place of the okey that stands for it; a 1 after 13 doesn't count
 export function fitsTable(state, tile) {
