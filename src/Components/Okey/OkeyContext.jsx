@@ -664,26 +664,28 @@ export function OkeyProvider({ children }) {
     [okeyState, setOkeyState, currentUser?.name],
   );
 
-  const sit = useCallback(
-    (player) => {
-      if (!currentUser) return;
-
-      const newState = cloneDeep(okeyState);
-      const seat = newState.players.find((p) => p.id === player);
-      if (!seat) return;
-
-      seat.user = currentUser;
-      seat.userKey = localID;
-      delete seat.away;
-      delete seat.awayName;
-
-      setOkeyState({
-        ...newState,
-        players: newState.players,
-        message: "",
-      });
+  // A change of who's in the round mid-round (a seat freed, or sat down in
+  // and dealt in) replaces the whole table, as a deal does, so a move racing
+  // it can't pass the turn to a seat that's gone or skip one that's come
+  const write = useCallback(
+    (next) => {
+      if (typeof next === "string") toast(t(next));
+      else if (!next) return;
+      else if (
+        next.gameState === "play" &&
+        next.players.length !== okeyState.players.length
+      ) {
+        replaceState(map, next);
+      } else setOkeyState(next);
     },
-    [okeyState, currentUser, localID, setOkeyState],
+    [map, okeyState.players.length, setOkeyState],
+  );
+
+  const sit = useCallback(
+    (player) =>
+      currentUser &&
+      write(americano.sit(okeyState, player, currentUser, localID)),
+    [okeyState, currentUser, localID, write],
   );
 
   const isAlreadySitting = useMemo(
@@ -698,13 +700,9 @@ export function OkeyProvider({ children }) {
   // to the first)
   React.useEffect(() => {
     if (!currentUser) return;
-    const seat = okeyState.players.find((p) =>
-      p.user && !p.user.bot
-        ? p.user.id === currentUser.id && !states.has(p.userKey)
-        : p.away === currentUser.id,
-    );
-    if (seat) sit(seat.id);
-  }, [currentUser, okeyState.players, states, sit]);
+    const seat = americano.seatToSitBack(okeyState, currentUser, states);
+    if (seat) sit(seat);
+  }, [currentUser, okeyState, states, sit]);
 
   // Joining a table, sit down in its first empty seat, and again if another
   // page took it first or a reset emptied them all; not once you've stood
@@ -724,22 +722,14 @@ export function OkeyProvider({ children }) {
     }
     if (me || out.current || !currentUser || stored("watch")) return;
     if (!shared) return;
-    if (okeyState.players.some((p) => p.away === currentUser.id)) return;
-    const empty = game.tableSeats(okeyState).find((p) => !p.user && !p.away);
-    if (empty) sit(empty.id);
+    const empty = americano.seatToJoin(okeyState, currentUser);
+    if (empty) sit(empty);
   }, [me, table, okeyState, currentUser, shared, sit]);
 
   // a new name (the sidebar) goes on your seat, and nothing else changes
   React.useEffect(() => {
-    if (!currentUser) return;
-    const mine = okeyState.players.find((p) => p.user?.id === currentUser.id);
-    if (!mine || mine.user.name === currentUser.name) return;
-    setOkeyState({
-      ...okeyState,
-      players: okeyState.players.map((p) =>
-        p === mine ? { ...p, user: currentUser } : p,
-      ),
-    });
+    const next = currentUser && americano.rename(okeyState, currentUser);
+    if (next) setOkeyState(next);
   }, [currentUser, okeyState, setOkeyState]);
 
   // everyone at the table says which build they run, and which deal of the
@@ -785,67 +775,26 @@ export function OkeyProvider({ children }) {
   // changes, as at a deal, so a move racing it can't pass the turn to the
   // seat that's gone
   const freeSeat = useCallback(
-    (player) => {
-      const next = americano.freeSeat(okeyState, player);
-      if (typeof next === "string") toast(t(next));
-      else if (next?.gameState === "play") replaceState(map, next);
-      else if (next) setOkeyState(next);
-    },
-    [map, okeyState, setOkeyState],
+    (player) => write(americano.freeSeat(okeyState, player)),
+    [okeyState, write],
   );
 
-  // Seats whose page has gone (never our own: it drops out of states only
-  // as this page unloads, where marking it away would have the sit-back
-  // effect above take it again, over and over). A player's is left for them
-  // to come back to (away); a bot is played on by the page with the lowest
-  // id in the room.
+  // seats whose page has gone: away, or a bot played on (americano.markGone)
   React.useEffect(() => {
-    const gone = okeyState.players.filter(
-      (p) => p.userKey && p.userKey !== localID && !states.has(p.userKey),
+    const next = americano.markGone(
+      okeyState,
+      states,
+      localID,
+      currentUser?.id,
     );
-    if (!gone.length) return;
-    // Seeing no one else means we're the ones offline: a phone waking up
-    // drops everyone it hasn't heard from in 30s, and must not unseat them,
-    // nor play their bots; alone at a table of bots (a reload), we do
-    const alone = states.size <= 1;
-    const others = okeyState.players.some(
-      (p) => p.user && !p.user.bot && p.user.id !== currentUser?.id,
-    );
-    const adopt = localID === Math.min(...states.keys()) && (!alone || !others);
-    const newState = cloneDeep(okeyState);
-    let changed = false;
-    let leaver = null;
-    for (const player of newState.players) {
-      if (!gone.some((p) => p.id === player.id)) continue;
-      if (player.user?.bot) {
-        if (adopt) player.userKey = localID;
-        changed ||= adopt;
-        continue;
-      }
-      if (alone) continue;
-      leaver = player.user?.name || "Someone";
-      player.away = player.user?.id; // theirs to come back to (sit)
-      player.awayName = player.user?.name; // on the seat meanwhile
-      player.user = null;
-      player.userKey = null;
-      changed = true;
-    }
-    if (changed) {
-      setOkeyState({
-        ...newState,
-        ...(leaver && { message: `${leaver} left` }),
-      });
-    }
+    if (next) setOkeyState(next);
   }, [states, localID, okeyState, currentUser?.id, setOkeyState]);
 
   // a bot in an empty seat, or in place of one who's gone, played by this
   // page (bot.js)
   const seatBot = useCallback(
-    (player) => {
-      const next = bots.seatBot(okeyState, player, localID);
-      if (next) setOkeyState(next);
-    },
-    [okeyState, localID, setOkeyState],
+    (player) => write(bots.seatBot(okeyState, player, localID)),
+    [okeyState, localID, write],
   );
   // the bots this page plays, out of turn: a claim on the discard up for
   // it or a catch of the tile just thrown, and tiles won into the inbox
@@ -895,11 +844,6 @@ export function OkeyProvider({ children }) {
     return () => clearTimeout(timer);
   }, [okeyState, localID, pace, setOkeyState]);
 
-  const myIndex = useMemo(
-    () => okeyState.players.findIndex((p) => p?.user?.id === currentUser?.id),
-    [okeyState.players, currentUser?.id],
-  );
-
   const toggleHidden = useCallback(
     (tile) => {
       const newState = cloneDeep(okeyState);
@@ -935,7 +879,6 @@ export function OkeyProvider({ children }) {
       freeSeat,
       seatBot,
       isAlreadySitting,
-      myIndex,
       resetGame,
       newGame,
       loadGame,
@@ -991,7 +934,6 @@ export function OkeyProvider({ children }) {
       freeSeat,
       seatBot,
       isAlreadySitting,
-      myIndex,
       resetGame,
       newGame,
       loadGame,

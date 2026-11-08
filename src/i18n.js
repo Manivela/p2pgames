@@ -83,6 +83,10 @@ const TR = [
   [/^2 to 8 players$/, "2 ile 8 arası oyuncu"],
   [/^1 to 4 sets of tiles$/, "1 ile 4 arası taş takımı"],
   [/^Not enough tiles for those hands$/, "Bu eller için taş yetmez"],
+  [
+    /^Not enough tiles left to deal you in$/,
+    "Sana dağıtacak kadar taş kalmadı",
+  ],
   [/^Fill in every number$/, "Her sayıyı doldur"],
   [/^Make the rack's rows longer$/, "Istaka sıralarını uzat"],
   [/^1 to 50 rounds$/, "1 ile 50 arası el"],

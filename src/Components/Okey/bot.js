@@ -29,21 +29,17 @@ function chance(...key) {
 const slips = (state, mistakes, ...key) =>
   chance(state.gameId, state.round, state.discards ?? 0, ...key) < mistakes;
 
-// sits a bot in an empty seat, or in place of one who's gone (away), whose
-// player sits back down when they're back; `runner` is the page playing it
+// sits a bot in an empty seat (mid-round dealt in, as anyone), or in place
+// of one who's gone (away), whose player sits back down when they're back;
+// `runner` is the page playing it
 export function seatBot(state, player, runner) {
-  const seat = game.seat(state, player);
-  if (!seat || seat.user) return;
-  const s = cloneDeep(state);
-  Object.assign(game.seat(s, player), {
-    user: {
-      id: `bot-${player}-${runner}`,
-      name: `🤖 Bot ${player}`,
-      bot: true,
-    },
-    userKey: runner,
-  });
-  return s;
+  if (game.seat(state, player)?.user) return;
+  const bot = {
+    id: `bot-${player}-${runner}`,
+    name: `🤖 Bot ${player}`,
+    bot: true,
+  };
+  return americano.sit(state, player, bot, runner);
 }
 
 const keyOf = (t, ind) => `${colorOf(t, ind)}|${rankOf(t, ind)}`;

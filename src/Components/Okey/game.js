@@ -131,7 +131,7 @@ export const rowOf = (state, player) =>
 
 // ids: optional fixed hand (tile ids, null for a gap) instead of a random
 // one; `slots`: the rack's, both rows
-function dealHand(drawPile, player, count, ids, slots) {
+export function dealHand(drawPile, player, count, ids, slots) {
   const hand = ids
     ? ids.map(
         (id) =>
@@ -256,10 +256,14 @@ export const allSeats = (players, count = initialState.players.length) =>
 // before it is taken, so four play at the table they always had and a
 // bigger one grows a seat at a time. A seat someone's in always shows.
 export function tableSeats(state) {
-  const { players } = state;
   const seats = seatsOf(
     state.gameState === "start" ? { rules: state.setup } : state,
   );
+  // mid-round the empty ones too, while someone sitting down there could be
+  // dealt in
+  const players = dealsIn(state)
+    ? allSeats(state.players, seats)
+    : state.players;
   return players.filter(
     (p) =>
       p.user ||
@@ -283,6 +287,18 @@ export const partner = (players, player) => along(players, player, 2);
 
 export const seat = (state, player) =>
   state.players.find((p) => p.id === player);
+// a seat at the table: one in the round, or an empty one beside it
+// (tableSeats)
+export const seatAt = (state, player) =>
+  seat(state, player) ?? initialState.players.find((p) => p.id === player);
+
+// Mid-round, someone sitting down in an empty seat is dealt a hand from the
+// middle pile (americano.sit), while it holds one; not with partners, who
+// are four
+export const dealsIn = (state) =>
+  state.gameState === "play" &&
+  !state.rules.partners &&
+  state.drawPile.length >= state.rules.handSize;
 
 // What the player whose turn it is has done this turn, so the round's end
 // can show how it finished: [{ by, move, tiles: [ids] }], move one of

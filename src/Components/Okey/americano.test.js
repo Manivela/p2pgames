@@ -438,9 +438,29 @@ test("mid-round a freed seat leaves the round, the turn passing on", () => {
   assert.equal(s.currentPlayer, 2);
   assert.isFalse(s.drawn);
   assert.equal(s.message, "P1 left");
-  // P3 freed out of turn: after P2 comes P4
+  // its 15 tiles went back into the middle pile
+  assertAllTiles(s);
+  // P3 freed out of turn: after P2 comes P4; its discard back in the pile,
+  // and caught, no longer counts as caught
   s = game.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = americano.discardTile(s, 2, player(s, 2).hand.find(Boolean), Infinity);
+  s = game.drawTile(s, 3, s.drawPile.at(-1), 25);
+  s = americano.discardTile(s, 3, player(s, 3).hand.find(Boolean), Infinity);
+  const thrown = s.lastDiscard;
+  s = {
+    ...s,
+    players: s.players.map((p) =>
+      p.id === 4 ? { ...p, caught: [thrown] } : p,
+    ),
+  };
   s = americano.freeSeat(s, 3);
+  assertAllTiles(s);
+  assert.isTrue(s.drawPile.some((t) => t.id === thrown && t.hidden));
+  assert.isFalse(americano.isCaught(s, thrown));
+  assert.isNull(s.lastDiscard);
+  s = game.drawTile(s, 4, s.drawPile.at(-1), 25);
+  s = americano.discardTile(s, 4, player(s, 4).hand.find(Boolean), Infinity);
+  s = game.drawTile(s, 2, s.drawPile.at(-1), 25);
   s = americano.discardTile(s, 2, player(s, 2).hand.find(Boolean));
   assert.equal(s.currentPlayer, 4);
   assert.equal(americano.freeSeat(s, 4), "A round takes two players");
@@ -460,6 +480,81 @@ test("mid-round a freed seat leaves the round, the turn passing on", () => {
     partners: true,
   });
   assert.equal(americano.freeSeat(pairs, 2), "Partners take four players");
+});
+
+test("mid-round an empty seat is sat down in, dealt from the middle pile", () => {
+  const ece = { id: "u4", name: "Ece" };
+  let s = americano.startGame(seated(3));
+  assert.deepEqual(
+    game.tableSeats(s).map((p) => p.id),
+    [1, 2, 3, 4],
+  );
+  assert.equal(americano.seatToJoin(s, ece), 4);
+  const pile = s.drawPile.length;
+  s = americano.sit(s, 4, ece, 7);
+  assert.equal(player(s, 4).user.name, "Ece");
+  assert.equal(player(s, 4).hand.filter(Boolean).length, 14);
+  assert.equal(s.drawPile.length, pile - 14);
+  assertAllTiles(s);
+  // after P3 comes Ece
+  assert.equal(game.next(s.players, 3).id, 4);
+  // later in the game: level with whoever's losing
+  s = {
+    ...americano.freeSeat(s, 4),
+    round: 3,
+    scores: { 1: [10, 20], 2: [40, 30], 3: [0, 5] },
+  };
+  s = americano.sit(s, 4, ece, 7);
+  assert.deepEqual(s.scores[4], [null, 70]);
+  // no hand left in the pile for them, or partners: none dealt in
+  const short = {
+    ...americano.freeSeat(s, 4),
+    drawPile: s.drawPile.slice(0, 13),
+  };
+  assert.equal(
+    americano.sit(short, 4, ece, 7),
+    "Not enough tiles left to deal you in",
+  );
+  assert.isUndefined(americano.seatToJoin(short, ece));
+  const pairs = { ...short, rules: { ...short.rules, partners: true } };
+  assert.equal(americano.sit(pairs, 4, ece, 7), "Partners take four players");
+});
+
+test("a seat whose page has gone is away, and sat back down in by its player", () => {
+  let s = americano.startGame(seated(4));
+  s = {
+    ...s,
+    players: s.players.map((p) =>
+      p.id === 4 ? { ...p, user: { id: "bot", name: "🤖", bot: true } } : p,
+    ),
+  };
+  // P2's and the bot's pages are gone; this page is P1's (key 1)
+  const present = new Set([1, 3]);
+  const next = americano.markGone(s, present, 1, "u1");
+  assert.deepEqual(
+    [player(next, 2).user, player(next, 2).away, player(next, 2).awayName],
+    [null, "u2", "P2"],
+  );
+  assert.equal(next.message, "P2 left");
+  // the bot played on by the page with the lowest key
+  assert.equal(player(next, 4).userKey, 1);
+  // and not by another
+  assert.equal(player(americano.markGone(s, present, 3, "u3"), 4).userKey, 4);
+  // seeing nobody else, this page is the one offline: nobody unseated
+  assert.isUndefined(americano.markGone(s, new Set([1]), 1, "u1"));
+  // P2 back: their seat, theirs again; nobody else sits in it by themselves
+  const bora = { id: "u2", name: "P2" };
+  assert.equal(americano.seatToSitBack(next, bora, new Set([1, 3, 9])), 2);
+  assert.isUndefined(americano.seatToJoin(next, bora));
+  const back = americano.sit(next, 2, bora, 9);
+  assert.deepEqual(
+    [player(back, 2).user, player(back, 2).away, player(back, 2).awayName],
+    [bora, undefined, undefined],
+  );
+  // a bot keeps it for them meanwhile
+  const kept = americano.sit(next, 2, { id: "b", name: "🤖", bot: true }, 1);
+  assert.equal(player(kept, 2).away, "u2");
+  assert.equal(americano.seatToSitBack(kept, bora, new Set([1, 9])), 2);
 });
 
 test("standing up mid-round leaves the hand for a friend to sit down to", () => {

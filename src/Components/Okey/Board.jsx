@@ -331,9 +331,10 @@ function useKnock() {
 }
 
 function Board() {
-  const { okeyState, myIndex, me } = useContext(OkeyContext);
+  const { okeyState, me } = useContext(OkeyContext);
   // you first, then round the table: right, across, left
   const players = tableSeats(okeyState);
+  const myIndex = players.findIndex((p) => p.id === me);
   const [mine, ...rest] =
     myIndex !== -1
       ? [...players.slice(myIndex), ...players.slice(0, myIndex)]

@@ -1,4 +1,4 @@
-import { cloneDeep, max, sortBy, sum } from "lodash";
+import { cloneDeep, max, shuffle, sortBy, sum } from "lodash";
 import * as game from "./game";
 import {
   colorOf,
@@ -95,7 +95,8 @@ export function standUp(state, player) {
 }
 
 // A seat freed from the menu, or its player leaving the round: stood up
-// from, and mid-round out of the round too, its tiles off the table and the
+// from, and mid-round out of the round too, its hand, discards and inbox
+// shuffled back into the middle pile (its melds stay on the table) and the
 // turn passing on if it was theirs, so nobody waits on it.
 export function freeSeat(state, player) {
   const s = standUp(state, player);
@@ -110,8 +111,140 @@ export function freeSeat(state, player) {
   if (s.tookDiscard?.player === player || s.tookDiscard?.from === player) {
     s.tookDiscard = null;
   }
+  const { hand, discardPile, inbox } = seat(s, player);
+  const back = [...hand, ...discardPile, ...(inbox ?? [])].filter(Boolean);
+  const ids = back.map((t) => t.id);
+  s.drawPile = shuffle([
+    ...s.drawPile,
+    ...back.map((t) => ({ ...t, source: "draw-pile", hidden: true })),
+  ]);
   s.players = s.players.filter((p) => p.id !== player);
+  // back in the pile, a caught tile is a tile like any other
+  for (const p of s.players)
+    p.caught = p.caught?.filter((id) => !ids.includes(id));
+  if (ids.includes(s.lastDiscard)) s.lastDiscard = null;
   return s;
+}
+
+// Sitting down in `player`'s seat as `user`, played by the page `key`. In a
+// seat in the round its hand is theirs (one they dropped out of, stood up
+// from, or a bot's, which a person takes over but a bot keeps away for
+// them). Mid-round in one that isn't, they're dealt a hand from the middle
+// pile (game.dealsIn) and play when the turn reaches them, starting level
+// with whoever's losing, as between rounds.
+export function sit(state, player, user, key) {
+  const s = cloneDeep(state);
+  let taken = seat(s, player);
+  if (!taken && state.gameState === "play") {
+    if (state.rules.partners) return "Partners take four players";
+    if (!game.dealsIn(state)) return "Not enough tiles left to deal you in";
+    const size = state.rules.handSize;
+    const hand = game.dealHand(
+      s.drawPile,
+      player,
+      size,
+      undefined,
+      2 * game.rowOf(s, player),
+    );
+    const dealt = new Set(hand.filter(Boolean).map((t) => t.id));
+    s.drawPile = s.drawPile.filter((t) => !dealt.has(t.id));
+    taken = {
+      ...game.seatAt(s, player),
+      hand,
+      discardPile: [],
+      inbox: [],
+      claim: null,
+      caught: [],
+    };
+    s.players = sortBy([...s.players, taken], "id");
+    const totals = s.players
+      .filter((p) => s.scores[p.id])
+      .map((p) => sum(s.scores[p.id]));
+    if (!s.scores[player] && s.round > 1 && totals.length) {
+      s.scores = {
+        ...s.scores,
+        [player]: [...Array(s.round - 2).fill(null), Math.max(...totals)],
+      };
+    }
+  }
+  if (!taken) return;
+  taken.user = user;
+  taken.userKey = key;
+  if (!user.bot) {
+    delete taken.away;
+    delete taken.awayName;
+  }
+  s.message = "";
+  return s;
+}
+
+// Seats whose page has gone from `present` (the pages at the table, by
+// key), never this page's own (`localID`: it drops out only as this page
+// unloads, where marking it away would have it sit back down, over and
+// over). A player's is left for them to come back to (away); a bot is
+// played on by the page with the lowest key. Seeing no one else means this
+// page is the one offline: a phone waking up drops everyone it hasn't heard
+// from in 30s, and must not unseat them, nor play their bots; alone at a
+// table of bots (a reload), it does.
+export function markGone(state, present, localID, userId) {
+  const gone = state.players.filter(
+    (p) => p.userKey && p.userKey !== localID && !present.has(p.userKey),
+  );
+  if (!gone.length) return;
+  const alone = present.size <= 1;
+  const others = state.players.some(
+    (p) => p.user && !p.user.bot && p.user.id !== userId,
+  );
+  const adopt = localID === Math.min(...present.keys()) && (!alone || !others);
+  const s = cloneDeep(state);
+  let changed = false;
+  let leaver = null;
+  for (const p of s.players) {
+    if (!gone.some((g) => g.id === p.id)) continue;
+    if (p.user?.bot) {
+      if (adopt) p.userKey = localID;
+      changed ||= adopt;
+      continue;
+    }
+    if (alone) continue;
+    leaver = p.user?.name || "Someone";
+    p.away = p.user?.id; // theirs to come back to (sit)
+    p.awayName = p.user?.name; // on the seat meanwhile
+    p.user = null;
+    p.userKey = null;
+    changed = true;
+  }
+  if (!changed) return;
+  return { ...s, ...(leaver && { message: `${leaver} left` }) };
+}
+
+// The seat `user` sits back down in by themselves: the one they dropped out
+// of (away), unless someone took it (a bot playing it meanwhile makes way),
+// or theirs still held by a page of theirs that's gone from `present` (a
+// tab duplicated with their login leaves the seat to the first)
+export const seatToSitBack = (state, user, present) =>
+  state.players.find((p) =>
+    p.user && !p.user.bot
+      ? p.user.id === user.id && !present.has(p.userKey)
+      : p.away === user.id,
+  )?.id;
+
+// The seat a page joining the table sits down in by itself: the first empty
+// one at the table, mid-round too (dealt in); none while its player has a
+// seat to come back to
+export function seatToJoin(state, user) {
+  if (state.players.some((p) => p.away === user.id)) return;
+  return game.tableSeats(state).find((p) => !p.user && !p.away)?.id;
+}
+
+// A new name goes on the player's seat, and nothing else changes
+export function rename(state, user) {
+  const mine = state.players.find((p) => p.user?.id === user.id);
+  if (!mine || mine.user.name === user.name) return;
+  return {
+    ...state,
+    players: state.players.map((p) => (p === mine ? { ...p, user } : p)),
+  };
 }
 
 // Deals every seat sat in, and every seat whose player dropped out (away):

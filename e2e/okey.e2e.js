@@ -1490,10 +1490,38 @@ test("mid-round a seat is freed and the round plays on", async ({ page }) => {
   const s = await state(page);
   expect([s.gameState, s.round, s.currentPlayer]).toEqual(["play", round, 1]);
   expect(s.deal).not.toBe(deal);
-  await expect(page.locator('[data-seat="2"]')).toHaveCount(0);
+  // an empty seat now, to sit down in (dealt in) or put a bot in
+  await expect(page.locator('[data-seat="2"] .avatar.empty')).toHaveCount(1);
   // my discard goes to Can, next round the table now
   await table(page, "play", 1);
   expect((await state(page)).currentPlayer).toBe(3);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
+test("someone arriving mid-round sits down in an empty seat, dealt in", async ({
+  page,
+  browser,
+}, info) => {
+  anySize(info);
+  const room = await sitDown(page);
+  await table(page, "start", 3);
+  const { drawPile, currentPlayer } = await state(page);
+  // Deniz comes in: seat 4, dealt from the middle pile, the turn as it was
+  const deniz = await (await browser.newContext()).newPage();
+  await deniz.goto(`/${room}/okey`);
+  await deniz.getByRole("textbox").fill("Deniz");
+  await deniz.getByRole("button", { name: GO }).click();
+  await expect
+    .poll(async () => (await state(page)).players[3]?.user?.name, NET)
+    .toBe("Deniz");
+  const s = await state(page);
+  expect(s.players[3].hand.filter(Boolean)).toHaveLength(14);
+  expect(s.drawPile).toHaveLength(drawPile.length - 14);
+  expect(s.currentPlayer).toBe(currentPlayer);
+  // their rack, on their page
+  await expect(deniz.locator(".rack:not(.mini) [data-tile-id]")).toHaveCount(
+    14,
+  );
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
@@ -1596,7 +1624,10 @@ test("a bot plays for someone gone, and makes way when they're back", async ({
   await expect(
     page.locator(".playerName", { hasText: "Bora" }).locator(".badge.away"),
   ).toHaveText(/^(away|yok)$/);
-  await page.getByRole("button", { name: BOT }).click();
+  await page
+    .locator(".playerName", { hasText: "Bora" })
+    .getByRole("button", { name: BOT })
+    .click();
   await table(page, "play", 1);
   await expect
     .poll(async () => (await state(page)).currentPlayer, { timeout: 20000 })

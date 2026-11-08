@@ -17,7 +17,7 @@ import {
 } from "./americano";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-import { ended, partner, placeTiles, rowOf } from "./game";
+import { ended, partner, placeTiles, rowOf, seatAt } from "./game";
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -69,7 +69,7 @@ function RackPoints({ player }) {
 function Name({ player, avatarSits, children }) {
   const { okeyState, me, sit, seatBot, isAlreadySitting } =
     useContext(OkeyContext);
-  const seat = okeyState.players.find((p) => p.id === player);
+  const seat = seatAt(okeyState, player);
   const bot = seat.user?.bot && !avatarSits;
   const sitHere = !isAlreadySitting && (!seat.user || bot) && (
     <button onClick={() => sit(player)}>{t("Sit")}</button>
@@ -264,7 +264,7 @@ function Rack({ player, hands }) {
 // next pile would cover it.
 export function Seat({ player }) {
   const { okeyState, sit, isAlreadySitting } = useContext(OkeyContext);
-  const user = okeyState.players.find((p) => p.id === player).user;
+  const user = seatAt(okeyState, player).user;
   const name = user?.name;
   const turn = turnOf(okeyState, player);
   const takeOver = !isAlreadySitting && user?.bot;
