@@ -477,11 +477,13 @@ test("mid-round a freed seat leaves the round, the turn passing on", () => {
 test("mid-round an empty seat is sat down in, dealt from the middle pile", () => {
   const ece = { id: "u4", name: "Ece" };
   let s = okey.startGame(seated(3));
+  // not at the table, nor sat down in by itself: the ⋯ menu's to offer
   assert.deepEqual(
     game.tableSeats(s).map((p) => p.id),
-    [1, 2, 3, 4],
+    [1, 2, 3],
   );
-  assert.equal(okey.seatToJoin(s, ece), 4);
+  assert.isUndefined(okey.seatToJoin(s, ece));
+  assert.deepEqual(okey.freeSeats(s), [4]);
   const pile = s.drawPile.length;
   s = okey.sit(s, 4, ece, 7);
   assert.equal(player(s, 4).user.name, "Ece");
@@ -507,7 +509,7 @@ test("mid-round an empty seat is sat down in, dealt from the middle pile", () =>
     okey.sit(short, 4, ece, 7),
     "Not enough tiles left to deal you in",
   );
-  assert.isUndefined(okey.seatToJoin(short, ece));
+  assert.deepEqual(okey.freeSeats(short), []);
   const pairs = { ...short, rules: { ...short.rules, partners: true } };
   assert.equal(okey.sit(pairs, 4, ece, 7), "Partners take four players");
 });

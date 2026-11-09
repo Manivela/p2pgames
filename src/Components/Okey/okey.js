@@ -269,8 +269,21 @@ export const seatToSitBack = (state, user, present) =>
       : p.away === user.id,
   )?.id;
 
+// The empty seats a round can take on mid-round, sat down in or given a bot
+// from the ⋯ menu and dealt in (dealsIn): the ones the table would show
+// between rounds
+export function freeSeats(state) {
+  if (!game.dealsIn(state)) return [];
+  const all = game.allSeats(state.players, game.seatsOf(state));
+  return game
+    .tableSeats({ ...state, players: all })
+    .filter((p) => !p.user && !p.away && !seat(state, p.id))
+    .map((p) => p.id);
+}
+
 // The seat a page joining the table sits down in by itself: the first empty
-// one at the table, mid-round too (dealt in); none while its player has a
+// one at the table (mid-round, one stood up from, its hand there to take
+// over; never dealt in, that's the ⋯ menu's); none while its player has a
 // seat to come back to
 export function seatToJoin(state, user) {
   if (state.players.some((p) => p.away === user.id)) return;

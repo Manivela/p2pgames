@@ -26,6 +26,7 @@ const LAY = /^(Lay melds|Per aç)$/;
 const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const STAND = /^(Stand|Kalk)$/;
 const LEAVE = /^(Leave the round|Elden çekil)$/;
+const SIT_IN = /^(Sit down in this round|Bu ele otur)$/;
 
 // a helper from e2e/table.js, run in the page
 const table = (page, name, ...args) =>
@@ -1490,15 +1491,14 @@ test("mid-round a seat is freed and the round plays on", async ({ page }) => {
   const s = await state(page);
   expect([s.gameState, s.round, s.currentPlayer]).toEqual(["play", round, 1]);
   expect(s.deal).not.toBe(deal);
-  // an empty seat now, to sit down in (dealt in) or put a bot in
-  await expect(page.locator('[data-seat="2"] .avatar.empty')).toHaveCount(1);
+  await expect(page.locator('[data-seat="2"]')).toHaveCount(0);
   // my discard goes to Can, next round the table now
   await table(page, "play", 1);
   expect((await state(page)).currentPlayer).toBe(3);
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
-test("someone arriving mid-round sits down in an empty seat, dealt in", async ({
+test("mid-round someone sits down from the menu, dealt from the middle pile", async ({
   page,
   browser,
 }, info) => {
@@ -1506,11 +1506,16 @@ test("someone arriving mid-round sits down in an empty seat, dealt in", async ({
   const room = await sitDown(page);
   await table(page, "start", 3);
   const { drawPile, currentPlayer } = await state(page);
-  // Deniz comes in: seat 4, dealt from the middle pile, the turn as it was
+  // Deniz comes in mid-round: watching, the empty seat not at the table
   const deniz = await (await browser.newContext()).newPage();
   await deniz.goto(`/${room}/okey`);
   await deniz.getByRole("textbox").fill("Deniz");
   await deniz.getByRole("button", { name: GO }).click();
+  await arrived(deniz);
+  await expect(deniz.locator('[data-seat="4"]')).toHaveCount(0);
+  expect((await state(page)).players).toHaveLength(3);
+  // and sits down from the ⋯ menu: seat 4, dealt in, the turn as it was
+  await confirm(deniz, SIT_IN);
   await expect
     .poll(async () => (await state(page)).players[3]?.user?.name, NET)
     .toBe("Deniz");
@@ -1518,7 +1523,6 @@ test("someone arriving mid-round sits down in an empty seat, dealt in", async ({
   expect(s.players[3].hand.filter(Boolean)).toHaveLength(14);
   expect(s.drawPile).toHaveLength(drawPile.length - 14);
   expect(s.currentPlayer).toBe(currentPlayer);
-  // their rack, on their page
   await expect(deniz.locator(".rack:not(.mini) [data-tile-id]")).toHaveCount(
     14,
   );

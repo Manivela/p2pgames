@@ -375,6 +375,8 @@ export default function TableMenu() {
     okeyState,
     me,
     stand,
+    sit,
+    seatBot,
     freeSeat,
     resetGame,
     newGame,
@@ -389,6 +391,7 @@ export default function TableMenu() {
   const [dialog, setDialog] = useState(null);
   useAutoSave();
   const playing = okeyState.gameState === "play";
+  const free = okey.freeSeats(okeyState);
   const show = (name) => {
     setOpen(false);
     setDialog(name);
@@ -439,6 +442,14 @@ export default function TableMenu() {
             {me && (
               <button onClick={then(() => stand(me))}>{t("Stand")}</button>
             )}
+            {/* mid-round a seat joins the round only from here, dealt a hand
+                from the middle pile (okey.sit); between rounds, Sit */}
+            {!me && free.length > 0 && (
+              <Confirm
+                label={t("Sit down in this round")}
+                onConfirm={then(() => sit(free[0]))}
+              />
+            )}
           </div>
           {/* anyone's, gone or still here: mid-round every seat is in the
               round, stood up from or not, and leaves it (okey.freeSeat) */}
@@ -452,6 +463,13 @@ export default function TableMenu() {
                   onConfirm={then(() => freeSeat(p.id))}
                 />
               ))}
+            {free.map((id) => (
+              <Confirm
+                key={id}
+                label={t(`Add a bot: ${t(`Player ${id}`)}`)}
+                onConfirm={then(() => seatBot(id))}
+              />
+            ))}
           </div>
           <div className="group">
             <button onClick={() => show("load")}>{t("Saved games")}</button>

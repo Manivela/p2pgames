@@ -259,11 +259,7 @@ export function tableSeats(state) {
   const seats = seatsOf(
     state.gameState === "start" ? { rules: state.setup } : state,
   );
-  // mid-round the empty ones too, while someone sitting down there could be
-  // dealt in
-  const players = dealsIn(state)
-    ? allSeats(state.players, seats)
-    : state.players;
+  const { players } = state;
   return players.filter(
     (p) =>
       p.user ||
