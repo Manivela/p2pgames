@@ -4,8 +4,11 @@ import { checkFinished } from "./checkFinish";
 import { createTile } from "./utils";
 import { rowFits } from "./rulesets";
 
-// Game rules as pure functions: (state, player, ...args) => new state,
-// an error string to show the player, or undefined for "nothing changed".
+// A hand's moves and the table's facts, as pure functions: (state, player,
+// ...args) => new state, an error string to show the player, or undefined
+// for "nothing changed". Only okey.js and tests import this file: its draw,
+// discard and finish are whole only as okey.js wraps them. (It keeps the
+// name game.js: `hand`, the obvious one, is a local in nearly every rule.)
 
 function removeItem(array, tile) {
   const newArray = [...array];
