@@ -8,7 +8,10 @@ import { t } from "../../i18n";
 // comparing where each tile was and is now tells what happened, and a copy
 // of it flies there (Web Animations, transform and opacity only). Other
 // players' moves arrive over the network and would otherwise just appear.
-// The tile you dragged has already landed; it only bounces.
+// The tile you dragged has already landed; it only bounces. Tiles and the
+// places they fly to are found by data-tile-id, data-seat, data-pile,
+// data-meld and data-hand; a flight measures screen rects, which Chrome and
+// WebKit both report right inside `zoom` (small piles, melds, shown hands).
 
 const EASE = "cubic-bezier(.2,.8,.2,1)";
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -671,7 +671,8 @@ export function OkeyProvider({ children }) {
   // offered (Board.jsx). Between hands the table's is picked up by itself,
   // once one of its pages has our deal (not just come in, the game still on
   // its way): it keeps the game while this page reloads, once a build, so a
-  // page the site still serves old can't loop
+  // page the site still serves old can't loop. Never on the site's build
+  // alone: the whole table would reload at once, and the game with it.
   const deal = shared?.deal;
   React.useEffect(() => {
     setLocalState((s) =>

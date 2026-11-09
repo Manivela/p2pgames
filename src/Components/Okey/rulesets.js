@@ -15,7 +15,16 @@ export const pointsRound = (opening) => ({
 });
 
 // Every setting a ruleset has, each preset's unless it says otherwise:
-// every switch off, the score sheet Americano's
+// every switch off, the score sheet Americano's. A new setting gets a key
+// here; a line in GameSettings.jsx's groups saying in full what it does (no
+// tooltips: the text is the explanation), with its Turkish, under the switch
+// it hangs on, and in "The table" if the deal or the seats are laid out by
+// it (those can't change mid-game); and a check in `invalid` when a bad
+// value would break the rules at every table playing it.
+// No setting scores the gösterge: it scores nothing in any game, 101 as the
+// PDF has it (a -101 for showing its twin was invented, and taken out) and
+// classic too, though many tables play gösterme (the user's call); it's
+// never a pair either.
 export const DEFAULTS = {
   seats: 4,
   tileSets: 2,
@@ -40,6 +49,9 @@ export const DEFAULTS = {
   pairsForAll: false,
   pairsAddMax: 0, // no limit
   finishInOne: false,
+  // katlamalı, the table's to tick: an opening with points beats the
+  // highest so far that hand (not in the PDF; not `doubling`, its score
+  // multipliers)
   raiseOpening: false,
   reshuffle: false,
   pileOutCounts: false,
@@ -143,7 +155,8 @@ export const AMERICANO = {
   okeySwapFromRound: 6,
   doubling: true, // the okey thrown last doubles the others' scores
   pileOutCounts: true, // a pile that runs out ends the round, scored
-  peekPairRounds: true, // the pair round's discards can be looked through
+  // the pair round's discards can be looked through: the user's house rule
+  peekPairRounds: true,
 };
 
 // 101 Okey, as pagat.com has it (pagat.com/rummy/okey101.html), with the
@@ -172,7 +185,9 @@ export const ONE_O_ONE = {
   // işler taş, caught with the Catch button until the next discard, as in
   // Americano (the PDF: until the next player draws; the user's call)
   catchPenalty: 101,
-  takeCaught: true, // and, caught, the next player can still take it
+  // and, caught, the next player can still take it (the user's call;
+  // Americano's can't)
+  takeCaught: true,
   okeyDiscardPenalty: 101, // discarding the okey, unless it's your last tile
   // the previous discard can be taken only to use it in a meld that turn,
   // or put back for this
@@ -180,7 +195,9 @@ export const ONE_O_ONE = {
   returnPenalty: 101,
   pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn
   pairsForAll: true, // once someone opens with pairs, everyone lays pairs
-  peekWithPairs: true, // and anyone can look through the discards
+  // and anyone can look through the discards (the user's call: the PDF
+  // lets only the pairs opener)
+  peekWithPairs: true,
   finishInOne: true, // open all but one tile at once and finish, under 101 too
   pileOutCounts: true, // a pile that runs out ends the hand, scored as usual
   // a table okey goes to whoever holds its tile, once they've opened
