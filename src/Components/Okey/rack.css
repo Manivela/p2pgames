@@ -58,6 +58,8 @@ html:has(.fit) {
   display: flex;
   justify-content: center;
   align-items: start;
+  /* a line of a seat's badges, hanging under it (.seat .badges) */
+  padding-bottom: calc(var(--t) * 0.24);
 }
 
 .others {
@@ -146,12 +148,14 @@ html:has(.fit) {
 
 .side {
   grid-column: 3;
-  align-self: center;
+  /* where the table is shorter than it (a phone on its side), down from the
+     top of the table, never up into the seats' badges */
+  align-self: safe center;
   max-width: calc(var(--t) * 4);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(var(--t) * 0.18);
+  gap: calc(var(--t) * 0.1);
   text-align: center;
 }
 
@@ -444,15 +448,22 @@ html:has(.fit) {
   background-color: #1565c0;
 }
 
+/* opened on this turn: what they laid came down just now */
+.badge.just {
+  background-color: #00897b;
+}
+
 /* dropped out (a reload, a phone that slept): the seat waits for them */
 .badge.away {
   background-color: #616161;
 }
 
+/* from under the avatar, clear of its tile count and the tea glass: room up
+   to the next pile, even past a short name */
 .seat .badges {
   position: absolute;
-  top: calc(100% - var(--t) * 0.12);
-  left: calc(var(--t) * 0.92);
+  top: calc(100% + var(--t) * 0.09);
+  left: calc(var(--t) * 0.26);
   /* as tall as the badges or buttons in it, not the name's line */
   line-height: 1;
   white-space: nowrap;
@@ -513,6 +524,12 @@ html:has(.fit) {
   font-size: calc(var(--t) * 0.2);
   font-weight: 700;
   line-height: 1.4;
+}
+
+/* has drawn this turn: the count up by the tile drawn, in drew's blue (the
+   seats round the table have no drew badge: no room for two) */
+.tilesLeft.drew {
+  background: #1565c0;
 }
 
 .tilesLeft.last {

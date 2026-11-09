@@ -50,8 +50,13 @@ function TilesLeft({ player }) {
   const { okeyState, myHand } = useContext(OkeyContext);
   if (okeyState.gameState !== "play" || isElden(okeyState)) return null;
   const left = myHand(player).filter(Boolean).length;
+  const drew = okeyState.currentPlayer === player && okeyState.drawn;
   return (
-    <span className={`tilesLeft ${left === 1 ? "last" : ""}`}>{left}</span>
+    <span
+      className={`tilesLeft ${drew ? "drew" : ""} ${left === 1 ? "last" : ""}`}
+    >
+      {left}
+    </span>
   );
 }
 
@@ -103,12 +108,17 @@ function Name({ player, avatarSits, children }) {
       <span className="name">{seat.user.name}</span>
       {/* under a seat's name, so the row doesn't shift each turn */}
       <span className="badges">
-        {playing && turn && okeyState.drawn && (
+        {/* round the table, the tile count says it (TilesLeft) */}
+        {playing && turn && okeyState.drawn && !avatarSits && (
           <span className="badge drew">{t("drew")}</span>
         )}
-        {playing && okeyState.opened[player] && (
-          <span className="badge">{t("opened")}</span>
-        )}
+        {playing &&
+          okeyState.opened[player] &&
+          (okeyState.justOpened === player ? (
+            <span className="badge just">{t("just opened")}</span>
+          ) : (
+            <span className="badge">{t("opened")}</span>
+          ))}
         {playing &&
           okeyState.rules?.partners &&
           me &&

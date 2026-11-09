@@ -293,6 +293,7 @@ const TR = [
   // how the round finished (LastTurn)
   [/^(.+) took the discard$/, "$1 yandan aldı"],
   [/^taken (\d+)\/(\d+)$/, "yandan $1/$2"],
+  [/^just opened$/, "yeni açtı"], // before "(.+) opened"
   [/^(.+) opened$/, "$1 açtı"],
   [/^(.+) laid down$/, "$1 per indirdi"],
   [/^(.+) added to a meld$/, "$1 işledi"],
