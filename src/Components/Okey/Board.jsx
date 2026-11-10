@@ -239,7 +239,7 @@ function OnTheTable({ pile }) {
 // hand once the round ends), the pile you throw to.
 // what a press on the table works instead of the felt under it
 const CONTROLS =
-  ".tile, button, input, label, a, details, select, textarea, .dialog-backdrop";
+  ".tile, button, input, label, a, details, select, textarea, .dialog-backdrop, .glass";
 
 // Picking your tiles from anywhere on the table off the tiles and
 // controls: a tap drops the pick; a box drawn picks the tiles of your rack

@@ -194,6 +194,27 @@ test("a crowded table keeps clear of what hangs under the others", async ({
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
+// a tap on the tea glass pours a Perge, then rakı, then tea again, and the
+// glass keeps its drink as the turn takes it to the next seat
+test("a tap on the tea glass pours the next drink", async ({ page }, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  const drink = (fill, at = ".rack") =>
+    expect(page.locator(`${at} .glass [fill="url(#tea-glass-${fill})"]`));
+  const pour = () =>
+    info.project.name === "desktop"
+      ? page.locator(".glass").click()
+      : page.locator(".glass").tap();
+  await drink("tea").toBeVisible();
+  for (const next of ["bottle", "raki", "tea", "bottle"]) {
+    await pour();
+    await drink(next).toBeVisible();
+  }
+  await table(page, "play", 1);
+  await drink("bottle", ".head").toBeVisible();
+});
+
 // a discard that fit a meld gives the others time to catch it: the next
 // player's take waits meanwhile, a ghost in its slot, and Catch shows the
 // tile it catches

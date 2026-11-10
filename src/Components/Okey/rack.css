@@ -651,13 +651,12 @@ html:has(.fit) {
 /* the tea glass floats in front of whoever's turn it is, so nothing moves
    when it passes: on an avatar's corner, beside your name. Nothing along
    the top hangs past its row (the badges too): the melds come right up to
-   it on a full table. */
+   it on a full table. A tap on it pours another drink (TeaGlass.jsx). */
 .glass {
   position: absolute;
   width: calc(var(--t) * 0.7);
   height: calc(var(--t) * 0.77);
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.4));
-  pointer-events: none;
 }
 
 .seat .glass {
