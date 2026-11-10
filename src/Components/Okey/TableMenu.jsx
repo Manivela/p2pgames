@@ -7,6 +7,9 @@ import * as okey from "./okey";
 import { allRulesets } from "./rulesets";
 import { TableSettings } from "./GameSettings";
 import { t } from "../../i18n";
+import { Confirm } from "../Confirm";
+
+export { Confirm };
 
 // Every device keeps the latest two games it saw, in any room, so they can
 // be picked up again after a reset, a closed tab or another night: each as
@@ -46,30 +49,6 @@ function useAutoSave() {
       }
     }, 1000);
   }, [okeyState, roomId]);
-}
-
-// a destructive or replacing action takes a second tap within 3s
-export function Confirm({ label, onConfirm, children }) {
-  const [armed, setArmed] = useState(false);
-  const timer = useRef();
-  return (
-    <button
-      className={armed ? "armed" : ""}
-      onClick={() => {
-        clearTimeout(timer.current);
-        if (armed) {
-          setArmed(false);
-          onConfirm();
-        } else {
-          setArmed(true);
-          timer.current = setTimeout(() => setArmed(false), 3000);
-        }
-      }}
-    >
-      {armed ? t("Sure? Tap again") : label}
-      {children}
-    </button>
-  );
 }
 
 function summary(s) {
