@@ -3,8 +3,13 @@ import { assert, test } from "vitest";
 import { t } from "./i18n";
 
 test("every message the rules return has a Turkish version", () => {
-  const rules = ["game.js", "okey.js", "rulesets.js"]
-    .map((f) => readFileSync(`src/Components/Okey/${f}`, "utf8"))
+  const rules = [
+    "Okey/game.js",
+    "Okey/okey.js",
+    "Okey/rulesets.js",
+    "Backgammon/rules.js",
+  ]
+    .map((f) => readFileSync(`src/Components/${f}`, "utf8"))
     .join("\n");
   const messages = [...rules.matchAll(/return "([^"]+)"/g)].map((m) => m[1]);
   assert.isNotEmpty(messages);

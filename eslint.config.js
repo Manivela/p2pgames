@@ -5,7 +5,6 @@ import reactHooks from "eslint-plugin-react-hooks";
 import prettier from "eslint-plugin-prettier/recommended";
 
 export default [
-  { ignores: ["src/Components/Backgammon"] },
   js.configs.recommended,
   react.configs.flat.recommended,
   reactHooks.configs["recommended-latest"],
@@ -27,7 +26,7 @@ export default [
   },
   // run by node: the configs and the e2e tests
   {
-    files: ["*.config.js", "e2e/okey.e2e.js"],
+    files: ["*.config.js", "e2e/*.e2e.js"],
     languageOptions: { globals: globals.node },
   },
 ];

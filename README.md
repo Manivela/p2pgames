@@ -18,11 +18,12 @@ demo: <https://p2p.yunusgulcu.com/>
 - message each other using the very basic messaging UI (disabled for liability concerns)
   - the order of messages should be the same for everyone thanks to the YArray data structure.
   - automatically scrolls when messages start overflowing the container.
-- play the backgammon game made by [Bruno Nunes](https://github.com/bnunesc/react-backgammon) with another person in your room
-  - players are assigned using the buttons shown before the game
-  - either of the players can start the game
-  - UI elements like roll dice button and available moves will only show up for the relevant player.
-  - any player can hit the reset players button to reset the players and the game
+- play backgammon (tavla) with another person in your room, first made from [Bruno Nunes](https://github.com/bnunesc/react-backgammon)'s game
+  - tap Sit on a name plate to take white or black; anyone else watches
+  - each player sees the board from their own side, their home bottom right
+  - a picked checker shows where each die takes it and, in one go, where both do (3-2 also shows 5)
+  - both dice have to be played when they can, and when only one can, the higher one; a move the rules rule out says why
+  - a mars (the other has borne nothing off) counts two, and the score carries from game to game
 - play a very basic implementation of Minecraft made by [danba340](https://github.com/danba340/minecraft-react)
   - players are assigned a random color when they first join the main room and the spheres use this color.
   - player location is updated for all players using the YJS awareness api
@@ -48,13 +49,6 @@ demo: <https://p2p.yunusgulcu.com/>
 **A:** make sure hardware acceleration is enabled in your browser
 
 ## Known bugs and improvements
-
-### Backgammon
-
-- p2 can roll the dice for p1 on "No moves available" state
-- p2 can undo for p1
-- p2 sees the board from the same perspective as p1 which could be confusing, it should probably be flipped for p2 so both players try to go to the bottom right (similar to how you would see if you were sitting across each other on a real board)
-- Sound effects can be added for when it's a players turn or when someone rolls the dice
 
 ### Minecraft
 
