@@ -26,8 +26,20 @@ function removeItem(array, tile) {
 // towards the slots the moved tiles left in this row when those have room,
 // so a group being reordered closes up behind them instead of running into
 // the next one. A row too full to make room: what's in the way takes the
-// moved tiles' old slots, or the first gaps.
+// moved tiles' old slots, or the first gaps. Tiles picked from both rows
+// each stay in their own, moved along it as far as the held one.
 export function placeTiles(hand, row, tiles, toIndex, held = tiles[0]?.id) {
+  const at = (id) => hand.findIndex((t) => t?.id === id);
+  const rows = _.groupBy(tiles, (t) => Math.floor(at(t.id) / row));
+  if (Object.keys(rows).length > 1 && tiles.every((t) => at(t.id) >= 0)) {
+    const shift = (toIndex % row) - (at(held) % row);
+    return Object.entries(rows).reduce((h, [r, group]) => {
+      const lead =
+        group.find((t) => t.id === held) ?? _.minBy(group, (t) => at(t.id));
+      const col = _.clamp((at(lead.id) % row) + shift, 0, row - 1);
+      return placeTiles(h, row, group, r * row + col, lead.id);
+    }, hand);
+  }
   const h = Array.from(
     { length: Math.max(hand.length, 2 * row) },
     (_, i) => hand[i] ?? null,

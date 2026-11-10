@@ -226,6 +226,32 @@ test("picked tiles land together around the one held", () => {
   assert.equal(place("ABCDEF__" + "X_Y_____", "XY", 6, "X"), "ABCDEFXY");
 });
 
+test("picked tiles from both rows each stay in their row", () => {
+  const move = (hand, ids, at, held) =>
+    picture(game.placeTiles(rack(hand), 8, rack(ids), at, held));
+  // held by X, dropped 4 slots right: Z under it moves 4 right too
+  assert.equal(
+    move("X_Y_____" + "_Z______", "XYZ", 4, "X"),
+    "____X_Y_" + "_____Z__",
+  );
+  // dropped on the other row, the same
+  assert.equal(
+    move("X_Y_____" + "_Z______", "XYZ", 12, "X"),
+    "____X_Y_" + "_____Z__",
+  );
+  // held from the bottom row; what's in the way slides aside in its own
+  // row, into the slot left there
+  assert.equal(
+    move("XA______" + "Z_B_____", "XZ", 10, "Z"),
+    "_AX_____" + "_BZ_____",
+  );
+  // the row's end stops each row's tiles, not the others'
+  assert.equal(
+    move("X_______" + "__YZ____", "XYZ", 6, "X"),
+    "______X_" + "______YZ",
+  );
+});
+
 test("a full row swaps instead", () => {
   // X from the bottom row onto a full top row: B takes X's old slot
   const hand = rack("ABCD" + "X___");

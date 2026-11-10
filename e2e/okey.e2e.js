@@ -1019,6 +1019,31 @@ test("picked tiles move together", async ({ page }, info) => {
   await expect(picked).toHaveCount(0);
 });
 
+test("picked tiles from both rows each stay in their row", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  const before = await handIds(page);
+  for (const i of [2, 13]) await slot(page, i).locator(".tile").click();
+  // held by the top one, 4 slots right: the bottom one comes 4 along too
+  const from = await slot(page, 2).locator(".tile").boundingBox();
+  const to = await slot(page, 6).boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await holdAt(page, to.x + to.width / 2, to.y + to.height / 2);
+  await expect(slot(page, 6)).toHaveClass(/over/);
+  await expect(slot(page, 17)).toHaveClass(/over/);
+  await page.mouse.up();
+  await expect
+    .poll(async () => {
+      const ids = await handIds(page);
+      return [ids[6], ids[17]];
+    })
+    .toEqual([before[2], before[13]]);
+});
+
 // the pick goes with the round: its end shows the hands unpicked
 test("a pick is dropped when the round ends", async ({ page }, info) => {
   anySize(info);
