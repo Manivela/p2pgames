@@ -13,11 +13,13 @@ function Slot({
   className,
   canDiscard,
   disabled,
+  onDragOff,
   ...props
 }) {
   const [{ isOver, held }, drop] = useDrop(
     () => ({
-      accept: "TILE",
+      // a pending draw's ghost goes only around the rack (Tile.jsx)
+      accept: type === "HAND" ? ["TILE", "GHOST"] : "TILE",
       drop: (e) => {
         onDrop(e.tile, index); // react-dnd only takes an object or nothing back
       },
@@ -29,7 +31,7 @@ function Slot({
         held: monitor.isOver() ? monitor.getItem()?.tile : null,
       }),
     }),
-    [index, canDiscard, onDrop],
+    [index, canDiscard, onDrop, type],
   );
   // your rack shows what the tile held over one of its slots would do
   useEffect(() => onOver?.(index, held), [onOver, index, held]);
@@ -49,7 +51,14 @@ function Slot({
     >
       {/* a tile of its own per tile: one that moves to another slot doesn't
           carry over the slide shown before it was dropped (rack.css) */}
-      {tile && <Tile key={tile.id} tile={tile} disabled={disabled} />}
+      {tile && (
+        <Tile
+          key={tile.id}
+          tile={tile}
+          disabled={disabled}
+          onDragOff={onDragOff}
+        />
+      )}
     </div>
   );
 }

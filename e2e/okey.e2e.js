@@ -106,12 +106,22 @@ async function holdAt(page, x, y) {
   await page.mouse.move(x, y + 1);
 }
 
+// to: a locator, or a point ({ x, y })
 async function drag(page, from, to) {
-  const [a, b] = [await from.boundingBox(), await to.boundingBox()];
+  const a = await from.boundingBox();
+  const b = to.boundingBox
+    ? await to.boundingBox()
+    : { ...to, width: 0, height: 0 };
   await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
   await page.mouse.down();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
   await page.mouse.up();
+}
+
+// bare felt, at every size: just above my rack's left end
+async function felt(page) {
+  const r = await page.locator(".rack:not(.mini)").first().boundingBox();
+  return { x: r.x + 10, y: r.y - 15 };
 }
 
 // a menu item that takes a second tap
@@ -236,6 +246,54 @@ test("a discard that fits waits the others' time to catch it, then comes", async
   expect((await state(page)).drawn).toBeFalsy();
   await expect.poll(async () => (await handIds(page))[free]).toBe(top);
   await expect(slot(page, free)).not.toHaveClass(/ghost/);
+});
+
+// changed your mind: the waiting draw's ghost goes round the rack, and let
+// go anywhere off it, nothing is drawn
+test("a draw waiting the others' time is undone by dragging it off the rack", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "toMyTurn", false);
+  // time enough for all the drags below
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    const rules = { ...s.rules, catchWaitSeconds: 60 };
+    window.okey.set({ ...s, discardFits: true, rules });
+  });
+  const ids = await handIds(page);
+  const [a, b] = [ids.indexOf(null), ids.indexOf(null, ids.indexOf(null) + 1)];
+  const pile = page.locator('[data-pile="4"] .slot');
+  await drag(page, pile, slot(page, a));
+  await drag(page, slot(page, a).locator(".tile"), slot(page, b));
+  await expect(slot(page, b)).toHaveClass(/ghost/);
+  await expect(slot(page, a)).not.toHaveClass(/ghost/);
+  // on the felt, the middle pile, a meld, or back on its pile
+  const offRack = [
+    await felt(page),
+    page.locator(".draw .stack"),
+    page.locator(".meld").first(),
+    pile,
+  ];
+  for (const to of offRack) {
+    if (!(await slot(page, b).getAttribute("class")).includes("ghost")) {
+      await drag(page, pile, slot(page, b));
+    }
+    await expect(slot(page, b)).toHaveClass(/ghost/);
+    await drag(page, slot(page, b).locator(".tile"), to);
+    await expect(slot(page, b)).not.toHaveClass(/ghost/);
+    await expect(page.locator("[role=status]")).toHaveCount(0);
+  }
+  // with the wait over, a draw still held would come now
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    window.okey.set({ ...s, rules: { ...s.rules, catchWaitSeconds: 0 } });
+  });
+  await page.waitForTimeout(500);
+  expect((await state(page)).drawn).toBeFalsy();
+  expect((await handIds(page))[b]).toBeNull();
 });
 
 test("on a wide screen the melds wrap about four to a row, as on a phone", async ({
@@ -1392,6 +1450,23 @@ test("tiles taken out of turn fly into their slots on my rack", async ({
     return tile().style.visibility;
   }, extra);
   expect(hidden).toBe("hidden");
+});
+
+// Americano: a claim on the discard, dragged off the rack, is withdrawn
+test("a claim's ghost dragged off the rack withdraws it", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora: Bora's discard on offer
+  const free = (await handIds(page)).indexOf(null);
+  await drag(page, page.locator('[data-pile="2"] .slot'), slot(page, free));
+  await expect(slot(page, free)).toHaveClass(/ghost/);
+  await drag(page, slot(page, free).locator(".tile"), await felt(page));
+  await expect(slot(page, free)).not.toHaveClass(/ghost/);
+  expect((await state(page)).players[0].claim).toBeNull();
+  await expect(page.locator("[role=status]")).toHaveCount(0);
 });
 
 // Americano's out-of-turn takes: yours this round, beside the round's name;

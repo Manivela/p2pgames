@@ -148,6 +148,7 @@ function Rack({ player, hands }) {
     takeBack,
     held,
     heldDraw,
+    unhold,
   } = useContext(OkeyContext);
   const offer = upForClaim(okeyState);
   // moving my claim's ghost, or claiming the discard out of turn
@@ -161,7 +162,8 @@ function Rack({ player, hands }) {
     else drawTile(player, tile, toIndex);
   }
   const sittingPlayer = okeyState.players.find((p) => p.id === player);
-  // my claim on the discard waits as a ghost in the slot I dropped it on
+  // my claim on the discard waits as a ghost in the slot I dropped it on;
+  // dragged off the rack, it's withdrawn
   const offered =
     offer &&
     !isCaught(okeyState, offer.tileId) &&
@@ -174,8 +176,13 @@ function Rack({ player, hands }) {
       sittingPlayer.claim?.id === offer.id && {
         slot: sittingPlayer.claim.slot,
         tile: { ...offered, source: `claim-${me}` },
+        cancel: () => act(claimDiscard, me, null),
       }) ||
-      (heldDraw && { slot: heldDraw.toIndex, tile: heldDraw.tile }));
+      (heldDraw && {
+        slot: heldDraw.toIndex,
+        tile: heldDraw.tile,
+        cancel: unhold,
+      }));
   // a row's slots (13; 101's 15), empty before a deal, on someone else's
   // rack (watched from outside the game), and once the round ends: the
   // hands are shown
@@ -218,7 +225,7 @@ function Rack({ player, hands }) {
   function slotProps(tile, index) {
     // a discard I made before the wait was over sits on my pile meanwhile
     if (!tile && ghost?.slot === index) {
-      return { tile: ghost.tile, className: "ghost" };
+      return { tile: ghost.tile, className: "ghost", onDragOff: ghost.cancel };
     }
     const props = { tile: tile?.id === held ? null : tile };
     if (!preview) return props;
@@ -362,9 +369,7 @@ export function DiscardPile({ player, small }) {
   } = useContext(OkeyContext);
   function onDiscard(tile, index) {
     const took = okeyState.tookDiscard;
-    if (tile.source.startsWith("claim-"))
-      act(claimDiscard, me, null); // put it back
-    else if (took?.tileId === tile.id && took.from === player)
+    if (took?.tileId === tile.id && took.from === player)
       act(returnDiscard, me);
     else discardTile(player, tile, index);
   }

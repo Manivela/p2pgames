@@ -37,9 +37,6 @@ function reportWentBack(why, tags, data) {
   Sentry.forceLoad?.();
 }
 
-// a claim's ghost only goes back to the discard pile or around the rack
-const ghost = (tile) => tile.source.startsWith("claim-");
-
 // this tab's own notes (sessionStorage), which a blocked storage just loses
 const stored = (key) => {
   try {
@@ -281,10 +278,11 @@ export function OkeyProvider({ children }) {
   // others' time to take or catch the discard), local only, not shared: a
   // draw waits as a ghost in the slot it was dropped on, a discard on my
   // pile, out of my rack, and is made when the wait is up. Dragging a held
-  // discard back cancels it.
+  // discard back, or a held draw's ghost off my rack, cancels it.
   const [hold, setHold] = React.useState(null); // { tile, toIndex }
   const held = hold?.tile.source === `hand-${me}` ? hold.tile.id : null;
   const heldDraw = hold && !held ? hold : null;
+  const unhold = useCallback(() => setHold(null), []);
   const drawTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
@@ -408,7 +406,6 @@ export function OkeyProvider({ children }) {
 
   const finishGame = useCallback(
     (tile) => {
-      if (ghost(tile)) return false;
       dragged.current = tile.id;
       return act(okey.finishGame, me, tile);
     },
@@ -524,7 +521,7 @@ export function OkeyProvider({ children }) {
 
   const playOnMeld = useCallback(
     (tile, meldIndex, atEnd) =>
-      !ghost(tile) && act(okey.playOnMeld, me, tile.id, meldIndex, atEnd),
+      act(okey.playOnMeld, me, tile.id, meldIndex, atEnd),
     [act, me],
   );
 
@@ -810,6 +807,7 @@ export function OkeyProvider({ children }) {
       startPicking,
       held,
       heldDraw,
+      unhold,
       openHand,
       openAll,
       layMelds,
@@ -858,6 +856,7 @@ export function OkeyProvider({ children }) {
       startPicking,
       held,
       heldDraw,
+      unhold,
       openHand,
       openAll,
       layMelds,

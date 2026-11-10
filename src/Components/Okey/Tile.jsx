@@ -56,7 +56,16 @@ export function lastTurn(state) {
 export const markOf = (moves, id) =>
   (id && moves.findIndex((m) => m.tiles.includes(id)) + 1) || null;
 
-function Tile({ tile, disabled, className, style, numbered = true }) {
+// onDragOff: the tile is a pending draw's ghost (Rack.jsx), which only a
+// slot of the rack takes; let go anywhere else, it calls this
+function Tile({
+  tile,
+  disabled,
+  className,
+  style,
+  numbered = true,
+  onDragOff,
+}) {
   const { me, act, okeyState, selected, toggleSelected, spun, spin } =
     useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
@@ -119,14 +128,15 @@ function Tile({ tile, disabled, className, style, numbered = true }) {
   }
   const [{ opacity }, dragRef] = useDrag(
     () => ({
-      type: "TILE",
+      type: onDragOff ? "GHOST" : "TILE",
       item: { tile },
       canDrag: () => !disabled,
+      end: (_, monitor) => onDragOff && !monitor.didDrop() && onDragOff(),
       collect: (monitor) => ({
         opacity: monitor.isDragging() ? 0.5 : 1,
       }),
     }),
-    [tile, disabled],
+    [tile, disabled, onDragOff],
   );
   const mark = markOf(lastTurn(okeyState), tile.id);
   const classes = [
