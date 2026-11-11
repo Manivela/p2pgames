@@ -33,6 +33,29 @@ export const useAuthStore = create(
   ),
 );
 
+// this device's sound level, 0 to 1, for every game (each table's ⋯ menu)
+export const useVolume = create(
+  persist((set) => ({ volume: 1, setVolume: (volume) => set({ volume }) }), {
+    name: "volume",
+    storage: createJSONStorage(() => localStorage),
+  }),
+);
+
+// the level the Okey table kept for itself before, moved here once: set,
+// so it's saved (loading alone saves nothing)
+try {
+  const old = localStorage.getItem("okey-volume");
+  if (old !== null) {
+    const v = Number(old);
+    if (localStorage.getItem("volume") === null && Number.isFinite(v)) {
+      useVolume.getState().setVolume(v);
+    }
+    localStorage.removeItem("okey-volume");
+  }
+} catch {
+  // storage blocked: full volume
+}
+
 // another tab's login or new name, here too: one player, one name
 addEventListener("storage", (e) => {
   if (e.key === "user") useAuthStore.persist.rehydrate();

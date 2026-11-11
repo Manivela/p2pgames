@@ -4,7 +4,7 @@ import { useAwareness, useDoc, useMap, useWebRtc } from "../../vendor/y-react";
 import { toast } from "react-hot-toast";
 import useSound from "use-sound";
 import { useParams } from "react-router-dom";
-import { useAuthStore } from "../../hooks/useStore";
+import { useAuthStore, useVolume } from "../../hooks/useStore";
 import * as okey from "./okey";
 import * as bots from "./bot";
 import { readState, replaceState, wentBack, writeState } from "./sync";
@@ -61,22 +61,8 @@ export function OkeyProvider({ children }) {
   });
   const { states, localID, setLocalState } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((state) => state.currentUser);
-  // this device's sound level, 0 to 1 (the ⋯ menu), kept for next time
-  const [volume, setVolume] = React.useState(() => {
-    try {
-      const v = Number(localStorage.getItem("okey-volume") ?? 1);
-      return Number.isFinite(v) ? v : 1;
-    } catch {
-      return 1;
-    }
-  });
-  React.useEffect(() => {
-    try {
-      localStorage.setItem("okey-volume", volume);
-    } catch {
-      // blocked: back to full next time
-    }
-  }, [volume]);
+  // this device's sound level, the same at every game (useStore.js)
+  const { volume, setVolume } = useVolume();
   const [playBellSound] = useSound(bell, { volume: 0.1 * volume });
   const [playTile1Sound] = useSound(tile1, { volume: 0.5 * volume });
   // a new level clicks at itself, to be heard as it's set (not on load)
@@ -872,6 +858,7 @@ export function OkeyProvider({ children }) {
       redealRound,
       newVersion,
       volume,
+      setVolume,
     ],
   );
 

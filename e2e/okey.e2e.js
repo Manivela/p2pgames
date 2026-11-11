@@ -1319,9 +1319,9 @@ test("the sound level is set in the menu and kept", async ({ page }) => {
   await sitDown(page);
   await page.getByRole("button", { name: MENU }).click();
   await page.getByLabel(SOUND).fill("0.3");
-  expect(await page.evaluate(() => localStorage.getItem("okey-volume"))).toBe(
-    "0.3",
-  );
+  // one level for every game on this device (useStore.js)
+  const kept = () => JSON.parse(localStorage.getItem("volume")).state.volume;
+  expect(await page.evaluate(kept)).toBe(0.3);
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
   await page.reload();
   await page.getByRole("button", { name: MENU }).click();
