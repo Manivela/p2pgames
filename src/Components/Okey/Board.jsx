@@ -242,10 +242,10 @@ const CONTROLS =
   ".tile, button, input, label, a, details, select, textarea, .dialog-backdrop, .glass";
 
 // Picking your tiles from anywhere on the table off the tiles and
-// controls: a tap drops the pick; a box drawn picks the tiles of your rack
-// it touches instead (their slots: a tile lifts once picked, its slot
-// stays put). One finger draws it; the browser doesn't pan under it
-// (rack.css).
+// controls: a tap drops the pick and lets El aç go; a box drawn picks
+// the tiles of your rack it touches instead (their slots: a tile lifts
+// once picked, its slot stays put). One finger draws it; the browser
+// doesn't pan under it (rack.css).
 function useTablePick() {
   const { okeyState, me, myHand, select, unselectAll } =
     useContext(OkeyContext);

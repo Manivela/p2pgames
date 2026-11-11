@@ -519,11 +519,11 @@ export function openHand(state, player, groups, withPairs = true) {
   const { melds: required, opening } = roundOf(state);
   if (isElden(state)) return "No opening this round: finish from your hand";
   if (state.opened[player]) return "You've already opened";
+  const picked = takeFromHand(state, player, groups);
+  if (typeof picked === "string" && picked !== KEEP) return picked;
   if (!withPairs && required?.some(([type]) => type === "pair")) {
     return "Pick the pairs to open with";
   }
-  const picked = takeFromHand(state, player, groups);
-  if (typeof picked === "string" && picked !== KEEP) return picked;
   const hand = seat(state, player).hand;
   const tiles = groups.flat().map((id) => hand.find((t) => t?.id === id));
 

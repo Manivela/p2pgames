@@ -306,7 +306,7 @@ export function OkeyProvider({ children }) {
   // wherever they sit on the rack.
   const [selected, setSelected] = React.useState([]);
   // El aç pressed once (local too): a tap picks the tile's whole group on
-  // the rack, as the opening reads it, until you open
+  // the rack, as the opening reads it, until you open or tap the felt
   const [picking, setPicking] = React.useState(false);
   // a new deal can hand out the same tile ids again, and a round that's over
   // has nothing left to pick: its end shows the hands unpicked
@@ -439,7 +439,11 @@ export function OkeyProvider({ children }) {
     },
     [picking, myHand, me, okeyState],
   );
-  const unselectAll = useCallback(() => setSelected([]), []);
+  // a tap on the felt: nothing picked, and El aç let go
+  const unselectAll = useCallback(() => {
+    setSelected([]);
+    setPicking(false);
+  }, []);
   // exactly these picked (a box drawn on the rack)
   const select = useCallback(
     (ids) => setSelected((old) => (old.join() === ids.join() ? old : ids)),
@@ -461,28 +465,29 @@ export function OkeyProvider({ children }) {
     setPicking(true);
     setSelected((ids) => (ids.length ? ids : okey.meldsToLay(okeyState, me)));
   }, [okeyState, me]);
-  const laid = useCallback((ok) => {
-    if (!ok) return;
-    setSelected([]);
-    setPicking(false);
-  }, []);
+  // laying the pick, which ends picking; nothing at all while my draw
+  // waits out the others' time to take it: it's on my rack, not yet drawn
+  const lay = useCallback(
+    (...move) => {
+      if (heldDraw || !act(...move)) return;
+      setSelected([]);
+      setPicking(false);
+    },
+    [act, heldDraw],
+  );
   const openHand = useCallback(
-    () => laid(act(okey.openHand, me, picked())),
-    [act, me, picked, laid],
+    () => lay(okey.openHand, me, picked()),
+    [lay, me, picked],
   );
-  const openAll = useCallback(
-    () => laid(act(okey.openAll, me)),
-    [act, me, laid],
-  );
+  const openAll = useCallback(() => lay(okey.openAll, me), [lay, me]);
   const layMelds = useCallback(
-    () => laid(act(okey.layMelds, me, picked())),
-    [act, me, picked, laid],
+    () => lay(okey.layMelds, me, picked()),
+    [lay, me, picked],
   );
   // the pick dropped on a meld: added to it, or laid down
   const addPick = useCallback(
-    (meldIndex, atEnd) =>
-      laid(act(okey.addPick, me, picked(), meldIndex, atEnd)),
-    [act, me, picked, laid],
+    (meldIndex, atEnd) => lay(okey.addPick, me, picked(), meldIndex, atEnd),
+    [lay, me, picked],
   );
 
   // a knock on the table (knock.js): passed round as this page's presence,

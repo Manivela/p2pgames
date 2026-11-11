@@ -267,19 +267,18 @@ export function Melds({ underPile }) {
 
   // Picked tiles open (or, once opened, lay down) when one of them is
   // dragged onto the table; a drop on a meld adds to that meld instead.
+  // Before you may lay, the rules say why not (Draw a tile first).
   const laying = canLay(okeyState, me) && selected.length > 0;
   const [{ over }, drop] = useDrop(
     () => ({
       accept: "TILE",
       drop: (e, monitor) => {
-        if (monitor.didDrop() || !laying || !selected.includes(e.tile.id)) {
-          return;
-        }
+        if (monitor.didDrop() || !selected.includes(e.tile.id)) return;
         (opened[me] ? layMelds : openHand)();
       },
       collect: (monitor) => ({ over: monitor.isOver({ shallow: true }) }),
     }),
-    [laying, selected, opened, me, openHand, layMelds],
+    [selected, opened, me, openHand, layMelds],
   );
 
   // every meld stays in view: they all shrink until they fit the band

@@ -270,6 +270,16 @@ test("a draw waiting the others' time is undone by dragging it off the rack", as
   await drag(page, slot(page, a).locator(".tile"), slot(page, b));
   await expect(slot(page, b)).toHaveClass(/ghost/);
   await expect(slot(page, a)).not.toHaveClass(/ghost/);
+  // El aç's second press waits too: nothing, not even a "Draw a tile first"
+  const elAc = page.locator("button[aria-pressed]");
+  await elAc.click();
+  await expect(elAc).toHaveAttribute("aria-pressed", "true");
+  await elAc.click();
+  await expect(elAc).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[role=status]")).toHaveCount(0);
+  const { x, y } = await felt(page);
+  await page.mouse.click(x, y);
+  await expect(elAc).toHaveAttribute("aria-pressed", "false");
   // on the felt, the middle pile, a meld, or back on its pile
   const offRack = [
     await felt(page),
@@ -434,6 +444,21 @@ test("the draw pile makes way as the table fills", async ({ page }, info) => {
   await expect(page.locator(".middle > .left > .draw")).toHaveCount(1);
 });
 
+test("picked tiles dragged onto the table before drawing ask for a draw", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn", false);
+  for (const i of [0, 1, 2]) await slot(page, i).locator(".tile").click();
+  await drag(page, slot(page, 1).locator(".tile"), page.locator(".melds"));
+  await expect(page.locator("[role=status]")).toHaveText(
+    /^(Draw a tile first|Önce taş çek)$/,
+  );
+  expect((await state(page)).melds).toEqual([]);
+});
+
 test("dragging picked tiles onto the table opens the hand", async ({
   page,
 }, info) => {
@@ -486,6 +511,13 @@ test("El aç: it picks what it would open, a tap picks a whole group, and it sta
   await page.clock.fastForward(20000);
   await expect(elAc).toHaveAttribute("aria-pressed", "false");
   await expect(elAc).toHaveText(LAY);
+  await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
+  // and a tap on the felt lets it go at once
+  await elAc.click();
+  await expect(elAc).toHaveAttribute("aria-pressed", "true");
+  const { x, y } = await felt(page);
+  await page.mouse.click(x, y);
+  await expect(elAc).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".rack .tile.selected")).toHaveCount(0);
 });
 

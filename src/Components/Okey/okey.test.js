@@ -1392,8 +1392,12 @@ test("El aç with nothing picked: the round's melds out of the whole rack, okeys
   assert.isOk(tileIn(s, 1, "blue1-0"));
   // pairs are opened with only when picked
   const round = AMERICANO.rounds.findIndex((r) => r.name === "4 çift") + 1;
-  s = okey.startGame(seated(2), deal);
-  assert.equal(okey.openAll({ ...s, round }, 1), "Pick the pairs to open with");
+  s = { ...okey.startGame(seated(2), deal), round };
+  assert.equal(okey.openAll(s, 1), "Pick the pairs to open with");
+  // but only once it's your turn and you've drawn
+  assert.equal(okey.openAll(s, 2), "Not your turn");
+  s = okey.discardTile(s, 1, tileIn(s, 1, "yellow13-0"));
+  assert.equal(okey.openAll(s, 2), "Draw a tile first");
 });
 
 test("El aç's first press picks the round's melds it finds", () => {
