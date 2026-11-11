@@ -243,8 +243,13 @@ test("a discard that fits waits the others' time to catch it, then comes", async
   const free = (await handIds(page)).indexOf(null);
   await drag(page, page.locator('[data-pile="4"] .slot'), slot(page, free));
   await expect(slot(page, free)).toHaveClass(/ghost/);
-  expect((await state(page)).drawn).toBeFalsy();
-  await expect.poll(async () => (await handIds(page))[free]).toBe(top);
+  const { drawn, rules } = await state(page);
+  expect(drawn).toBeFalsy();
+  // once the ruleset's seconds to catch it are up
+  const timeout = (rules.catchWaitSeconds + 3) * 1000;
+  await expect
+    .poll(async () => (await handIds(page))[free], { timeout })
+    .toBe(top);
   await expect(slot(page, free)).not.toHaveClass(/ghost/);
 });
 
