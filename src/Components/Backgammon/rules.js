@@ -33,6 +33,7 @@ export function openingRoll() {
 export function newGame(prev, ids, opening = openingRoll()) {
   const same = prev?.players?.[0] === ids[0] && prev?.players?.[1] === ids[1];
   const seat = opening[0] > opening[1] ? 0 : 1;
+  const n = (prev?.last?.n ?? 0) + 1;
   return {
     checkers: [startingCheckers(), startingCheckers()],
     players: ids,
@@ -45,8 +46,10 @@ export function newGame(prev, ids, opening = openingRoll()) {
     left: [...opening],
     undo: [],
     winner: null,
-    // what happened last, for the sounds (index.jsx)
-    last: { n: (prev?.last?.n ?? 0) + 1, kind: "new" },
+    // what happened last, for the sounds (index.jsx), and which of those
+    // put the dice up, tossed once each (Board.jsx)
+    last: { n, kind: "new" },
+    rolled: n,
   };
 }
 
@@ -206,6 +209,7 @@ const remove = (dice, used) => {
 export function roll(state, seat, dice = [d6(), d6()]) {
   if (state.turn !== seat || state.left.length || state.winner) return;
   const [a, b] = dice;
+  const n = state.last.n + 1;
   const next = {
     ...state,
     opening: null,
@@ -213,7 +217,8 @@ export function roll(state, seat, dice = [d6(), d6()]) {
     by: seat,
     left: a === b ? [a, a, a, a] : [a, b],
     undo: [],
-    last: { n: state.last.n + 1, kind: "roll" },
+    last: { n, kind: "roll" },
+    rolled: n,
   };
   // nothing to play: the dice stay up and the turn passes
   return plays(next).length ? next : { ...next, left: [], turn: 1 - seat };
@@ -239,7 +244,7 @@ export function move(state, seat, from, to) {
     checkers,
     left: remove(state.left, steps),
     undo: [...state.undo, before],
-    last: { n: state.last.n + 1, kind: "move", steps: steps.length },
+    last: { n: state.last.n + 1, kind: "move" },
   };
   if (checkers[seat][OFF] === 15) {
     // mars: the other has borne nothing off, and it counts two

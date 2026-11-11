@@ -73,7 +73,6 @@ test("doubles reach every multiple, and a blot passed over is hit", () => {
   const after = move(s, 0, 13, 5);
   assert.equal(after.checkers[1][16], 0);
   assert.equal(after.checkers[1][BAR], 1);
-  assert.equal(after.last.steps, 4);
 });
 
 test("from the bar first, and further only when it's the one there", () => {

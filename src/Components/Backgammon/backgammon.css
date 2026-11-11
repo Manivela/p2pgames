@@ -11,30 +11,61 @@
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.45);
 }
 
+/* the buttons sized as at the Okey table on this screen: --t, its tile
+   width (rack.css), which the site's corner buttons (index.css) go by */
 html:has(.bg-fit) {
   overflow: hidden;
+  --t: clamp(40px, min(100dvh, 100dvw) / 7.4, 70px);
+}
+
+/* the site's menu and fullscreen buttons bottom left and ⋯ bottom right,
+   dark see-through circles: where they are at the Okey table and as they
+   look there (rack.css) */
+#root:has(.bg-fit) .corner {
+  top: auto;
+  bottom: calc(var(--t) * 0.14);
+  gap: calc(var(--t) * 0.1);
+}
+
+#root:has(.bg-fit) .corner button,
+.bg-menu > .dots {
+  width: calc(var(--t) * 0.64);
+  height: calc(var(--t) * 0.64);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  font-size: calc(var(--t) * 0.3);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.38);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 
 .bg-fit {
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .5' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-columns: minmax(0, 1fr);
+  /* the players, the board, and room for ⋯ in the corner */
+  grid-template-columns: auto minmax(0, 1fr) calc(var(--t) * 0.92);
   color: #fff;
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* the players and the score along the top, clear of the site's menu and
-   fullscreen buttons in the corner (index.css) */
+/* the players and the score in a column left of the board, the other's
+   at the top and yours at the bottom, as they sit, above the corner
+   buttons */
 .bg-head {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: space-between;
   gap: 12px;
-  height: 52px;
-  padding: 0 8px 0 104px;
+  width: 190px;
+  padding: 8px 0 calc(var(--t) * 0.92) 8px;
   font-size: 16px;
 }
 
@@ -100,29 +131,20 @@ html:has(.bg-fit) {
 
 .bg-score {
   display: flex;
+  justify-content: center;
   gap: 6px;
   font-size: 22px;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* the table's menu, top right */
+/* the table's menu, bottom right, opening upwards in groups as at the
+   Okey table (TableMenu.jsx) */
 .bg-menu {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 30;
-}
-
-.bg-menu .dots {
-  width: 40px;
-  height: 36px;
-  border: none;
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.3);
-  color: #fff;
-  font-size: 22px;
-  line-height: 1;
+  position: fixed;
+  right: calc(var(--t) * 0.14);
+  bottom: calc(var(--t) * 0.14);
+  z-index: 40;
 }
 
 .bg-menu .backdrop {
@@ -132,11 +154,13 @@ html:has(.bg-fit) {
 
 .bg-menu .menu {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   right: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
   padding: 8px;
   border-radius: 8px;
   background: #fff;
@@ -145,18 +169,45 @@ html:has(.bg-fit) {
   white-space: nowrap;
 }
 
-.bg-menu .menu label {
+.bg-menu .group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bg-menu .group:empty {
+  display: none;
+}
+
+.bg-menu .group:not(:empty) ~ .group:not(:empty) {
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* the moves that end or replace the game */
+.bg-menu .ends button:not(.armed) {
+  color: #c62828;
+}
+
+/* this device's sound level */
+.bg-menu .volume {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 4px 6px;
+  padding: 2px 6px;
   font-size: 15px;
   font-weight: 600;
 }
 
-.bg-menu .menu label input {
+.bg-menu .volume input {
+  flex: 1;
+  min-width: 90px;
   margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
 }
 
 .bg-menu .menu button {
@@ -175,24 +226,40 @@ html:has(.bg-fit) {
   container-type: size;
   display: grid;
   place-items: center;
-  padding: 0 8px 8px;
+  padding: 8px;
 }
 
-.bg-board {
-  /* the board's size in points (Board.jsx) */
+/* The board is a wooden case on the table, seen from above, lit from the
+   top left: its felt sunk below the frame, the checkers raised off it. The
+   dice fly over it (.bg-air), each in 3D of its own. */
+.bg-scene {
   --p: min(100cqw / var(--board-w), 100cqh / var(--board-h));
   position: relative;
   width: calc(var(--p) * var(--board-w));
   height: calc(var(--p) * var(--board-h));
-  border-radius: calc(var(--p) * 0.3);
+  font-size: calc(var(--p) * 0.42);
+}
+
+.bg-board,
+.bg-air {
+  position: absolute;
+  inset: 0;
+}
+
+/* the case: walnut, its rim catching the light, its shadow on the table */
+.bg-board {
+  border-radius: calc(var(--p) * 0.12);
   background:
-    var(--grain), linear-gradient(135deg, #7a4a28, #5a3319 60%, #4a2912);
+    var(--grain), linear-gradient(160deg, #4d3226, #3b2419 50%, #2d1a11);
   box-shadow:
-    0 calc(var(--p) * 0.2) calc(var(--p) * 0.6) rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    inset calc(var(--p) * 0.03) calc(var(--p) * 0.04) calc(var(--p) * 0.03)
+      rgba(255, 220, 180, 0.25),
+    inset calc(var(--p) * -0.04) calc(var(--p) * -0.05) calc(var(--p) * 0.05)
+      rgba(0, 0, 0, 0.5),
+    calc(var(--p) * 0.15) calc(var(--p) * 0.25) calc(var(--p) * 0.6)
+      rgba(0, 0, 0, 0.6);
   /* a finger dragging a checker doesn't pan the page; two still zoom */
   touch-action: pinch-zoom;
-  font-size: calc(var(--p) * 0.42);
 }
 
 .bg-board > * {
@@ -201,76 +268,152 @@ html:has(.bg-fit) {
   top: calc(var(--p) * var(--y));
 }
 
-/* the two halves' felt, the bar between them, the tray on the right */
+/* inside the case: the two halves' fields, a compartment either side
+   (the right one the tray), and the halves' walls meeting at the hinges
+   between them */
 .bg-field,
 .bg-bar,
 .bg-tray {
-  --y: 0.45;
   width: calc(var(--p) * var(--w));
-  height: calc(var(--p) * 11);
+  height: calc(var(--p) * var(--h));
 }
 
+/* pale ash, its grain running across the board, sunk below the frame */
 .bg-field {
-  background: radial-gradient(ellipse at 50% 50%, #2d6a3a, #1d4a28);
-  box-shadow: inset 0 0 calc(var(--p) * 0.4) rgba(0, 0, 0, 0.55);
-}
-
-.bg-bar {
-  --y: 0;
-  height: calc(var(--p) * 11.9);
+  --grain-ash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9 .012' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .28 0 0 0 0 .2 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");
   background:
-    var(--grain), linear-gradient(90deg, #4a2912, #6b3f20 50%, #4a2912);
-  box-shadow: inset 0 0 calc(var(--p) * 0.2) rgba(0, 0, 0, 0.5);
+    var(--grain-ash), linear-gradient(90deg, #ead9c8, #e6d2bf 50%, #ead9c8);
+  box-shadow:
+    inset calc(var(--p) * 0.16) calc(var(--p) * 0.2) calc(var(--p) * 0.22)
+      calc(var(--p) * -0.06) rgba(60, 30, 10, 0.5),
+    inset calc(var(--p) * -0.03) calc(var(--p) * -0.04) calc(var(--p) * 0.05)
+      rgba(255, 255, 255, 0.25);
 }
 
+/* each half's wall, the seam between them, a brass hinge at either end */
+.bg-bar {
+  background:
+    var(--grain),
+    linear-gradient(
+      90deg,
+      #2d1a11,
+      #4d3226 12%,
+      #3b2419 44%,
+      #120a06 48% 52%,
+      #3b2419 56%,
+      #4d3226 88%,
+      #2d1a11
+    );
+}
+
+.bg-bar::before,
+.bg-bar::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: calc(var(--p) * 0.62);
+  height: calc(var(--p) * 0.5);
+  translate: -50% 0;
+  border-radius: calc(var(--p) * 0.05);
+  background:
+    radial-gradient(circle at 25% 30%, #5a4520 0 6%, transparent 7%),
+    radial-gradient(circle at 75% 30%, #5a4520 0 6%, transparent 7%),
+    radial-gradient(circle at 25% 72%, #5a4520 0 6%, transparent 7%),
+    radial-gradient(circle at 75% 72%, #5a4520 0 6%, transparent 7%),
+    linear-gradient(
+      90deg,
+      transparent 47%,
+      rgba(0, 0, 0, 0.45) 48% 52%,
+      transparent 53%
+    ),
+    linear-gradient(160deg, #e2c487, #b08d57 45%, #7a5c2e);
+  box-shadow: 0 calc(var(--p) * 0.03) calc(var(--p) * 0.05) rgba(0, 0, 0, 0.5);
+}
+
+.bg-bar::before {
+  top: calc(var(--p) * 0.06);
+}
+
+.bg-bar::after {
+  bottom: calc(var(--p) * 0.06);
+}
+
+/* lined with teal cloth */
 .bg-tray {
-  border-radius: calc(var(--p) * 0.12);
-  background: var(--grain), #3a2010;
-  box-shadow: inset 0 0 calc(var(--p) * 0.3) rgba(0, 0, 0, 0.7);
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.07) 0 1px,
+      transparent 1px 5px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(0, 0, 0, 0.1) 0 1px,
+      transparent 1px 5px
+    ),
+    linear-gradient(90deg, #2f7772, #3b8984 50%, #2f7772);
+  box-shadow:
+    inset calc(var(--p) * 0.12) calc(var(--p) * 0.16) calc(var(--p) * 0.2)
+      calc(var(--p) * -0.05) rgba(0, 0, 0, 0.6),
+    inset 0 0 calc(var(--p) * 0.12) rgba(0, 0, 0, 0.35);
 }
 
 .bg-tray.target {
   cursor: pointer;
   box-shadow:
-    inset 0 0 calc(var(--p) * 0.3) rgba(0, 0, 0, 0.7),
+    inset 0 0 calc(var(--p) * 0.2) rgba(0, 0, 0, 0.5),
     inset 0 0 0 calc(var(--p) * 0.06) #ffd54f;
 }
 
-/* a point: the whole column takes the tap, the spike is drawn in it */
+/* a point, inlaid in the ash: walnut or ebony, narrowing to a thin line
+   that runs on as an inlaid slot. The whole column takes the tap. */
 .bg-point {
+  --wood: #84492f;
   width: calc(var(--p) * 1);
   height: calc(var(--p) * 4.8);
 }
 
+.bg-point.dark {
+  --wood: #2a1d18;
+}
+
 .bg-point.target {
+  --wood: #d9a520;
   cursor: pointer;
 }
 
 .bg-spike {
   position: absolute;
-  inset: 0 6%;
-  clip-path: polygon(0 100%, 50% 4%, 100% 100%);
-  background: linear-gradient(to top, #efe3c6, #d9c8a2);
+  inset: 0 4%;
+  clip-path: polygon(0 100%, 100% 100%, 54% 30%, 46% 30%);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='240'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6 .02' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E"),
+    var(--wood);
+  transition: background-color 0.2s;
 }
 
 .bg-point.top .bg-spike {
-  clip-path: polygon(0 0, 100% 0, 50% 96%);
-  background: linear-gradient(to bottom, #efe3c6, #d9c8a2);
+  clip-path: polygon(0 0, 100% 0, 54% 70%, 46% 70%);
 }
 
-.bg-spike.dark {
-  background: linear-gradient(to top, #b8452f, #8f2f1e);
+/* the slot: a thin rounded outline beyond the spike's tip */
+.bg-point::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: calc(var(--p) * 0.13);
+  height: 24%;
+  translate: -50% 0;
+  border: calc(var(--p) * 0.035) solid var(--wood);
+  border-radius: 999px;
 }
 
-.bg-point.top .bg-spike.dark {
-  background: linear-gradient(to bottom, #b8452f, #8f2f1e);
+.bg-point:not(.top)::after {
+  bottom: auto;
+  top: 4%;
 }
 
-.bg-point.target .bg-spike {
-  filter: brightness(1.25) saturate(1.2);
-}
-
-/* checkers slide from point to point: each keeps who it is (Board.jsx) */
 .bg-checker {
   left: 0;
   top: 0;
@@ -278,14 +421,41 @@ html:has(.bg-fit) {
   height: calc(var(--p) * 0.92);
   border-radius: 50%;
   translate: calc(var(--p) * var(--x)) calc(var(--p) * var(--y));
+  transition: scale 0.15s;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
+/* checkers slide from point to point for a play (each keeps who it is,
+   Board.jsx), and are simply in place when the board resizes or turns */
+.bg-board.sliding .bg-checker {
   transition:
     translate 0.35s cubic-bezier(0.3, 0.7, 0.4, 1),
     scale 0.15s,
     height 0.35s,
     border-radius 0.35s;
-  pointer-events: none;
-  display: grid;
-  place-items: center;
+}
+
+/* a disc lit from the top left, lying on the board: its rim's bevel, and
+   where it touches the wood */
+.bg-checker,
+.bg-dot {
+  --u: var(--p, 30px);
+  --light: rgba(255, 255, 255, 0.5);
+  /* a flat face, its chamfered edge a narrow band round it, lit a little
+     from the top left */
+  --rim:
+    inset 0 0 0 calc(var(--u) * 0.04) rgba(0, 0, 0, 0.1),
+    inset calc(var(--u) * 0.02) calc(var(--u) * 0.025) calc(var(--u) * 0.02)
+      var(--light),
+    inset calc(var(--u) * -0.015) calc(var(--u) * -0.02) calc(var(--u) * 0.02)
+      rgba(0, 0, 0, 0.2);
+  /* lying on the wood: only a thin dark line where it meets it */
+  --drop:
+    0 0 0 calc(var(--u) * 0.012) rgba(40, 20, 5, 0.5),
+    0 calc(var(--u) * 0.01) calc(var(--u) * 0.025) rgba(0, 0, 0, 0.4);
+  box-shadow: var(--rim), var(--drop);
 }
 
 .bg-checker.white,
@@ -293,30 +463,37 @@ html:has(.bg-fit) {
   background:
     radial-gradient(
       circle,
-      transparent 52%,
-      rgba(120, 100, 70, 0.35) 55%,
-      transparent 59%
+      transparent 50%,
+      rgba(120, 100, 70, 0.4) 53%,
+      transparent 57%
     ),
-    radial-gradient(circle at 35% 30%, #fffdf6, #e9e0cc 60%, #cbbd9f);
-  box-shadow:
-    0 calc(var(--p, 30px) * 0.06) calc(var(--p, 30px) * 0.1) rgba(0, 0, 0, 0.55),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.2);
+    radial-gradient(
+      circle,
+      transparent 30%,
+      rgba(120, 100, 70, 0.25) 32%,
+      transparent 35%
+    ),
+    radial-gradient(circle, #f4ecdb, #efe6d3 70%, #e7dcc5);
   color: #4a3b22;
 }
 
 .bg-checker.black,
 .bg-dot.black {
+  --light: rgba(255, 255, 255, 0.22);
   background:
     radial-gradient(
       circle,
-      transparent 52%,
-      rgba(255, 255, 255, 0.18) 55%,
-      transparent 59%
+      transparent 50%,
+      rgba(255, 255, 255, 0.16) 53%,
+      transparent 57%
     ),
-    radial-gradient(circle at 35% 30%, #5a5a5a, #2a2a2a 60%, #111);
-  box-shadow:
-    0 calc(var(--p, 30px) * 0.06) calc(var(--p, 30px) * 0.1) rgba(0, 0, 0, 0.6),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+    radial-gradient(
+      circle,
+      transparent 30%,
+      rgba(255, 255, 255, 0.1) 32%,
+      transparent 35%
+    ),
+    radial-gradient(circle, #363636, #2d2d2d 70%, #252525);
   color: #eee;
 }
 
@@ -326,22 +503,27 @@ html:has(.bg-fit) {
 
 /* borne off: on its side in the tray */
 .bg-checker.off {
+  --drop: 0 calc(var(--p) * 0.03) calc(var(--p) * 0.05) rgba(0, 0, 0, 0.6);
   width: calc(var(--p) * 1);
-  height: calc(var(--p) * 0.26);
+  height: calc(var(--p) * 0.24);
   border-radius: calc(var(--p) * 0.08);
 }
 
-/* the checkers that can move, and the one picked */
+/* the checkers that can move, and the one picked, lifted off the felt */
 .bg-checker.movable {
   box-shadow:
-    0 calc(var(--p) * 0.06) calc(var(--p) * 0.1) rgba(0, 0, 0, 0.55),
+    var(--rim),
+    var(--drop),
     0 0 0 calc(var(--p) * 0.05) rgba(255, 213, 79, 0.75);
 }
 
 .bg-checker.picked {
-  scale: 1.08;
+  --drop: calc(var(--p) * 0.16) calc(var(--p) * 0.24) calc(var(--p) * 0.28)
+    rgba(0, 0, 0, 0.5);
+  scale: 1.1;
   box-shadow:
-    0 calc(var(--p) * 0.15) calc(var(--p) * 0.25) rgba(0, 0, 0, 0.6),
+    var(--rim),
+    var(--drop),
     0 0 0 calc(var(--p) * 0.07) #ffd54f;
 }
 
@@ -349,12 +531,13 @@ html:has(.bg-fit) {
   opacity: 0.35;
 }
 
-/* following the pointer */
+/* following the pointer, over the board */
 .bg-checker.drag {
+  position: absolute;
   z-index: 50;
   translate: -50% -50%;
   transition: none;
-  scale: 1.12;
+  scale: 1.15;
 }
 
 /* where the picked checker can go, with what it takes: 2, 3 or 5 */
@@ -363,12 +546,11 @@ html:has(.bg-fit) {
   place-items: center;
   width: calc(var(--p) * 0.92);
   height: calc(var(--p) * 0.92);
-  border: calc(var(--p) * 0.06) dashed #ffd54f;
+  border: calc(var(--p) * 0.06) dashed #a87b00;
   border-radius: 50%;
-  background: rgba(255, 213, 79, 0.28);
-  color: #fff;
+  background: rgba(255, 213, 79, 0.6);
+  color: #3e2a00;
   font-weight: 800;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   pointer-events: none;
 }
 
@@ -377,46 +559,38 @@ html:has(.bg-fit) {
   border-radius: calc(var(--p) * 0.2);
 }
 
-/* between the rows of each half: the dice, Roll, Undo and a word */
-.bg-strip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: calc(var(--p) * 0.25);
-  width: calc(var(--p) * 6);
-  height: calc(var(--p) * 1.4);
-  pointer-events: none;
-}
-
-.bg-strip button {
-  pointer-events: auto;
-  border: none;
-}
-
+/* in the middle of the board, where the dice land */
 .bg-roll {
+  translate: -50% -50%;
   height: calc(var(--p) * 0.95);
   padding: 0 calc(var(--p) * 0.5);
+  border: none;
   border-radius: calc(var(--p) * 0.5);
   background: #ffd54f;
   color: #3e2a00;
   font-size: calc(var(--p) * 0.45);
   font-weight: 800;
-  box-shadow: 0 calc(var(--p) * 0.08) calc(var(--p) * 0.2) rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 calc(var(--p) * 0.08) 0 #c9a227,
+    0 calc(var(--p) * 0.15) calc(var(--p) * 0.2) rgba(0, 0, 0, 0.5);
   animation: bg-call 1.6s ease-in-out 4;
 }
 
 @keyframes bg-call {
   50% {
-    transform: scale(1.06);
+    scale: 1.06;
   }
 }
 
+/* beside the dice, always in the same place */
 .bg-undo {
+  translate: -50% -50%;
   display: grid;
   place-items: center;
   width: calc(var(--p) * 0.85);
   height: calc(var(--p) * 0.85);
   padding: 0;
+  border: none;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.45);
   color: #fff;
@@ -427,25 +601,80 @@ html:has(.bg-fit) {
   height: 55%;
 }
 
+/* a word, between the rows of the left half */
 .bg-status {
+  display: grid;
+  place-items: center;
+  width: calc(var(--p) * 3.3);
+  height: calc(var(--p) * 1.4);
+  color: #3b2419;
   font-weight: 700;
   text-align: center;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+/* The dice fly over the board: thrown in, they fall to the felt, bounce,
+   tumble and come to rest, their shadows under them. Each is seen from
+   straight above itself, as the flat board is: its sides out of sight. */
+.bg-air {
+  pointer-events: none;
 }
 
 .bg-die {
-  display: grid;
-  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  /* no tumble: lying still */
+  --ax: 1;
+  --ay: 0;
+  position: absolute;
+  left: calc(var(--p) * (var(--x) - 0.4));
+  top: calc(var(--p) * (var(--y) - 0.4));
   width: calc(var(--p) * 0.8);
   height: calc(var(--p) * 0.8);
+  perspective: calc(var(--p) * 20);
+  animation: bg-fly var(--dur) linear var(--delay) backwards;
+}
+
+.bg-die .shadow {
+  position: absolute;
+  inset: -8%;
+  border-radius: 30%;
+  background: radial-gradient(rgba(0, 0, 0, 0.6), transparent 70%);
+  rotate: var(--rz);
+  translate: calc(var(--p) * 0.08) calc(var(--p) * 0.12);
+  animation: bg-shade var(--dur) linear var(--delay) backwards;
+}
+
+.bg-die .hop {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: translateZ(calc(var(--p) * 0.4));
+  animation: bg-hop var(--dur) var(--delay) backwards;
+}
+
+.bg-die .cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  /* at rest: face n up (rx, ry), turned (rz); thrown, it tumbles about
+     the axis across its path, ax ay (Board.jsx), till it stops */
+  transform: rotate3d(var(--ax), var(--ay), 0, 0deg) rotateZ(var(--rz))
+    rotateX(var(--rx)) rotateY(var(--ry));
+  animation: bg-spin var(--dur) cubic-bezier(var(--ease), 0.6, 0.3, 1)
+    var(--delay) backwards;
+}
+
+.bg-die .face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   padding: calc(var(--p) * 0.1);
-  border-radius: calc(var(--p) * 0.16);
-  background: linear-gradient(135deg, #fffdf6, #e6dcc4);
-  box-shadow:
-    0 calc(var(--p) * 0.06) calc(var(--p) * 0.14) rgba(0, 0, 0, 0.55),
-    inset 0 -2px 2px rgba(0, 0, 0, 0.15);
-  animation: bg-tumble 0.45s ease-out;
-  transition: opacity 0.3s;
+  border-radius: calc(var(--p) * 0.1);
+  background: linear-gradient(135deg, #fffdf6, #e8dec6);
+  box-shadow: inset 0 0 calc(var(--p) * 0.08) rgba(120, 100, 70, 0.45);
+  /* Safari before 15.4 knows it only by its prefix */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .bg-die i {
@@ -453,17 +682,107 @@ html:has(.bg-fit) {
   height: 72%;
   place-self: center;
   border-radius: 50%;
-  background: #222;
+  background: radial-gradient(circle at 40% 35%, #444, #111);
 }
 
-.bg-die.used {
-  opacity: 0.35;
+/* played: greyed */
+.bg-die.used .face {
+  background: linear-gradient(135deg, #b9b2a2, #9d9686);
 }
 
-@keyframes bg-tumble {
+.bg-die.used i {
+  background: #6a6a6a;
+}
+
+/* in from the thrower's side, slowing at each bounce till it stops */
+@keyframes bg-fly {
+  0% {
+    translate: calc(var(--p) * var(--fx)) calc(var(--p) * var(--fy));
+  }
+  45% {
+    translate: calc(var(--p) * var(--fx) * 0.25)
+      calc(var(--p) * var(--fy) * 0.25);
+  }
+  72% {
+    translate: calc(var(--p) * var(--fx) * 0.06)
+      calc(var(--p) * var(--fy) * 0.06);
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* falling to the felt from --h0, bouncing to --b1 and --b2, at rest */
+@keyframes bg-hop {
+  0% {
+    transform: translateZ(calc(var(--p) * var(--h0)));
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.6);
+  }
+  45% {
+    transform: translateZ(calc(var(--p) * 0.4));
+    animation-timing-function: cubic-bezier(0, 0.5, 0.5, 1);
+  }
+  58% {
+    transform: translateZ(calc(var(--p) * var(--b1)));
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.5);
+  }
+  72% {
+    transform: translateZ(calc(var(--p) * 0.4));
+    animation-timing-function: cubic-bezier(0, 0.5, 0.5, 1);
+  }
+  80% {
+    transform: translateZ(calc(var(--p) * var(--b2)));
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.5);
+  }
+  88%,
+  100% {
+    transform: translateZ(calc(var(--p) * 0.4));
+  }
+}
+
+@keyframes bg-spin {
   from {
-    transform: translateY(calc(var(--p) * -0.6)) rotate(-200deg) scale(0.6);
-    opacity: 0;
+    transform: rotate3d(var(--ax), var(--ay), 0, var(--roll0))
+      rotateZ(var(--rz0)) rotateX(var(--rx)) rotateY(var(--ry));
+  }
+}
+
+/* off to the lower right, wide and faint while the die is high; under it
+   as it lands */
+@keyframes bg-shade {
+  0% {
+    translate: calc(var(--p) * 0.9) calc(var(--p) * 1.2);
+    scale: 1.5;
+    opacity: 0.15;
+  }
+  45% {
+    translate: calc(var(--p) * 0.08) calc(var(--p) * 0.12);
+    scale: 1;
+    opacity: 1;
+  }
+  58% {
+    translate: calc(var(--p) * 0.3) calc(var(--p) * 0.42);
+    scale: 1.15;
+    opacity: 0.6;
+  }
+  72%,
+  100% {
+    translate: calc(var(--p) * 0.08) calc(var(--p) * 0.12);
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+/* up already when the page opened */
+.bg-die.still,
+.bg-die.still :is(.shadow, .hop, .cube) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-die,
+  .bg-die :is(.shadow, .hop, .cube) {
+    animation: none;
   }
 }
 
@@ -505,37 +824,39 @@ html:has(.bg-fit) {
   font-weight: 800;
 }
 
-/* a phone upright: the players under the corner buttons, the whole width */
+/* upright: the players and the score along the top, and a row at the
+   bottom for the corner buttons */
+@media (orientation: portrait) {
+  .bg-fit {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) calc(var(--t) * 0.92);
+  }
+
+  .bg-head {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: auto;
+    padding: 8px 8px 0;
+  }
+}
+
+/* a phone upright: the two share the width */
 @media (orientation: portrait) and (max-width: 600px) {
   .bg-head {
     gap: 8px;
-    height: auto;
-    padding: 52px 8px 4px;
     font-size: 14px;
   }
 
-  /* the two share the width */
   .bg-plate {
     flex: 1 1 0;
   }
 }
 
-/* a phone on its side: the players and the score in a column left of the
-   board, the other's at the top and yours at the bottom, as they sit, so
-   the board has the whole height */
+/* a phone on its side: a narrower column */
 @media (orientation: landscape) and (max-height: 500px) {
-  .bg-fit {
-    grid-template-rows: none;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
   .bg-head {
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: stretch;
     width: 150px;
-    height: auto;
-    padding: 56px 0 12px 8px;
     font-size: 14px;
   }
 
@@ -546,18 +867,5 @@ html:has(.bg-fit) {
   .bg-dot {
     width: 20px;
     height: 20px;
-  }
-
-  .bg-score {
-    justify-content: center;
-  }
-
-  .bg-wrap {
-    padding: 8px;
-  }
-
-  .bg-menu {
-    top: 4px;
-    right: 4px;
   }
 }

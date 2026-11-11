@@ -421,6 +421,7 @@ const TR = [
   [/^Reset score$/, "Skoru sıfırla"],
   [/^Pips to go$/, "Kalan yol"],
   [/^Sit down to play$/, "Oynamak için otur"],
+  [/^Play both sides$/, "İki tarafı da oyna"],
   [/^Waiting for a second player$/, "İkinci oyuncu bekleniyor"],
   [/^Waiting for (.+)$/, "$1 bekleniyor"],
   [/^(.+) starts$/, "$1 başlıyor"],

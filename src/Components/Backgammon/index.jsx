@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import useSound from "use-sound";
 import { useAwareness, useDoc, useMap, useWebRtc } from "../../vendor/y-react";
-import { useAuthStore } from "../../hooks/useStore";
+import { useAuthStore, useVolume } from "../../hooks/useStore";
 import { signalingServers, peerOpts } from "../../constants";
 import { Confirm } from "../Confirm";
 import { t } from "../../i18n";
@@ -19,7 +19,8 @@ import "./backgammon.css";
 
 const NO_SEATS = [null, null];
 
-// the board before a game: set up, no dice, no one's turn
+// the board before a game: set up, no dice, no one's turn, no roll yet
+// (the first game's opening dice are tossed, Board.jsx)
 const SET_UP = {
   ...newGame(null, NO_SEATS, [2, 1]),
   turn: -1,
@@ -27,46 +28,26 @@ const SET_UP = {
   dice: [],
   left: [],
   opening: null,
+  rolled: 0,
 };
 
-// this device's sound, on or off (the ⋯ menu), kept for next time
-function useSoundSetting() {
-  const [on, setOn] = useState(() => {
-    try {
-      return localStorage.getItem("backgammon-sound") !== "off";
-    } catch {
-      return true;
-    }
-  });
-  const set = (value) => {
-    setOn(value);
-    try {
-      localStorage.setItem("backgammon-sound", value ? "on" : "off");
-    } catch {
-      // blocked: on again next time
-    }
-  };
-  return [on, set];
-}
-
-// Everyone hears what happens as it reaches them: a checker's tak as it
-// lands (one for each die a combined move takes), dice rattling on a roll.
-function useTableSounds(last, on) {
-  const [tak] = useSound(tile, { volume: 0.5, soundEnabled: on });
+// Everyone hears a checker land: one soft tak as it comes down (the slide
+// in backgammon.css), however many dice took it there. A roll is quiet. A
+// new level taks at itself, to be heard as it's set.
+function useTableSounds(last, volume) {
+  const [tak] = useSound(tile, { volume: 0.3 * volume });
   const heard = useRef(last?.n);
   useEffect(() => {
     if (!last || last.n === heard.current) return;
     heard.current = last.n;
-    const at = (ms, rate = 1) =>
-      setTimeout(() => tak({ playbackRate: rate }), ms);
-    if (last.kind === "roll" || last.kind === "new") {
-      for (const ms of [0, 60, 140, 190]) at(ms, 1.7 + Math.random() * 0.6);
-    } else {
-      // as the sliding checker lands (backgammon.css)
-      const steps = last.steps ?? 1;
-      for (let i = 0; i < steps; i++) at(330 - (steps - 1 - i) * 120);
-    }
+    if (last.kind === "move" || last.kind === "undo") setTimeout(tak, 330);
   }, [last, tak]);
+  const level = useRef(volume);
+  useEffect(() => {
+    if (level.current === volume) return;
+    level.current = volume;
+    tak();
+  }, [volume, tak]);
 }
 
 function Plate({ seat, user, turn, here, pips, sit }) {
@@ -90,7 +71,18 @@ function Plate({ seat, user, turn, here, pips, sit }) {
   );
 }
 
-function Menu({ sound, setSound, stand, free, newGame, resetScore }) {
+// in groups, a line between them, as at the Okey table (TableMenu.jsx):
+// this device, your seat, the others', and in red the moves that end or
+// replace the game
+function Menu({
+  volume,
+  setVolume,
+  stand,
+  playBoth,
+  free,
+  newGame,
+  resetScore,
+}) {
   const [open, setOpen] = useState(false);
   // the menu folds away once an item has done its job
   const then = (action) => () => {
@@ -111,30 +103,48 @@ function Menu({ sound, setSound, stand, free, newGame, resetScore }) {
         <>
           <div className="backdrop" onClick={() => setOpen(false)} />
           <div className="menu">
-            <label>
-              <input
-                type="checkbox"
-                checked={sound}
-                onChange={(e) => setSound(e.target.checked)}
-              />
-              {t("Sound")}
-            </label>
-            {stand && <button onClick={then(stand)}>{t("Stand")}</button>}
+            <div className="group">
+              <label className="volume">
+                {t("Sound")}
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                />
+              </label>
+            </div>
+            <div className="group">
+              {/* the empty seat too, taking turns on this device */}
+              {playBoth && (
+                <button onClick={then(playBoth)}>{t("Play both sides")}</button>
+              )}
+              {stand && <button onClick={then(stand)}>{t("Stand")}</button>}
+            </div>
             {/* anyone frees a seat someone left without standing (a closed
                 tab, another browser): the game waits in it */}
-            {free.map(({ seat, name, go }) => (
-              <Confirm
-                key={seat}
-                label={t(`Free seat: ${name}`)}
-                onConfirm={then(go)}
-              />
-            ))}
-            {newGame && (
-              <Confirm label={t("New Game")} onConfirm={then(newGame)} />
-            )}
-            {resetScore && (
-              <Confirm label={t("Reset score")} onConfirm={then(resetScore)} />
-            )}
+            <div className="group">
+              {free.map(({ seat, name, go }) => (
+                <Confirm
+                  key={seat}
+                  label={t(`Free seat: ${name}`)}
+                  onConfirm={then(go)}
+                />
+              ))}
+            </div>
+            <div className="group ends">
+              {newGame && (
+                <Confirm label={t("New Game")} onConfirm={then(newGame)} />
+              )}
+              {resetScore && (
+                <Confirm
+                  label={t("Reset score")}
+                  onConfirm={then(resetScore)}
+                />
+              )}
+            </div>
           </div>
         </>
       )}
@@ -153,13 +163,17 @@ export default function Backgammon() {
   const seats = [map.get("seat-0") ?? null, map.get("seat-1") ?? null];
   const game = map.get("game") ?? null;
   const state = game ?? SET_UP;
-  const [sound, setSound] = useSoundSetting();
-  useTableSounds(game?.last, sound);
+  // this device's sound level, the same at every game (useStore.js)
+  const { volume, setVolume } = useVolume();
+  useTableSounds(game?.last, volume);
 
-  const seat = seats.findIndex((u) => u?.id === currentUser.id);
-  const me = seat < 0 ? undefined : seat;
-  // someone watching sees the board as white does
-  const near = me ?? 0;
+  // the seats this page plays: one, or both on one device, taking turns
+  const mine = [0, 1].filter((i) => seats[i]?.id === currentUser.id);
+  const seated = mine.length > 0;
+  const both = mine.length === 2;
+  // the board as your seat sees it, white's for someone watching or
+  // playing both
+  const near = both ? 0 : (mine[0] ?? 0);
   const far = 1 - near;
   const full = seats.every(Boolean);
   const ids = seats.map((u) => u?.id ?? null);
@@ -167,20 +181,21 @@ export default function Backgammon() {
 
   const act = (next) => next && map.set("game", next);
   const sit = (i) => map.set(`seat-${i}`, currentUser);
-  const stand = () => map.set(`seat-${me}`, null);
+  const stand = () => mine.forEach((i) => map.set(`seat-${i}`, null));
   const deal = () => map.set("game", newGame(game, ids));
 
   // the first game starts once both seats are taken, from whichever seated
   // page sees it first (two at once: one game wins, the same for everyone)
   useEffect(() => {
-    if (!game && full && me !== undefined) deal();
+    if (!game && full && seated) deal();
   });
 
-  // a new name (the sidebar) goes on your seat
+  // a new name (the sidebar) goes on your seats
   useEffect(() => {
-    const mine = seats[me];
-    if (mine && mine.name !== currentUser.name) {
-      map.set(`seat-${me}`, { ...mine, name: currentUser.name });
+    for (const i of mine) {
+      if (seats[i].name !== currentUser.name) {
+        map.set(`seat-${i}`, { ...seats[i], name: currentUser.name });
+      }
     }
   });
 
@@ -194,7 +209,8 @@ export default function Backgammon() {
     };
   }, [map]);
 
-  const name = (s) => seats[s]?.name ?? t(s ? "Black" : "White");
+  // one name on both seats says nothing: the colours, then
+  const name = (s) => (!both && seats[s]?.name) || t(s ? "Black" : "White");
   const plate = (s) => (
     <Plate
       seat={s}
@@ -202,7 +218,7 @@ export default function Backgammon() {
       turn={game && !game.winner && game.turn === s}
       here={here.has(seats[s]?.id)}
       pips={pips(state.checkers[s])}
-      sit={me === undefined && !seats[s] ? () => sit(s) : null}
+      sit={!seated && !seats[s] ? () => sit(s) : null}
     />
   );
   const won = game?.winner;
@@ -215,19 +231,20 @@ export default function Backgammon() {
         </div>
         {plate(near)}
         <Menu
-          sound={sound}
-          setSound={setSound}
-          stand={me !== undefined && stand}
+          volume={volume}
+          setVolume={setVolume}
+          stand={seated && stand}
+          playBoth={seated && !full && (() => sit(1 - mine[0]))}
           free={[0, 1]
-            .filter((i) => seats[i] && i !== me)
+            .filter((i) => seats[i] && !mine.includes(i))
             .map((i) => ({
               seat: i,
               name: seats[i].name,
               go: () => map.set(`seat-${i}`, null),
             }))}
-          newGame={me !== undefined && full && deal}
+          newGame={seated && full && deal}
           resetScore={
-            me !== undefined &&
+            seated &&
             game?.score.some(Boolean) &&
             (() => act({ ...game, score: [0, 0] }))
           }
@@ -236,9 +253,11 @@ export default function Backgammon() {
       <div className="bg-wrap">
         <Board
           state={state}
-          me={me}
+          // the room's here: a game, or a seat taken waiting for one
+          live={!!game || seats.some(Boolean)}
+          mine={mine}
           viewer={near}
-          names={seats.map((u) => u?.name)}
+          names={[0, 1].map(name)}
           note={
             game
               ? null
@@ -256,9 +275,7 @@ export default function Backgammon() {
               {name(far)} <b>{game.score[far]}</b> – <b>{game.score[near]}</b>{" "}
               {name(near)}
             </p>
-            {me !== undefined && full && (
-              <button onClick={deal}>{t("Next game")}</button>
-            )}
+            {seated && full && <button onClick={deal}>{t("Next game")}</button>}
           </div>
         )}
       </div>
