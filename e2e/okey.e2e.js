@@ -38,7 +38,8 @@ const table = (page, name, ...args) =>
     async ([name, args]) => (await import("/e2e/table.js"))[name](...args),
     [name, args],
   );
-const state = (page) => page.evaluate(() => window.okey.get());
+// none till the page knows the room's game (after a reload: root.jsx)
+const state = (page) => page.evaluate(() => window.okey?.get());
 const handIds = async (page) =>
   (await state(page)).players[0].hand.map((t) => t?.id ?? null);
 
@@ -75,6 +76,8 @@ const anySize = (info) =>
 // unless `sit: false` (it only watches). A browser is one player
 // (useStore.js): another player is a browser context of its own.
 async function sitDown(page, { name = "Ayşe", room, sit = true } = {}) {
+  // the room's first page: not waiting to hear from others (root.jsx)
+  const first = !room;
   room ??= `e2e-${Math.random().toString(36).slice(2, 10)}`;
   await page.addInitScript((watch) => {
     if (watch) sessionStorage.setItem("watch", "1");
@@ -83,6 +86,9 @@ async function sitDown(page, { name = "Ayşe", room, sit = true } = {}) {
     localStorage.removeItem("user");
   }, !sit);
   await page.goto(`/${room}/okey`);
+  if (first) {
+    await page.evaluate((r) => sessionStorage.setItem("alone", r), room);
+  }
   await page.getByRole("textbox").fill(name);
   await page.getByRole("button", { name: GO }).click();
   if (sit) await sitInSeat1(page);
@@ -1418,16 +1424,17 @@ test("your name is remembered, and changed in the menu", async ({
   await expect(page.locator(".site-menu")).toHaveCount(1);
 });
 
-// the menu's games, found by name: one picked opens it and closes the
-// menu, as Esc does. On a short screen the coffee and the credits make way
+// the menu's games, every way to play each, found by name: one picked
+// takes the room there and closes the menu, as Esc does. On a short
+// screen the coffee and the credits make way
 test("the menu finds a game by name and goes to it", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "not about the layout");
-  await sitDown(page);
+  const room = await sitDown(page);
   await page.getByRole("button", { name: SITE_MENU }).click();
-  const games = page.locator(".site-menu .games a");
-  await expect(games).toHaveCount(4);
-  await expect(page.locator(".site-menu .games a.active")).toHaveAccessibleName(
-    "Okey",
+  const games = page.locator(".site-menu .games button");
+  await expect(games).toHaveCount(9);
+  await expect(page.locator(".site-menu .games .active")).toHaveAccessibleName(
+    "Okey Americano",
   );
   const footer = page.locator(".site-menu footer");
   await expect(footer).toBeVisible();
@@ -1435,10 +1442,18 @@ test("the menu finds a game by name and goes to it", async ({ page }, info) => {
   await expect(footer).toBeHidden();
   await page.setViewportSize({ width: 1348, height: 870 });
   await expect(footer).toBeVisible();
+  // a preset, found by its kind: the lobby's rules
+  await page.getByRole("searchbox").fill("101");
+  await expect(games).toHaveCount(1);
+  await expect(games).toHaveAccessibleName("Okey 101");
+  await games.click();
+  await expect(page.getByRole("combobox", { name: RULES })).toHaveValue("101");
+  await page.getByRole("button", { name: SITE_MENU }).click();
   await page.getByRole("searchbox").fill("BACK");
   await expect(games).toHaveText(["Backgammon"]);
   await games.click();
-  await expect(page).toHaveURL(/\/backgammon$/);
+  await expect(page.locator(".bg-board")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/${room}$`));
   await expect(page.locator(".site-menu")).toHaveCount(0);
   await page.getByRole("button", { name: SITE_MENU }).click();
   await page.getByRole("searchbox").fill("chess");
@@ -1446,6 +1461,36 @@ test("the menu finds a game by name and goes to it", async ({ page }, info) => {
   await expect(page.locator(".site-menu .none")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator(".site-menu")).toHaveCount(0);
+});
+
+// the room's game is its players' to change, not someone watching
+test("someone watching can't take the room to another game", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  const room = await sitDown(page);
+  const other = await secondPlayer(page, room);
+  // Ayşe's seat there
+  await expect
+    .poll(
+      () =>
+        other.evaluate(() =>
+          window.okey.get().players.some((p) => p.user?.name === "Ayşe"),
+        ),
+      NET,
+    )
+    .toBe(true);
+  await other.getByRole("button", { name: SITE_MENU }).click();
+  await other
+    .locator(".site-menu .games")
+    .getByRole("button", { name: /^Go$/ })
+    .click();
+  await expect(
+    other.getByText(
+      /^(Only the players can change the game|Oyunu yalnızca oynayanlar değiştirebilir)$/,
+    ),
+  ).toBeVisible();
+  await expect(other.locator(".board")).toBeVisible();
 });
 
 test("a page leaving the table keeps it till it's gone", async ({

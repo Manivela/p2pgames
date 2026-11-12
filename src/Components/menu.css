@@ -39,9 +39,10 @@
   flex: none;
 }
 
-/* its scrollbar always shown, so a card that scrolls never looks cut off:
-   a phone's own shows only while it's being scrolled */
-.site-menu::-webkit-scrollbar {
+/* its scrollbars always shown, the card's and the games', so one that
+   scrolls never looks cut off: a phone's own shows only while it's being
+   scrolled */
+:is(.site-menu, .site-menu .games)::-webkit-scrollbar {
   width: 6px;
 }
 
@@ -49,7 +50,7 @@
   margin: 14px 0;
 }
 
-.site-menu::-webkit-scrollbar-thumb {
+:is(.site-menu, .site-menu .games)::-webkit-scrollbar-thumb {
   border-radius: 3px;
   background: #c4c4bf;
 }
@@ -77,41 +78,49 @@
   box-shadow: inset 0 0 0 1px #ddd;
 }
 
-/* four across, about three rows, then it scrolls */
+/* four across, three rows (a tile's 89px), then it scrolls */
 .site-menu .games {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-content: start;
   gap: 4px;
-  max-height: min(268px, 50dvh);
+  max-height: min(284px, 50dvh);
   margin: -4px -6px;
   padding: 4px 6px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-.site-menu .games a {
+.site-menu .games button {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 5px;
   padding: 8px 2px 6px;
   border-radius: 10px;
+  background: none;
+  box-shadow: none;
   color: inherit;
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
-  text-decoration: none;
 }
 
-.site-menu .games a:is(:hover, :focus-visible) {
+.site-menu .games button:is(:hover, :focus-visible) {
   background: #f1f1ee;
-  color: inherit;
-  text-decoration: none;
+  box-shadow: none;
 }
 
-.site-menu .games a.active {
+/* its kind under the name, Classic or 13×13 */
+.site-menu .games small {
+  margin-top: -3px;
+  font-size: 10.5px;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.site-menu .games .active {
   background: #e3f1e1;
   color: #1b5e20;
   box-shadow: inset 0 0 0 2px #2e7d32;

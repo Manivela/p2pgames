@@ -6,12 +6,16 @@ import { expect, test } from "@playwright/test";
 import {
   BOTH,
   FACING,
+  IN_PLAY,
   MENU,
   NET,
   NEXT,
+  PLAYERS_ONLY,
   SIT,
   againstBot,
+  enter,
   moving,
+  pick,
   room,
   sitDown as sit,
 } from "./seats";
@@ -215,14 +219,12 @@ test("a bot rolls and plays its turns", async ({ browser }, info) => {
     .toBe(true);
 });
 
-test("checkers on the case's back: picked on the board, a bot answers", async ({
+test("checkers on the case's back: picked in the menu, a bot answers", async ({
   browser,
 }, info) => {
   const page = await againstBot(browser, info, room("bg"), "backgammon");
   await expect.poll(async () => (await game(page))?.turn, NET).not.toBeNull();
-  await page
-    .getByRole("button", { name: /^(Checkers|Amerikan daması)$/ })
-    .click();
+  await pick(page, /^(Checkers|Amerikan daması)$/);
   // dealt again as checkers: black, the bot, starts, and it's white's turn
   await expect.poll(async () => (await game(page)).mode).toBe("checkers");
   await expect.poll(async () => (await game(page)).turn).toBe(0);
@@ -234,13 +236,49 @@ test("checkers on the case's back: picked on the board, a bot answers", async ({
   await page.locator(`[data-at="${from}"]`).click();
   await page.locator(`[data-at="${to}"]`).click();
   await expect.poll(async () => (await game(page)).cells[to]?.seat).toBe(0);
-  // a move made: no more picking; the bot's answer (its turn, its to take
-  // back till white moves), and white's turn again
-  await expect(page.locator(".tb-modes")).toHaveCount(0);
+  // a move made: another mode waits for the game, the menu says; the
+  // bot's answer (its turn, its to take back till white moves), and
+  // white's turn again
+  await pick(page, /^Dama$/);
+  await expect(page.getByText(IN_PLAY)).toBeVisible();
+  expect((await game(page)).mode).toBe("checkers");
   await expect
     .poll(async () => {
       const g = await game(page);
       return g.turn === 0 && g.back?.seat === 1;
     })
     .toBe(true);
+});
+
+// the room plays one game, picked in the menu: by its players between
+// games, anyone's while none of them is here (a player gone keeps the
+// seat); everyone in the room goes, and the address stays the room's
+test("the room's game, picked in the menu, goes for everyone", async ({
+  browser,
+}, info) => {
+  const at = room("bg");
+  const ayse = await sitDown(browser, info, at, "Ayşe", 0);
+  const bora = await enter(browser, info, at, "backgammon", "Bora");
+  // Ayşe at her seat, there, and Bora's page never showed Okey first
+  const hers = bora.locator(".tb-plate", { hasText: "Ayşe" });
+  await expect(hers).toBeVisible(NET);
+  expect(await bora.evaluate(() => window.okey)).toBeUndefined();
+  await expect(hers.locator(".away")).toHaveCount(0);
+  // Bora, watching, can't take the room from her table
+  await pick(bora, /^Go$/);
+  await expect(bora.getByText(PLAYERS_ONLY)).toBeVisible();
+  await expect(bora.locator(".bg-board")).toBeVisible();
+  // she can, waiting for a second player: everyone's at Go, and back
+  await pick(ayse, /^Go$/);
+  for (const page of [ayse, bora]) {
+    await expect(page.locator(".go-scene")).toBeVisible(NET);
+    await expect(page).toHaveURL(new RegExp(`/${at}$`));
+  }
+  await pick(ayse, /^(Backgammon|Tavla)$/);
+  await expect(bora.locator(".bg-board")).toBeVisible(NET);
+  // she's gone, her seat kept: Bora takes the room to Go
+  await ayse.close({ runBeforeUnload: true });
+  await expect(hers.locator(".away")).toHaveCount(1, NET);
+  await pick(bora, /^Go$/);
+  await expect(bora.locator(".go-scene")).toBeVisible();
 });

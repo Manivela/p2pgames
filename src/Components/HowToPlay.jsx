@@ -16,7 +16,7 @@ const OKEY = [
   "Sets: one number in different colours. Runs: one colour in a row. Three tiles or more each.",
 ];
 
-// by game (the page's path), then mode (the table's, or the Okey ruleset's
+// by game (the room's, Menu.jsx), then mode (the table's, or the Okey ruleset's
 // kind, okeyKind), the first when it's not there
 export const RULES = {
   tictactoe: {
@@ -122,8 +122,11 @@ export const okeyKind = (rules) =>
         ? "classic"
         : "americano";
 
-// the mode the table on this page plays (Table's useTable), for the ?
-export const usePlaying = create(() => ({ mode: null }));
+// the room's table (Table's useTable, Okey's): the mode it plays, for the ?
+// and the site's menu; why you can't take the room to another game now
+// (null: you can); and a game picked in the menu, { game, mode }, for its
+// table to take up (Menu.jsx)
+export const usePlaying = create(() => ({ mode: null, why: null, pick: null }));
 
 const rulesOf = (game, mode) =>
   RULES[game][mode] ?? Object.values(RULES[game])[0];

@@ -2,9 +2,11 @@ import { expect, test } from "@playwright/test";
 import {
   NET,
   BOT,
+  IN_PLAY,
   NEXT,
   SIT,
   againstBot,
+  pick,
   enter,
   bothSides,
   moving,
@@ -17,7 +19,8 @@ import {
 const WINS = (name) => new RegExp(`^${name} (wins!|kazandı!)$`);
 const game = (page) => page.evaluate(() => window.tictactoe?.get());
 const cell = (page, i) => page.locator(`[data-cell="${i}"]`);
-const SUPER = /^(Super|Süper)$/;
+const SUPER = /^(Tic-tac-toe Super|XOX Süper)$/;
+const CLASSIC = /^(Tic-tac-toe Classic|XOX Klasik)$/;
 
 async function twoPlayers(browser, info) {
   const at = room("ttt");
@@ -103,7 +106,7 @@ test("one device, face to face: a word to each, O's Undo turned to O", async ({
   await expect(page.locator(".tb-plate.turn")).toHaveCount(1);
 });
 
-test("Super, picked on the sheet: sent to a board, a board taken", async ({
+test("Super, picked in the menu: sent to a board, a board taken", async ({
   browser,
 }, info) => {
   const page = await sitDown(
@@ -116,7 +119,7 @@ test("Super, picked on the sheet: sent to a board, a board taken", async ({
   );
   await bothSides(page, false);
   await expect.poll(() => game(page), NET).toBeTruthy();
-  await page.getByRole("button", { name: SUPER }).click();
+  await pick(page, SUPER);
   // dealt again, nobody having marked: X still starts
   await expect.poll(async () => (await game(page)).cells.length).toBe(81);
   expect((await game(page)).turn).toBe(0);
@@ -136,8 +139,10 @@ test("Super, picked on the sheet: sent to a board, a board taken", async ({
     await at(b, s);
   expect((await game(page)).boards[0]).toBe(0);
   await expect(page.locator(".tt-ink.big")).toHaveCount(1);
-  // a game in play: no modes to pick
-  await expect(page.locator(".tb-modes")).toHaveCount(0);
+  // a game in play: another mode waits for it, the menu says
+  await pick(page, CLASSIC);
+  await expect(page.getByText(IN_PLAY)).toBeVisible();
+  expect((await game(page)).cells).toHaveLength(81);
 });
 
 test("Super picked before the other sits: both sheets Super", async ({
@@ -145,7 +150,7 @@ test("Super picked before the other sits: both sheets Super", async ({
 }, info) => {
   const at = room("ttt");
   const x = await sitDown(browser, info, at, "tictactoe", "Ayşe", 0);
-  await x.getByRole("button", { name: SUPER }).click();
+  await pick(x, SUPER);
   const o = await sitDown(browser, info, at, "tictactoe", "Bora", 1);
   for (const page of [x, o]) {
     await expect
@@ -209,29 +214,4 @@ test("two bots play each other for whoever's watching", async ({
   await expect
     .poll(async () => (await game(page)).sheet)
     .toBeGreaterThan(sheet);
-});
-
-test("a bot plays on when its page goes to another game in the room", async ({
-  browser,
-}, info) => {
-  const at = room("ttt");
-  const page = await againstBot(browser, info, at, "tictactoe");
-  // slow, so it hasn't answered before Ayşe leaves
-  await page.evaluate(() => sessionStorage.setItem("botPace", "3000"));
-  const bora = await enter(browser, info, at, "tictactoe", "Bora");
-  await expect.poll(async () => (await game(bora))?.turn, NET).toBe(0);
-  await cell(page, 4).click();
-  // Ayşe goes to the Okey table, the page still in the room
-  await page.evaluate(() => {
-    history.pushState(null, "", location.pathname.replace("tictactoe", "okey"));
-    dispatchEvent(new PopStateEvent("popstate"));
-  });
-  await expect(page.locator(".tt-sheet")).toHaveCount(0);
-  // the bot answers all the same, played by Bora's page
-  await expect
-    .poll(
-      async () => (await game(bora))?.cells.filter((c) => c !== null).length,
-      NET,
-    )
-    .toBe(2);
 });

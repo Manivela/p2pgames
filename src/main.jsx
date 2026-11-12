@@ -3,8 +3,10 @@ import ReactDOM from "react-dom/client";
 import {
   createRoutesFromElements,
   createBrowserRouter,
+  Navigate,
   RouterProvider,
   Route,
+  useParams,
 } from "react-router-dom";
 import { DocumentProvider } from "./vendor/y-react";
 import { Toaster } from "react-hot-toast";
@@ -13,7 +15,6 @@ import ErrorPage from "./error-page";
 import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
-import Okey from "./Components/Okey";
 import { peerOpts } from "./constants";
 
 // a TURN relay login, for players whose networks block a direct connection.
@@ -37,10 +38,11 @@ if (import.meta.env.PROD && location.hostname !== "localhost") {
   );
 }
 
-const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
-// const Chat = React.lazy(() => import("./Components/Chat"));
-const Backgammon = React.lazy(() => import("./Components/Backgammon"));
-const Go = React.lazy(() => import("./Components/Go"));
+// a link from before the room's game was the room's (/K7QP/okey): the room
+function ToRoom() {
+  const { roomId } = useParams();
+  return <Navigate to={`/${roomId}`} replace />;
+}
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -48,58 +50,16 @@ const router = createBrowserRouter(
       <Route path="/" element={<Login />} />
       {/* <Route path="/" element={<Login />} /> */}
       <Route path="/login" element={<Login />} />
+      {/* the room, at the game it's playing (root.jsx) */}
       <Route
-        path="/:roomId/"
+        path="/:roomId"
         element={
           <RequireAuth>
             <Root />
           </RequireAuth>
         }
-        errorElement={<ErrorPage />}
-      >
-        <Route errorElement={<ErrorPage />}>
-          <Route
-            path="tictactoe"
-            element={
-              <React.Suspense fallback={<>...</>}>
-                <TicTacToe />
-              </React.Suspense>
-            }
-          />
-          {/* <Route
-            path="chat"
-            element={
-              <React.Suspense fallback={<>...</>}>
-                <Chat />
-              </React.Suspense>
-            }
-          /> */}
-          <Route
-            path="backgammon"
-            element={
-              <React.Suspense fallback={<>...</>}>
-                <Backgammon />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="okey"
-            element={
-              <React.Suspense fallback={<>...</>}>
-                <Okey />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="go"
-            element={
-              <React.Suspense fallback={<>...</>}>
-                <Go />
-              </React.Suspense>
-            }
-          />
-        </Route>
-      </Route>
+      />
+      <Route path="/:roomId/*" element={<ToRoom />} />
     </Route>,
   ),
 );

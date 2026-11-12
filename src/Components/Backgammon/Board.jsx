@@ -367,7 +367,6 @@ export default function Board({
   note,
   act,
   deal,
-  modes,
 }) {
   const me = mine.includes(state.turn) ? state.turn : mine[0];
   const view = { viewer, left };
@@ -645,34 +644,19 @@ export default function Board({
         {points}
         {pieces}
         {marks}
-        {/* the game to play, in the word's place while none is in play
-            (and its win said): this half's free of the dice */}
-        {modes && !won ? (
-          <div
-            className="bg-picker"
+        {status && (
+          <span
+            className={`bg-status${won ? " won" : ""}${across ? " pair" : ""}`}
             style={{
-              "--x": freeRight ? colX(6) + 0.2 : FIELD_X + 0.2,
+              "--x": freeRight ? colX(6) + 6 - 0.2 - statusW : FIELD_X + 0.2,
               "--y": FRAME + POINT_H,
-              "--w": 5.6,
+              "--w": statusW,
             }}
           >
-            {modes}
-          </div>
-        ) : (
-          status && (
-            <span
-              className={`bg-status${won ? " won" : ""}${across ? " pair" : ""}`}
-              style={{
-                "--x": freeRight ? colX(6) + 6 - 0.2 - statusW : FIELD_X + 0.2,
-                "--y": FRAME + POINT_H,
-                "--w": statusW,
-              }}
-            >
-              {/* face to face: a copy turned to each */}
-              {across && <span className="over">{status}</span>}
-              <span>{status}</span>
-            </span>
-          )
+            {/* face to face: a copy turned to each */}
+            {across && <span className="over">{status}</span>}
+            <span>{status}</span>
+          </span>
         )}
         {canUndo && (
           <Undo

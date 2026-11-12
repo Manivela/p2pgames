@@ -22,7 +22,7 @@
 // - last: { n, kind, at, off }, what happened last: a stone put `at`,
 //   taking `off`; a pass; an undo (Board.jsx, index.jsx)
 
-// the first the default
+// the board's sizes (picked in the table's ⋯), the first the default
 export const SIZE = 9;
 export const SIZES = [9, 13, 19];
 export const KOMI = 7.5;

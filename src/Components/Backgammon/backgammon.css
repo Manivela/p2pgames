@@ -358,19 +358,6 @@
   pointer-events: none;
 }
 
-/* the game to play, a row of choices across the half (Board.jsx) */
-.bg-picker {
-  z-index: 30;
-  display: grid;
-  place-items: center;
-  width: calc(var(--p) * var(--w));
-  height: calc(var(--p) * 1.4);
-}
-
-.bg-picker .tb-modes {
-  font-size: max(calc(var(--p) * 0.3), 12px);
-}
-
 /* who won, big enough on a phone */
 .bg-status.won {
   font-size: max(calc(var(--p) * 0.6), 15px);

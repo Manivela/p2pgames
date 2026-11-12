@@ -1,5 +1,5 @@
 import { useLeftHome } from "../../hooks/useStore";
-import { Modes, Table, useHeard, useTable, useTok } from "../Table";
+import { Table, useHeard, useTable, useTok } from "../Table";
 import { t } from "../../i18n";
 import Board from "./Board";
 import bot from "./bot";
@@ -10,16 +10,9 @@ import checkersBot from "../Checkers/bot";
 import { newGame as newCheckers } from "../Checkers/rules";
 
 // The room's game at its table (Table: its own Yjs map, the seats, ⋯),
-// the rules' state in rules.js; or, its other modes, checkers on the back
-// of the case (Checkers/), a game's `mode` saying which (none: backgammon)
-const MODES = {
-  label: "Game",
-  list: [
-    { id: "tavla", name: "Backgammon" },
-    { id: "checkers", name: "Checkers" },
-    { id: "dama", name: "Dama" },
-  ],
-};
+// the rules' state in rules.js; or, its other modes (the site's menu),
+// checkers on the back of the case (Checkers/): "checkers" or "dama", a
+// game's `mode` saying which (none: backgammon, "tavla")
 const newGameOf = (prev, ids, mode) =>
   mode === "tavla" ? newGame(prev, ids) : newCheckers(prev, ids, mode);
 const botOf = {
@@ -56,7 +49,7 @@ export default function Backgammon() {
     "backgammon",
     newGameOf,
     ["White", "Black"],
-    MODES,
+    "tavla",
     botOf,
   );
   const { game } = table;
@@ -100,15 +93,6 @@ export default function Backgammon() {
           note={table.note}
           act={table.act}
           deal={table.deal}
-          // on the board, in the way of two bots' game: theirs only before
-          // it starts
-          modes={
-            table.setMode &&
-            table.idle &&
-            !(table.bots && game?.last.kind !== "new") && (
-              <Modes table={table} />
-            )
-          }
         />
       ) : (
         <Checkers state={state} table={table} />

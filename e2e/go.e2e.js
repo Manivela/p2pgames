@@ -4,8 +4,10 @@ import {
   NEXT,
   againstBot,
   bothSides,
+  MENU,
   enter,
   moving,
+  pick,
   room,
   sitDown,
 } from "./seats";
@@ -13,6 +15,7 @@ import {
 // Go at the table: two browsers, or one device playing both sides. Its
 // state through the dev-only window.go.
 const PASS = /^(Pass|Pas)$/;
+const BOARD = /^(Board|Tahta)/;
 const game = (page) => page.evaluate(() => window.go?.get());
 const point = (page, row, col) => page.locator(`[data-at="${row * 9 + col}"]`);
 const stones = async (page) =>
@@ -105,11 +108,13 @@ test("one device, face to face: a word to each, the far side turned", async ({
   expect((await game(page)).passes).toBe(0);
 });
 
-test("a 13×13 board, picked beside the bowl", async ({ browser }, info) => {
+test("a 13×13 board, picked in the table's ⋯", async ({ browser }, info) => {
   const page = await sitDown(browser, info, room("go"), "go", "Ayşe", 0);
   await bothSides(page, false);
   await expect.poll(() => game(page), NET).toBeTruthy();
-  await page.getByRole("button", { name: "13×13" }).click();
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("combobox", { name: BOARD }).selectOption("13");
+  await page.locator(".tb-menu .backdrop").click();
   await expect.poll(async () => (await game(page)).stones.length).toBe(169);
   await expect(page.locator(".go-point")).toHaveCount(169);
   // the far corner, on the bigger board
@@ -135,4 +140,16 @@ test("? in the corner: how to play, closed by a tap outside", async ({
   await expect(page.getByRole("dialog")).toContainText(/7[.,]5/);
   await page.locator(".how-to").click({ position: { x: 5, y: 5 } });
   await expect(page.locator(".how-to")).toHaveCount(0);
+});
+
+// a game that crashes (its shared state, broken here on purpose) shows the
+// error in its place, the menu still there to take the room elsewhere
+test("a game that crashes leaves the menu to go elsewhere", async ({
+  browser,
+}, info) => {
+  const page = await sitDown(browser, info, room("go"), "go", "Ayşe", 0);
+  await page.evaluate(() => window.go.set({ broken: true }));
+  await expect(page.locator("#error-page")).toBeVisible();
+  await pick(page, /^(Backgammon|Tavla)$/);
+  await expect(page.locator(".bg-board")).toBeVisible();
 });

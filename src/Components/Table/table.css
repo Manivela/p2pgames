@@ -219,6 +219,10 @@ html:has(.tb-fit) {
   font-weight: 600;
 }
 
+.tb-menu .facing select {
+  margin-left: auto;
+}
+
 .tb-menu .volume input {
   flex: 1;
   min-width: 90px;
@@ -333,36 +337,4 @@ html:has(.tb-fit) {
   from {
     opacity: 0.35;
   }
-}
-
-/* how the game's played (Modes): a choice of a few, the one picked lit */
-.tb-modes {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.25em;
-  padding: 0.25em;
-  border-radius: 1.2em;
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.tb-modes button {
-  padding: 0.15em 0.75em;
-  border-radius: 1em;
-  background: none;
-  box-shadow: none;
-  color: #fff;
-  font-size: inherit;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.tb-modes button:is(:hover, :active) {
-  box-shadow: none;
-  transform: none;
-}
-
-.tb-modes button[aria-pressed="true"] {
-  background: #fff;
-  color: #1b5e20;
 }

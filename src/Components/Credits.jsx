@@ -1,11 +1,8 @@
-import { useMatch } from "react-router-dom";
 import { t } from "../i18n";
 
-function Credits() {
-  const isBackgammon = useMatch("/:roomId/backgammon");
-  const isOkey = useMatch("/:roomId/okey");
-  const isGo = useMatch("/:roomId/go");
-  if (isBackgammon) {
+// where the sounds of the room's `game` (Menu.jsx) come from
+function Credits({ game }) {
+  if (game === "backgammon") {
     return (
       <div style={{ flexDirection: "column" }}>
         {t("Sound Effects from")}{" "}
@@ -17,7 +14,7 @@ function Credits() {
     );
   }
   // the stones: backgammon's wooden toks
-  if (isGo) {
+  if (game === "go") {
     return (
       <div style={{ flexDirection: "column" }}>
         {t("Sound Effects from")}{" "}
@@ -25,7 +22,7 @@ function Credits() {
       </div>
     );
   }
-  if (isOkey) {
+  if (game === "okey") {
     return (
       <div style={{ flexDirection: "column" }}>
         {t("Sound Effects from")}{" "}

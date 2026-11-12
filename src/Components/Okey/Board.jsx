@@ -193,7 +193,7 @@ function NextStep() {
     case "roundEnd":
       return <button onClick={nextRound}>{t("Next Round")}</button>;
     case "finish":
-      return <button onClick={newGame}>{t("New Game")}</button>;
+      return <button onClick={() => newGame()}>{t("New Game")}</button>;
     default:
       return null;
   }

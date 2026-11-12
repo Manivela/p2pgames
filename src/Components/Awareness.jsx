@@ -1,17 +1,19 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useWebRtc, useAwareness } from "../vendor/y-react";
 import { useAuthStore } from "../hooks/useStore";
 import { signalingServers, peerOpts } from "../constants";
+import { useRoomGame } from "./Menu";
 
 const colors = ["orange", "blue", "yellow", "green"];
 
-const disabledPaths = ["okey", "backgammon"];
+// the games whose tables have no pointers on them
+const disabledGames = ["okey", "backgammon"];
 
 export default function Awareness() {
   const { roomId } = useParams();
-  const location = useLocation();
-  const disabled = disabledPaths.some((d) => location.pathname.includes(d));
+  const [game] = useRoomGame();
+  const disabled = disabledGames.includes(game);
   const [connectedUsers, setConnectedUsers] = useState([]);
 
   const provider = useWebRtc(roomId, {

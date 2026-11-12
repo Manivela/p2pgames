@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDoc } from "../vendor/y-react";
 import { newUser, useAuthStore } from "../hooks/useStore";
 import { customNanoid } from "../utils/customNanoid";
 import { t } from "../i18n";
@@ -8,13 +9,17 @@ export default function Login() {
   const location = useLocation();
   const currentUser = useAuthStore((state) => state.currentUser);
   const login = useAuthStore((state) => state.login);
+  const doc = useDoc();
 
   if (currentUser) {
     const from = location.state?.from?.pathname;
     const roomId = customNanoid(4);
-    const targetPath = from || `/${roomId}/okey`;
+    const targetPath = from || `/${roomId}`;
 
     setTimeout(() => {
+      // a new room's game, so its first page needn't wait to hear it
+      // (root.jsx)
+      if (!from) doc.getMap("room").set("game", "okey");
       navigate(targetPath, { replace: true });
     }, 0);
 

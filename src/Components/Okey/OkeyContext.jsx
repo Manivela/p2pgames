@@ -551,18 +551,22 @@ export function OkeyProvider({ children }) {
     replaceState(map, okey.initialState);
   }, [map]);
 
-  // the next game set up as this one was played
-  const newGame = useCallback(() => {
-    replaceState(map, {
-      ...okey.initialState,
-      players: okey.allSeats(okeyState.players).map((p) => ({
-        ...p,
-        discardPile: [],
-        hand: [],
-      })),
-      setup: okeyState.rules ?? okeyState.setup,
-    });
-  }, [map, okeyState.players, okeyState.rules, okeyState.setup]);
+  // the next game set up as this one was played, or as `setup` (a preset
+  // picked in the site's menu)
+  const newGame = useCallback(
+    (setup = okeyState.rules ?? okeyState.setup) => {
+      replaceState(map, {
+        ...okey.initialState,
+        players: okey.allSeats(okeyState.players).map((p) => ({
+          ...p,
+          discardPile: [],
+          hand: [],
+        })),
+        setup,
+      });
+    },
+    [map, okeyState.players, okeyState.rules, okeyState.setup],
+  );
 
   // the lobby's settings, anyone's to change (GameSettings.jsx), and a pile
   // of as many sets as they play

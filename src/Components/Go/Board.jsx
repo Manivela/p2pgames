@@ -1,4 +1,4 @@
-import { Modes, Undo, tell, useChangedAt } from "../Table";
+import { Undo, tell, useChangedAt } from "../Table";
 import { t } from "../../i18n";
 import { count, pass, play, sizeOf, undo, whyNot } from "./rules";
 
@@ -28,12 +28,11 @@ const COLOR = ["black", "white"];
 // A side of the table: a word for its player, Undo when they can take
 // their last move back, and their bowl, a tap on it a pass (`onPass`) when
 // it's theirs to move
-function Side({ seat, far, over, said, modes, onUndo, onPass }) {
+function Side({ seat, far, over, said, onUndo, onPass }) {
   const Bowl = onPass ? "button" : "div";
   return (
     <div className={`go-side${far ? " far" : ""}${over ? " over" : ""}`}>
       {said && <p className="go-said">{said}</p>}
-      {modes}
       {onUndo && <Undo className="go-undo" onClick={onUndo} />}
       <Bowl
         className={`go-bowl ${COLOR[seat]}`}
@@ -102,7 +101,6 @@ export default function Board({ state, table }) {
       far={isFar}
       over={across && isFar}
       said={(!isFar || across) && said}
-      modes={!isFar && <Modes table={table} />}
       onUndo={
         state.back?.seat === seat && mine.includes(seat)
           ? () => act(undo(state, seat))

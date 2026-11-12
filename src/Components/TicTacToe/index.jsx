@@ -7,15 +7,6 @@ import { newGame } from "./rules";
 import pen from "./assets/pen.mp3";
 import "./tictactoe.css";
 
-// the ways to play, chosen on the sheet (Table's Modes)
-const MODES = {
-  label: "Game",
-  list: [
-    { id: "classic", name: "Classic" },
-    { id: "super", name: "Super" },
-  ],
-};
-
 // a felt-tip on paper (made with ffmpeg, from noise): an X's two strokes,
 // an O's round one, three of each, and the long one through a win; where
 // each starts in pen.mp3, and how long it lasts, in ms
@@ -51,7 +42,7 @@ function usePen(game) {
 }
 
 export default function TicTacToe() {
-  const table = useTable("tictactoe", newGame, ["X", "O"], MODES, bot);
+  const table = useTable("tictactoe", newGame, ["X", "O"], "classic", bot);
   usePen(table.game);
   // the sheet before a game: empty, the game chosen, no one's turn
   const blank = { ...newGame(null, [], table.mode), turn: null };

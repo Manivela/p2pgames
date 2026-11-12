@@ -6,6 +6,11 @@ export const BOTH = /^(Play both sides|İki tarafı da oyna)$/;
 export const MENU = /^(Table menu|Masa menüsü)$/;
 export const FACING = /^(Face to face|Karşılıklı)$/;
 export const NEXT = /^(Next game|Sonraki oyun)$/;
+// why the menu can't take the room to another game, or mode, now
+export const IN_PLAY =
+  /^(A game is in play: finish it, or start a new one in ⋯|Oyun sürüyor: bitirin ya da ⋯ menüsünden yenisini başlatın)$/;
+export const PLAYERS_ONLY =
+  /^(Only the players can change the game|Oyunu yalnızca oynayanlar değiştirebilir)$/;
 // the other's seat may come over the network after the page: slowly with
 // the whole suite running at once
 export const NET = { timeout: 30000 };
@@ -13,14 +18,37 @@ export const NET = { timeout: 30000 };
 export const room = (game) =>
   `e2e-${game}-${Math.random().toString(36).slice(2, 10)}`;
 
-// a page at `game` in `room`, named, watching
+// a game in the site's menu (Menu.jsx), by its tile's name, picked: the
+// room goes there, everyone in it, as its table allows
+export async function pick(page, name) {
+  await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
+  await page.locator(".site-menu .games").getByRole("button", { name }).click();
+}
+
+// each game's first way to play, as the menu names it
+const FIRST = {
+  tictactoe: /^(Tic-tac-toe Classic|XOX Klasik)$/,
+  backgammon: /^(Backgammon|Tavla)$/,
+  go: /^Go$/,
+};
+const made = new Set();
+
+// a page in `room`, named, watching, at `game`: the room's first page
+// takes it there (a room plays Okey till then), not waiting to hear from
+// others first (sessionStorage alone, root.jsx); the others find it there
+// once it comes over the network
 export async function enter(browser, info, room, game, name) {
   const { viewport, hasTouch, locale } = info.project.use;
   const context = await browser.newContext({ viewport, hasTouch, locale });
   const page = await context.newPage();
-  await page.goto(`/${room}/${game}`);
+  await page.goto(`/${room}`);
+  const first = !made.has(room);
+  made.add(room);
+  if (first)
+    await page.evaluate((r) => sessionStorage.setItem("alone", r), room);
   await page.getByRole("textbox").fill(name);
   await page.getByRole("button", { name: /^(Go|Gir)$/ }).click();
+  if (first && FIRST[game]) await pick(page, FIRST[game]);
   return page;
 }
 

@@ -601,9 +601,21 @@ const TR = [
   [/^Pass$/, "Pas"],
   [/^Prisoners$/, "Esirler"],
   [/^Board$/, "Tahta"],
-  [/^Game$/, "Oyun"],
   [/^Classic$/, "Klasik"],
   [/^Super$/, "Süper"],
+  // the room's game, picked in the menu
+  [
+    /^A game is in play: finish it, or start a new one in ⋯$/,
+    "Oyun sürüyor: bitirin ya da ⋯ menüsünden yenisini başlatın",
+  ],
+  [
+    /^Only the players can change the game$/,
+    "Oyunu yalnızca oynayanlar değiştirebilir",
+  ],
+  [
+    /^Its players are away: free their seats in ⋯$/,
+    "Oyuncuları burada değil: yerlerini ⋯ menüsünden boşaltın",
+  ],
   [/^That board is decided$/, "O tahta bitti"],
   [/^Play in the lit board$/, "Işıklı tahtaya oyna"],
   [/^(.+) passed$/, "$1 pas geçti"],

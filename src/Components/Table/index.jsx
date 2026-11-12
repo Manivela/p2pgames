@@ -19,24 +19,17 @@ import "./table.css";
 // game. A game's state has `turn`, the seat to move, `winner` ({ seat })
 // once one's won, and `score`, carried over by `newGame(prev, ids, mode)`
 // while the same two sit. `sides`: what the seats are called, white and
-// black. `modes`: the ways the game can be played, { label, list: [{ id,
-// name }] }, the first the default; the table's, `mode` in the map, chosen
-// by those seated on the board while no game is in play (Modes, `idle`):
-// before a player's first move (`touched`), it deals again; once a game's
-// over, the next one.
+// black. The way it's played, `mode` in the map (`first` till one's
+// picked), is picked in the site's menu (Menu.jsx), or Go's board size in
+// its ⋯ (`setMode`), by those seated while no game is in play (`idle`), or
+// by anyone while nobody sits: before a player's first move (`touched`),
+// it deals again; once a game's over, the next one.
 // `bot`: the game's, { play(state, seat): its move, the next state;
 // wait(state): ms before it, 900 when not given }.
-export function useTable(name, newGame, sides, modes, bot) {
+export function useTable(name, newGame, sides, first, bot) {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, { signaling: signalingServers, peerOpts });
-  const { states, localID, setLocalState } = useAwareness(provider.awareness);
-  // the room's pages say which game they show (one page goes from game to
-  // game in the room): who's at this table, to play its bots
-  useEffect(() => {
-    setLocalState((s) => ({ ...s, table: name }));
-    return () => setLocalState((s) => ({ ...s, table: null }));
-  }, [name, setLocalState]);
-  const at = (id) => states.get(id)?.table === name;
+  const { states, localID } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((s) => s.currentUser);
   useMap(name); // re-render on every change
   const map = useDoc().getMap(name);
@@ -63,11 +56,15 @@ export function useTable(name, newGame, sides, modes, bot) {
   const ids = seats.map((u) => u?.id ?? null);
 
   const sit = (i) => map.set(`seat-${i}`, currentUser);
-  const mode = map.get("mode") ?? modes?.list[0].id;
+  const mode = map.get("mode") ?? first;
   const deal = (m = mode) => map.set("game", newGame(game, ids, m));
+  // with nobody seated, a game left on the board goes with it
+  const empty = !seats.some(Boolean);
+  const canMode = (hosts && idle) || empty;
   const setMode = (m) => {
     map.set("mode", m);
     if (full && idle) deal(m);
+    else if (empty && game) map.set("game", null);
   };
 
   // the first game starts once both seats are taken, from whichever host's
@@ -78,9 +75,8 @@ export function useTable(name, newGame, sides, modes, bot) {
 
   // A bot sits in an empty seat, either or both, and plays its turns
   // through the same rules, played by the page that seated it (`runner`),
-  // or while that one's gone or at another game, the first page at this
-  // table; anyone not
-  // seated can take its seat. sessionStorage botPace: ms before each move.
+  // or while that one's gone, the room's first page; anyone not seated can
+  // take its seat. sessionStorage botPace: ms before each move.
   const addBot = (i) =>
     map.set(`seat-${i}`, {
       id: `bot-${i}`,
@@ -90,8 +86,7 @@ export function useTable(name, newGame, sides, modes, bot) {
     });
   const up = game && !game.winner && game.turn !== null && seats[game.turn];
   const runner =
-    up?.bot &&
-    (at(up.runner) ? up.runner : Math.min(...[...states.keys()].filter(at)));
+    up?.bot && (states.has(up.runner) ? up.runner : Math.min(...states.keys()));
   const plays = runner === localID;
   useEffect(() => {
     if (!plays) return;
@@ -116,9 +111,31 @@ export function useTable(name, newGame, sides, modes, bot) {
   }, [plays, game?.last.n]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // the mode in play, the game's own (backgammon's says none: the first),
-  // or before a game the one picked: How to play's (root.jsx)
-  const playing = game ? (game.mode ?? modes?.list[0].id) : mode;
-  useEffect(() => usePlaying.setState({ mode: playing }), [playing]);
+  // or before a game the one picked: How to play's (root.jsx) and the menu's
+  const playing = game ? (game.mode ?? first) : mode;
+  // the room goes to another game (the menu) at its players' word between
+  // games, or at anyone's while none of them is here: a player gone (a
+  // closed tab) keeps the seat, and the game, for their return
+  const here = new Set([...states.values()].map((s) => s?.user?.id));
+  const playersHere = seats.some((u) => u && !u.bot && here.has(u.id));
+  const why =
+    !playersHere || (seated && idle)
+      ? null
+      : seated
+        ? "A game is in play: finish it, or start a new one in ⋯"
+        : "Only the players can change the game";
+  useEffect(() => usePlaying.setState({ mode: playing, why }), [playing, why]);
+  // a mode picked in the menu for this table: its players' between games,
+  // or anyone's while nobody sits; a game of players gone stays theirs
+  const pick = usePlaying((s) => s.pick);
+  useEffect(() => {
+    if (pick?.game !== name) return;
+    usePlaying.setState({ pick: null });
+    if (pick.mode === playing) return;
+    if (canMode) setMode(pick.mode);
+    else if (!playersHere) tell("Its players are away: free their seats in ⋯");
+    else tell(why ?? "Only the players can change the game");
+  }, [pick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // a new name (the sidebar) goes on your seats
   useEffect(() => {
@@ -159,7 +176,7 @@ export function useTable(name, newGame, sides, modes, bot) {
     across: both && facing,
     facing,
     setFacing,
-    here: new Set([...states.values()].map((s) => s?.user?.id)),
+    here,
     names: [0, 1].map(named),
     // the room's here: a game, or a seat taken waiting for one
     live: !!game || seats.some(Boolean),
@@ -177,10 +194,8 @@ export function useTable(name, newGame, sides, modes, bot) {
     free: (i) => map.set(`seat-${i}`, null),
     // the next game, for the hosts of a full table
     deal: hosts && full ? () => deal() : null,
-    modes,
     mode,
-    idle,
-    setMode: hosts && modes ? setMode : null,
+    setMode: canMode ? setMode : null,
   };
 }
 
@@ -330,7 +345,7 @@ function Menu({
 // The table (useTable): the players and their scores beside the board, the
 // ⋯ menu in the corner, and the board, `children`, as big as the room
 // left fits. `mark(seat)`: the side's piece; `info(seat)`: a number by
-// its name; `options`: the game's own, for this device, in the menu.
+// its name; `options`: the game's own settings, in the menu.
 export function Table({ table, mark, info, options, children }) {
   const { seats, game, mine, seated, both, full, near, far, across } = table;
   const { volume, setVolume } = useVolume();
@@ -382,26 +397,6 @@ export function Table({ table, mark, info, options, children }) {
         />
       </div>
       <div className="tb-wrap">{children}</div>
-    </div>
-  );
-}
-
-// How the game's played, picked on the board while none is in play: before
-// anyone's moved, or once it's over (useTable's `modes`)
-export function Modes({ table }) {
-  const { modes, mode, setMode, idle } = table;
-  if (!setMode || !idle) return null;
-  return (
-    <div className="tb-modes" role="group" aria-label={t(modes.label)}>
-      {modes.list.map(({ id, name }) => (
-        <button
-          key={id}
-          aria-pressed={id === mode}
-          onClick={() => id !== mode && setMode(id)}
-        >
-          {t(name)}
-        </button>
-      ))}
     </div>
   );
 }

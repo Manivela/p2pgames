@@ -2,14 +2,8 @@ import { Table, useHeard, useTable, useTok } from "../Table";
 import { t } from "../../i18n";
 import Board from "./Board";
 import bot from "./bot";
-import { SIZES, newGame } from "./rules";
+import { SIZE, SIZES, newGame } from "./rules";
 import "./go.css";
-
-// the board's sizes, chosen beside your bowl (Table's Modes)
-const MODES = {
-  label: "Board",
-  list: SIZES.map((n) => ({ id: String(n), name: `${n}×${n}` })),
-};
 
 // Everyone hears a stone put down, and the ones it takes, each a tok,
 // dropped in the lid one after another. A new level is heard as a stone.
@@ -27,7 +21,14 @@ function useStoneSounds(game) {
 }
 
 export default function Go() {
-  const table = useTable("go", newGame, ["Black", "White"], MODES, bot);
+  const table = useTable(
+    "go",
+    newGame,
+    ["Black", "White"],
+    // the board's size
+    String(SIZE),
+    bot,
+  );
   // the board before a game: empty, the size chosen, no one's turn
   const state = table.game ?? { ...newGame(null, [], table.mode), turn: null };
   useStoneSounds(table.game);
@@ -36,6 +37,23 @@ export default function Go() {
       table={table}
       mark={(seat) => <i className={`go-dot ${seat ? "white" : "black"}`} />}
       info={(seat) => ({ value: state.taken[seat], title: t("Prisoners") })}
+      // the size, the rules the same on each: a setting, not a game of
+      // its own in the site's menu
+      options={
+        table.setMode && (
+          <label className="facing">
+            {t("Board")}
+            <select
+              value={table.mode}
+              onChange={(e) => table.setMode(e.target.value)}
+            >
+              {SIZES.map((n) => (
+                <option key={n} value={n}>{`${n}×${n}`}</option>
+              ))}
+            </select>
+          </label>
+        )
+      }
     >
       <Board state={state} table={table} />
     </Table>

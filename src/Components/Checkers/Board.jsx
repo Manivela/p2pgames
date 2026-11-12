@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import { Modes, Undo, tell, useChangedAt } from "../Table";
+import { Undo, tell, useChangedAt } from "../Table";
 import { t } from "../../i18n";
 import { colOf, hop, movable, rowOf, targets, undo, whyNot } from "./rules";
 import "./checkers.css";
 
 // The back of the backgammon case: a board of eight by eight, walnut and
 // ash, the backgammon checkers on it (backgammon.css) and each player's
-// word, Undo and the game's modes at their side of it (checkers.css lays
-// them out). Each sees their own pieces at the bottom.
+// word and Undo at their side of it (checkers.css lays them out). Each sees their own pieces at the bottom.
 const COLOR = ["white", "black"];
 // as long as a piece takes to slide (checkers.css)
 const SLIDE_MS = 400;
@@ -16,12 +15,11 @@ const SLIDE_MS = 400;
 const spot = (i, viewer) =>
   viewer === 0 ? [colOf(i), rowOf(i)] : [7 - colOf(i), 7 - rowOf(i)];
 
-// a side of the board: its player's word, Undo, and the modes on yours
-function Side({ far, over, said, modes, onUndo }) {
+// a side of the board: its player's word and Undo
+function Side({ far, over, said, onUndo }) {
   return (
     <div className={`ck-side${far ? " far" : ""}${over ? " over" : ""}`}>
       {said && <p className="ck-said">{said}</p>}
-      {modes}
       {onUndo && <Undo className="ck-undo" onClick={onUndo} />}
     </div>
   );
@@ -94,7 +92,6 @@ export default function Board({ state, table }) {
       over={away(seat)}
       // what's said is for both: the far side's copy only face to face
       said={(!isFar || across) && said}
-      modes={!isFar && <Modes table={table} />}
       onUndo={
         canUndo && back === seat
           ? () => {

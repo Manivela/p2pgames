@@ -267,10 +267,6 @@
   opacity: 0.85;
 }
 
-.go-side .tb-modes {
-  font-size: max(calc(var(--s) * 0.32), 12px);
-}
-
 .go-undo {
   flex: none;
   width: max(calc(var(--s) * 0.9), 32px);

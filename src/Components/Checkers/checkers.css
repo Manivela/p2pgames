@@ -155,17 +155,6 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.ck-side .tb-modes {
-  flex-direction: column;
-  font-size: max(calc(var(--q) * 0.3), 12px);
-}
-
-@container (aspect-ratio < 1) {
-  .ck-side .tb-modes {
-    flex-direction: row;
-  }
-}
-
 .ck-undo {
   flex: none;
   width: max(calc(var(--q) * 0.9), 32px);

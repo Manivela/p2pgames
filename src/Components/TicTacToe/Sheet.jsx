@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modes, Undo, tell, useChangedAt } from "../Table";
+import { Undo, tell, useChangedAt } from "../Table";
 import { t } from "../../i18n";
 import { mark, undo, whyNot } from "./rules";
 
@@ -284,10 +284,7 @@ export default function Sheet({ state, table }) {
           <p>{status}</p>
         </div>
       )}
-      <div className="tt-margin">
-        {status && <p>{status}</p>}
-        <Modes table={table} />
-      </div>
+      <div className="tt-margin">{status && <p>{status}</p>}</div>
       {canUndo && (
         <Undo
           className={`tt-undo${away(back) ? " over" : ""}`}
