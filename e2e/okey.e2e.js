@@ -1768,8 +1768,6 @@ test("someone joining sits down by themselves, in the first free seat", async ({
   browser,
 }, info) => {
   anySize(info);
-  // three browsers, each reaching the room in turn
-  test.setTimeout(60000);
   const room = await sitDown(page);
   const other = await (await browser.newContext()).newPage();
   await sitDown(other, { room, name: "Bora", sit: false });
