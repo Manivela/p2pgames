@@ -18,12 +18,22 @@ export default defineConfig({
   expect: {
     toHaveScreenshot: { stylePath: "e2e/screenshot.css" },
   },
-  use: { baseURL: "http://localhost:5173" },
-  webServer: {
-    command: "npm run dev -- --port 5173 --strictPort",
-    url: "http://localhost:5173",
-    reuseExistingServer: true,
-  },
+  use: { baseURL: "http://localhost:5174" },
+  // the dev server in e2e mode, which finds pages through a signaling
+  // server here (src/constants.js), on a port of its own so a plain
+  // `npm run dev` is never taken for it
+  webServer: [
+    {
+      command: "node node_modules/y-webrtc/bin/server.js",
+      url: "http://localhost:4444",
+      reuseExistingServer: true,
+    },
+    {
+      command: "npm run dev -- --port 5174 --strictPort --mode e2e",
+      url: "http://localhost:5174",
+      reuseExistingServer: true,
+    },
+  ],
   projects: [
     {
       name: "phone",

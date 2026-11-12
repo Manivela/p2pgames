@@ -233,7 +233,7 @@ test("checkers on the case's back: picked on the board, a bot answers", async ({
   });
   await page.locator(`[data-at="${from}"]`).click();
   await page.locator(`[data-at="${to}"]`).click();
-  expect((await game(page)).cells[to]?.seat).toBe(0);
+  await expect.poll(async () => (await game(page)).cells[to]?.seat).toBe(0);
   // a move made: no more picking; the bot's answer (its turn, its to take
   // back till white moves), and white's turn again
   await expect(page.locator(".tb-modes")).toHaveCount(0);

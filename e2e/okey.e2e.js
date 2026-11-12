@@ -64,7 +64,8 @@ const arrived = (page) =>
 const anySize = (info) =>
   test.skip(info.project.name === "small-phone", "not about the size");
 
-// a fresh room each time: rooms with the same name sync over the internet.
+// a fresh room each time: rooms with the same name sync, through the e2e
+// signaling server (playwright.config.js) or the live one.
 // A page asked for a name as it first loads (a reload keeps the login); the
 // first in a new room taps Sit, one joining a table sits down by itself
 // unless `sit: false` (it only watches). A browser is one player
@@ -1717,6 +1718,8 @@ test("someone joining sits down by themselves, in the first free seat", async ({
   browser,
 }, info) => {
   anySize(info);
+  // three browsers, each reaching the room in turn
+  test.setTimeout(60000);
   const room = await sitDown(page);
   const other = await (await browser.newContext()).newPage();
   await sitDown(other, { room, name: "Bora", sit: false });
@@ -1730,6 +1733,29 @@ test("someone joining sits down by themselves, in the first free seat", async ({
   await expect
     .poll(async () => (await state(page)).players[1].user?.name, NET)
     .toBe("Bora");
+});
+
+// the live signaling server, the one players find each other through (the
+// other tests have one of their own): two browsers meet at a table
+test("two browsers find each other through the live signaling server", async ({
+  page,
+  browser,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "one check of the server");
+  const live = () => sessionStorage.setItem("signaling", "live");
+  const bora = await (await browser.newContext()).newPage();
+  const sockets = [];
+  for (const p of [page, bora]) {
+    await p.addInitScript(live);
+    p.on("websocket", (ws) => sockets.push(new URL(ws.url()).host));
+  }
+  const room = await sitDown(page);
+  await sitDown(bora, { room, name: "Bora", sit: false });
+  await arrived(bora);
+  expect((await state(bora)).players[0].user.name).toBe("Ayşe");
+  // through the live one, not the e2e's
+  expect(sockets).toContain("webrtc-signaling.fly.dev");
+  expect(sockets).not.toContain("localhost:4444");
 });
 
 const BOT = /^(Add a bot|Bot ekle)$/;
