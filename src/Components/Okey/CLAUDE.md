@@ -23,11 +23,11 @@ How each part works is in its code comments; this file holds the conventions, de
 
 ## Verify
 
-1. Rules: `npx vitest run` from the repo root (from this folder it skips test files). A discard waits out the others' claim time unless its `now` is past it: tests pass `afterWait(s)`, scripts `Infinity`.
-2. `npm run lint`: no errors (prettier runs inside it).
-3. End to end: `npm run test:e2e` runs `e2e/okey.e2e.js` in Playwright's Linux image (`e2e/docker.sh`; the first run pulls ~1 GB), so screenshots match on every machine; `npx playwright test` on the Mac runs the same tests without the screenshot comparisons. Positions come from `e2e/table.js`. A new table stage gets the fit check (`check()`: nothing overlaps or falls off-screen) and a reference screenshot. After an intended visual change: `npm run test:e2e -- --update-snapshots`, look at each new PNG in `e2e/okey.e2e.js-snapshots/`, commit them (a change within the per-pixel tolerance keeps the old image; `=all` rewrites every one).
+1. `npm run check`: the unit tests (vitest) and lint, prettier inside it, no errors. A discard waits out the others' claim time unless its `now` is past it: tests pass `afterWait(s)`, scripts `Infinity`.
+2. End to end, the tests of what changed, on the Mac: `npx playwright test -g "<title>" --project desktop`, and `--project phone` for touch or Turkish; the screenshots are compared only in Playwright's Linux image. Positions come from `e2e/table.js`. A new table stage gets the fit check (`check()`: nothing overlaps or falls off-screen) and a reference screenshot. After an intended visual change: `npm run test:e2e -- --update-snapshots -g "<title>"` runs those tests in the Linux image (`e2e/docker.sh`; the first run pulls ~1 GB), look at each new PNG in `e2e/okey.e2e.js-snapshots/`, commit them (a change within the per-pixel tolerance keeps the old image; `=all` rewrites every one).
+3. The whole e2e suite runs on CI (`.github/workflows/test.yml`), on every push to main, the screenshots compared, and main deploys only once it's green (its last job). To see it before pushing: `npm run test:e2e`, about 4 minutes with the laptop otherwise idle; busy with anything else, its timing and screenshot tests fail.
 4. A layout change, by eye: 1348×870, 1024×768, 820×1180, 844×390 and 667×320, each in the lobby, mid-game, at round end and watching without a seat, in English and Turkish.
 
-Done when vitest, lint and the Docker e2e are green and every layout change has been seen at each size and stage, its strings in Turkish too.
+Done when check and the e2e of what changed are green, every layout change has been seen at each size and stage, its strings in Turkish too, and once pushed, CI's run is green (`gh run watch`).
 
 Driving the table in a browser or a script (Playwright, `window.okey`, bots, touch, Turkish, a second player): `DRIVING.md`.

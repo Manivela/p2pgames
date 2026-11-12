@@ -1,0 +1,54 @@
+# Every push to main: the unit tests and lint, and the whole e2e suite in
+# Playwright's Linux image (e2e/docker.sh, as `npm run test:e2e` runs it),
+# its screenshots compared, split three ways to finish sooner; then, all
+# green, the site deployed
+name: test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# a newer push stops the run before it: the deploy hook builds main as it
+# is, so only the run of main's last commit may call it
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1/3, 2/3, 3/3]
+    steps:
+      - uses: actions/checkout@v5
+      - run: e2e/docker.sh --shard=${{ matrix.shard }}
+      # what failed: the error, the page, the screenshots' diff
+      - if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results-${{ strategy.job-index }}
+          path: test-results
+
+  # Cloudflare Pages builds and deploys main: its own automatic deploys
+  # off (the project's Settings, Branch control), this deploy hook on
+  deploy:
+    needs: [check, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -X POST "$HOOK"
+        env:
+          HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}

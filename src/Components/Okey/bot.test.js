@@ -133,7 +133,9 @@ function botsPlay(s) {
   return s;
 }
 
-test("bots play every Americano round to its end", () => {
+// seven rounds played out, about 4 s on a fast machine: longer than
+// vitest's 5 s allows on a slow or busy one
+test("bots play every Americano round to its end", { timeout: 30000 }, () => {
   let finished = 0;
   for (let round = 1; round <= AMERICANO.rounds.length; round++) {
     const s = okey.setUp(seated(4), round, {}, 1, AMERICANO);

@@ -14,6 +14,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "check": "vitest run && npm run lint",
     "test:e2e": "e2e/docker.sh",
     "lint": "eslint src e2e functions *.js"
   },
