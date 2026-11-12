@@ -1,0 +1,330 @@
+/* The site's menu (Menu.jsx): a white card from ☰ in the corner, over the
+   game, as the table's ⋯ opens from the other corner (table.css). px
+   throughout: Bootstrap 3 makes a rem 10px. */
+
+.site-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+}
+
+/* above the corner buttons' row, which every table keeps at the bottom:
+   --t, the tile width the tables size them by (index.css) */
+.site-menu {
+  position: fixed;
+  z-index: 200;
+  left: calc(var(--t, 57px) * 0.14);
+  bottom: calc(var(--t, 57px) * 0.92);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(340px, calc(100vw - 16px));
+  max-height: calc(100dvh - var(--t, 57px) * 0.92 - 8px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  color: #222;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* a page with no table keeps the buttons top left: under them */
+#root:not(:has(.fit, .tb-fit)) .site-menu {
+  top: calc(var(--t, 28.6px) * 0.14 + 48px);
+  bottom: auto;
+}
+
+/* a short screen scrolls the card, never squeezes its parts */
+.site-menu > * {
+  flex: none;
+}
+
+.site-menu input.find {
+  display: block;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 36px;
+  border-radius: 10px;
+  background: #f1f1ee
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23888' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E")
+    no-repeat 12px center / 16px;
+  box-shadow: none;
+  font-size: 15px;
+}
+
+.site-menu input.find:hover {
+  box-shadow: inset 0 0 0 1px #ddd;
+}
+
+/* four across, about three rows, then it scrolls */
+.site-menu .games {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  gap: 4px;
+  max-height: min(268px, 50dvh);
+  margin: -4px -6px;
+  padding: 4px 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.site-menu .games a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 2px 6px;
+  border-radius: 10px;
+  color: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+
+.site-menu .games a:is(:hover, :focus-visible) {
+  background: #f1f1ee;
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-menu .games a.active {
+  background: #e3f1e1;
+  color: #1b5e20;
+  box-shadow: inset 0 0 0 2px #2e7d32;
+}
+
+.game-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.site-menu .none {
+  margin: 4px 0;
+  color: #888;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* the room, who's here and the credits, a rule between each */
+.site-menu aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.site-menu aside > * {
+  padding-top: 12px;
+  border-top: 1px solid #e6e6e6;
+}
+
+/* the invite on a line of its own when the two don't fit (Turkish's is
+   long) */
+.site-menu .room {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.site-menu .room span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.site-menu .room b {
+  font-size: 18px;
+  letter-spacing: 0.05em;
+}
+
+/* green with white: the table's white-with-green, on white */
+.site-menu button.invite {
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 16px;
+  background: #2e7d32;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.site-menu .here {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.site-menu .here li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px 0 5px;
+  border-radius: 16px;
+  background: #f1f1ee;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.site-menu .here small {
+  margin-left: -4px;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.site-menu .here .me {
+  cursor: pointer;
+}
+
+.site-menu .dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.site-menu button.rename {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 -8px 0 -4px;
+  padding: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.site-menu button.rename:is(:hover, :focus-visible) {
+  opacity: 1;
+  box-shadow: none;
+}
+
+.site-menu .rename svg {
+  width: 15px;
+  height: 15px;
+}
+
+.site-menu .here form {
+  margin: 0 -8px 0 0;
+}
+
+.site-menu .here input {
+  width: 160px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.site-menu .here input,
+.site-menu .here input:is(:hover, :focus) {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #2e7d32;
+}
+
+.site-menu footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #888;
+  font-size: 12px;
+}
+
+.site-menu footer a:not(.bmc-btn) {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Buy me a coffee's own button, small */
+.bmc-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #ff5f5f;
+  color: #fff;
+  font:
+    19px/1 "Cookie",
+    cursive;
+  white-space: nowrap;
+}
+
+.bmc-btn:is(:hover, :focus) {
+  color: #fff;
+  text-decoration: none;
+}
+
+.bmc-btn img {
+  height: 20px;
+}
+
+/* a phone upright: the screen's width, wide enough for Backgammon */
+@media (max-width: 500px) {
+  .site-menu {
+    width: calc(100vw - 16px);
+  }
+}
+
+/* a phone on its side: the games down the left, the room down the right,
+   each as tall as the card, scrolling on its own */
+@media (orientation: landscape) and (max-height: 500px) {
+  .site-menu {
+    display: grid;
+    grid-template:
+      "find aside" auto
+      "games aside" minmax(0, 1fr)
+      / minmax(0, 1fr) minmax(0, 0.8fr);
+    gap: 10px 16px;
+    width: min(660px, calc(100vw - 16px));
+    height: calc(100dvh - var(--t, 57px) * 0.92 - 8px);
+    overflow: hidden;
+  }
+
+  .site-menu .find {
+    grid-area: find;
+  }
+
+  .site-menu :is(.games, .none) {
+    grid-area: games;
+    max-height: none;
+  }
+
+  .site-menu aside {
+    grid-area: aside;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .site-menu aside > .room {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .site-menu aside > footer {
+    margin-top: auto;
+  }
+}

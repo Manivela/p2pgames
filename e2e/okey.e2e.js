@@ -27,6 +27,10 @@ const FREE = (name) => new RegExp(`^(Free seat|Yeri boşalt): ${name}$`);
 const STAND = /^(Stand|Kalk)$/;
 const LEAVE = /^(Leave the round|Elden çekil)$/;
 const SIT_IN = /^(Sit down in this round|Bu ele otur)$/;
+// the site's menu (Menu.jsx), from ☰ in the corner
+const SITE_MENU = /^(Menu|Menü)$/;
+const RENAME = /^(Change your name|Adını değiştir)$/;
+const NAME = /^(Your name|Adın)$/;
 
 // a helper from e2e/table.js, run in the page
 const table = (page, name, ...args) =>
@@ -834,8 +838,17 @@ test("a link dragged over the table leaves it be", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "the browser's own drag");
   await sitDown(page);
   await table(page, "start", 4);
-  await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const a = await page.getByRole("link", { name: "TicTacToe" }).boundingBox();
+  // a link of the page's own, beside the table
+  await page.evaluate(() =>
+    document.body.append(
+      Object.assign(document.createElement("a"), {
+        href: "/",
+        textContent: "A link",
+        style: "position: fixed; top: 200px; left: 8px; z-index: 300",
+      }),
+    ),
+  );
+  const a = await page.getByRole("link", { name: "A link" }).boundingBox();
   await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
   await page.mouse.down();
   for (const x of [500, 700, 800]) await page.mouse.move(x, 450, { steps: 5 });
@@ -1368,34 +1381,65 @@ test("a reload keeps you logged in and in your seat", async ({
 });
 
 // a new tab in this browser is the same player, under the name given once;
-// a name changed in the sidebar shows on your seat for everyone, and in
-// your other tabs
-test("your name is remembered, and changed from the sidebar", async ({
+// a name changed in the menu, with ✎ beside it, shows on your seat for
+// everyone, and in your other tabs
+test("your name is remembered, and changed in the menu", async ({
   page,
 }, info) => {
   test.skip(info.project.name !== "desktop", "not about the layout");
   const room = await sitDown(page);
   const tab = await page.context().newPage();
   await tab.goto(`/${room}/okey`);
-  await expect(tab.getByLabel(/^(Your name|Adın)$/)).toHaveValue("Ayşe");
   await expect(tab.getByRole("button", { name: SIT })).toHaveCount(0);
   await expect(tab.locator(".rack > .playerName")).toHaveText("Ayşe");
-  await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
-  const field = page.getByLabel(/^(Your name|Adın)$/);
+  await tab.getByRole("button", { name: SITE_MENU }).click();
+  const mine = (p) => p.locator(".site-menu .here .me");
+  await expect(mine(tab)).toContainText("Ayşe");
+  await page.getByRole("button", { name: SITE_MENU }).click();
+  const field = page.getByRole("textbox", { name: NAME });
+  await page.getByRole("button", { name: RENAME }).click();
   await field.fill("Ayşe K");
   await field.press("Enter");
   await expect(tab.locator(".rack > .playerName")).toHaveText("Ayşe K");
-  await expect(
-    tab.locator("#sidebar main li", { hasText: "Ayşe K" }),
-  ).toHaveCount(1);
-  await expect(tab.getByLabel(/^(Your name|Adın)$/)).toHaveValue("Ayşe K");
+  await expect(mine(tab)).toContainText("Ayşe K");
   expect(
     await tab.evaluate(() => JSON.parse(localStorage.user).state.currentUser),
   ).toMatchObject({ name: "Ayşe K" });
-  // emptied, it keeps the name it had
+  // emptied, it keeps the name it had; and Esc leaves it as it was, the
+  // menu open
+  await page.getByRole("button", { name: RENAME }).click();
   await field.fill("");
   await field.blur();
-  await expect(field).toHaveValue("Ayşe K");
+  await expect(mine(page)).toContainText("Ayşe K");
+  await mine(page).click();
+  await field.fill("Ayşe X");
+  await field.press("Escape");
+  await expect(mine(page)).toContainText("Ayşe K");
+  await expect(page.locator(".site-menu")).toHaveCount(1);
+});
+
+// the menu's games, found by name: one picked opens it and closes the
+// menu, as Esc does
+test("the menu finds a game by name and goes to it", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  await sitDown(page);
+  await page.getByRole("button", { name: SITE_MENU }).click();
+  const games = page.locator(".site-menu .games a");
+  await expect(games).toHaveCount(4);
+  await expect(page.locator(".site-menu .games a.active")).toHaveAccessibleName(
+    "Okey",
+  );
+  await page.getByRole("searchbox").fill("BACK");
+  await expect(games).toHaveText(["Backgammon"]);
+  await games.click();
+  await expect(page).toHaveURL(/\/backgammon$/);
+  await expect(page.locator(".site-menu")).toHaveCount(0);
+  await page.getByRole("button", { name: SITE_MENU }).click();
+  await page.getByRole("searchbox").fill("chess");
+  await expect(games).toHaveCount(0);
+  await expect(page.locator(".site-menu .none")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".site-menu")).toHaveCount(0);
 });
 
 test("a page leaving the table keeps it till it's gone", async ({

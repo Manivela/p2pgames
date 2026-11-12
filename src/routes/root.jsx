@@ -1,153 +1,26 @@
-import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { toast } from "react-hot-toast";
+import { useCallback, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import Awareness from "../Components/Awareness";
-import Credits from "../Components/Credits";
 import HowToPlay, { RULES, usePlaying } from "../Components/HowToPlay";
-import { useAuthStore } from "../hooks/useStore";
-import coffee from "../assets/coffee.svg";
+import Menu from "../Components/Menu";
 import { t } from "../i18n";
 
-// your name as the others see it: this device remembers it, and a new one
-// goes on your seat (OkeyContext). Enter, or leaving the box, keeps it.
-function YourName() {
-  const currentUser = useAuthStore((state) => state.currentUser);
-  const rename = useAuthStore((state) => state.rename);
-  if (!currentUser) return null;
-  return (
-    <form
-      key={currentUser.name}
-      className="your-name"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const input = e.target.username;
-        const name = input.value.trim();
-        if (!name) input.value = currentUser.name;
-        else if (name !== currentUser.name) rename(name);
-        input.blur();
-      }}
-    >
-      <label>
-        {t("Your name")}
-        <input
-          name="username"
-          defaultValue={currentUser.name}
-          onBlur={(e) => e.target.form.requestSubmit()}
-        />
-      </label>
-    </form>
-  );
-}
-
-// wide screens show the sidebar beside the game, small ones lay it over it
-// (index.css)
-const docked = () => matchMedia("(min-width: 1025px)").matches;
-
 export default function Root() {
-  // closed to start; the button hides and shows it on any screen
+  // the menu, from the button in the corner: opened afresh each time
   const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
   // the game's How to play, from ? in the corner (the Okey table's is in
   // its ⋯: its corner has room for two)
   const game = useLocation().pathname.split("/")[2];
   const [help, setHelp] = useState(false);
   const playing = usePlaying((s) => s.mode);
   const helps = game in RULES && game !== "okey";
-  // fullscreen is just the game (the button brings the sidebar back);
-  // leaving it, with the button or Esc, puts the sidebar back as it was
-  const wasOpen = useRef(false);
-  useEffect(() => {
-    const onChange = () =>
-      setMenuOpen((open) => {
-        if (!document.fullscreenElement) return wasOpen.current;
-        wasOpen.current = open;
-        return false;
-      });
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
   return (
     <>
-      <div id="sidebar" className={menuOpen ? "open" : ""}>
-        <nav onClick={() => !docked() && setMenuOpen(false)}>
-          <ul>
-            <li>
-              <NavLink
-                to="tictactoe"
-                className={({ isActive, isPending }) =>
-                  isActive ? "active" : isPending ? "pending" : ""
-                }
-              >
-                TicTacToe
-              </NavLink>
-            </li>
-            {/* <li>
-              <NavLink
-                to="chat"
-                className={({ isActive, isPending }) =>
-                  isActive ? "active" : isPending ? "pending" : ""
-                }
-              >
-                Chat
-              </NavLink>
-            </li> */}
-            <li>
-              <NavLink
-                to="backgammon"
-                className={({ isActive, isPending }) =>
-                  isActive ? "active" : isPending ? "pending" : ""
-                }
-              >
-                Backgammon
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="okey"
-                className={({ isActive, isPending }) =>
-                  isActive ? "active" : isPending ? "pending" : ""
-                }
-              >
-                Okey
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="go"
-                className={({ isActive, isPending }) =>
-                  isActive ? "active" : isPending ? "pending" : ""
-                }
-              >
-                Go
-              </NavLink>
-            </li>
-          </ul>
-        </nav>
-        <button
-          onClick={() =>
-            navigator.clipboard
-              ?.writeText(window.location.href)
-              .then(() => toast.success(t("Copied!")))
-              .catch(() => toast(t("Couldn't copy")))
-          }
-        >
-          {t("Share Link")}
-        </button>
-        <div>
-          <a
-            className="bmc-btn"
-            href="https://buymeacoffee.com/manivela"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <img src={coffee} alt="" />
-            Buy me a coffee
-          </a>
-        </div>
-        <Credits />
-        <YourName />
-        <Awareness />
-      </div>
-      {/* top left on every page, beside the sidebar while it's open */}
+      {/* you to the others, and their pointers: open or not, the menu */}
+      <Awareness />
+      {menuOpen && <Menu onClose={closeMenu} />}
+      {/* the corner buttons, on every page: where each table keeps them */}
       <div className="corner">
         <button
           className="menu-toggle"

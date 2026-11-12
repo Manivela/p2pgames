@@ -1577,7 +1577,7 @@ html:has(.fit) {
 }
 
 /* the copies that fly between places (moves.js), over the whole table but
-   under the piles' counts, its menus and dialogs, and the sidebar */
+   under the piles' counts, its menus and dialogs, and the site's menu */
 .flights {
   position: fixed;
   inset: 0;

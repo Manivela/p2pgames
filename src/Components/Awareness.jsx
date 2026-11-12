@@ -1,10 +1,8 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { uniqBy } from "lodash";
 import { useWebRtc, useAwareness } from "../vendor/y-react";
 import { useAuthStore } from "../hooks/useStore";
 import { signalingServers, peerOpts } from "../constants";
-import { t } from "../i18n";
 
 const colors = ["orange", "blue", "yellow", "green"];
 
@@ -51,7 +49,7 @@ export default function Awareness() {
     if (!userData) return;
 
     setLocalState((prevState) => {
-      // the same player, or a new name for them (the sidebar)
+      // the same player, or a new name for them (the menu)
       if (prevState?.user?.id === userData.id) {
         return prevState.user.name === userData.name
           ? prevState
@@ -84,45 +82,33 @@ export default function Awareness() {
     };
   }, [provider.awareness, states]);
 
+  // you to the others (above), and their pointers: who's here is the
+  // menu's (Menu.jsx)
+  if (disabled) return null;
   return (
-    <main>
-      {!disabled && (
-        <svg
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            padding: 0,
-            margin: 0,
-            zIndex: 100,
-            pointerEvents: "none",
-          }}
-        >
-          {connectedUsers
-            .filter(([id, state]) => id !== localID && state.x)
-            .map(([id, state]) => (
-              <g key={id}>
-                <circle cx={state.x} cy={state.y} r={5} />
-                <text x={state.x + 7} y={state.y - 7} style={{ fontSize: 10 }}>
-                  {state.user?.name}
-                </text>
-              </g>
-            ))}
-        </svg>
-      )}
-      <div>
-        {t("Connected:")}
-        <ul>
-          {/* a player's tabs once: a browser is one player */}
-          {uniqBy(connectedUsers, ([id, state]) => state?.user?.id ?? id).map(
-            ([id, state]) => (
-              <li key={id}>{state?.user?.name}</li>
-            ),
-          )}
-        </ul>
-      </div>
-    </main>
+    <svg
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        padding: 0,
+        margin: 0,
+        zIndex: 100,
+        pointerEvents: "none",
+      }}
+    >
+      {connectedUsers
+        .filter(([id, state]) => id !== localID && state.x)
+        .map(([id, state]) => (
+          <g key={id}>
+            <circle cx={state.x} cy={state.y} r={5} />
+            <text x={state.x + 7} y={state.y - 7} style={{ fontSize: 10 }}>
+              {state.user?.name}
+            </text>
+          </g>
+        ))}
+    </svg>
   );
 }
