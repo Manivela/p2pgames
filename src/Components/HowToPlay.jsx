@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { t } from "../i18n";
+import { PRESETS } from "./Okey/rulesets";
 
 // How each game is played, as briefly as it goes, for anyone who comes
 // across the site with no one to teach them: what you're after, a turn,
@@ -110,10 +111,11 @@ export const RULES = {
 };
 
 // which sheet an Okey ruleset reads by, a table's own too: one hand
-// finished from the rack, hands opened by points, or by melds named
+// finished from the rack, hands opened by points, or by melds named; none
+// picked yet, the first preset's, as the lobby's (GameSettings.jsx)
 export const okeyKind = (rules) =>
   !rules
-    ? "classic"
+    ? okeyKind(PRESETS[0])
     : rules.rounds.some((r) => r.opening)
       ? "101"
       : rules.rounds.length === 1 && !rules.rounds[0].melds

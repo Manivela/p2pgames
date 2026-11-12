@@ -206,7 +206,9 @@ export const ONE_O_ONE = {
   buildWhenOpening: true,
 };
 
-export const PRESETS = [CLASSIC, AMERICANO, ONE_O_ONE];
+// the first is the one a room starts with until someone picks (the lobby,
+// Set up a game): Americano, the one most play
+export const PRESETS = [AMERICANO, CLASSIC, ONE_O_ONE];
 
 // Turkish "3'lü", "5'li", "6'lı", "9'lu": by how the number ends
 const SUFFIX = ["lu", "li", "li", "lü", "lü", "li", "lı", "li", "li", "lu"];

@@ -253,12 +253,12 @@ const meldName = ([type, size]) =>
 
 const number = (v) => (v === "" ? null : Number(v));
 
-// the rules the next game starts with; a setting they lack (written by an
-// older build, or a game of one just ended) at its default, as a kept
-// ruleset's are
+// the rules the next game starts with, the first preset until someone
+// picks; a setting they lack (written by an older build, or a game of one
+// just ended) at its default, as a kept ruleset's are
 const setupOf = (okeyState) => ({
   ...DEFAULTS,
-  ...(okeyState.setup ?? CLASSIC),
+  ...(okeyState.setup ?? PRESETS[0]),
 });
 
 // The lobby: the rules the next game starts with, shared by everyone in the

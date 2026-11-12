@@ -1744,6 +1744,9 @@ test("bots fill the table and play their turns", async ({ page }) => {
     .poll(async () => (await state(page)).players.filter((p) => p.user?.bot))
     .toHaveLength(3);
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  // a lap at Classic's pace: the lobby's Americano waits out a claim
+  // after every discard
+  await page.getByLabel(RULES).selectOption("classic");
   await page.getByRole("button", { name: START }).click();
   // my turn first: once I've thrown, the three bots play round to me
   await table(page, "play", 1);
@@ -1775,6 +1778,9 @@ test("a bot plays for someone gone, and makes way when they're back", async ({
   await expect
     .poll(async () => (await state(page)).players[1].user?.name)
     .toBe("Bora");
+  // a lap at Classic's pace: the lobby's Americano waits out a claim
+  // after every discard
+  await page.getByLabel(RULES).selectOption("classic");
   await page.getByRole("button", { name: START }).click();
   await expect.poll(async () => (await state(page)).gameState).toBe("play");
   const bora = (await state(page)).players[1].user.id;
@@ -1830,6 +1836,9 @@ test("a bot plays on when the page that added it closes", async ({
     .locator(".playerName", { hasText: /(Player|Oyuncu) 3(?!\d)/ })
     .getByRole("button", { name: BOT })
     .click();
+  // a lap at Classic's pace: the lobby's Americano waits out a claim
+  // after every discard
+  await page.getByLabel(RULES).selectOption("classic");
   await page.getByRole("button", { name: START }).click();
   // a lap: Ayşe, Bora, and the bot this page plays
   await table(page, "play", 1);
