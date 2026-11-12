@@ -187,7 +187,7 @@ form[action$="destroy"] button {
 
 /* fullscreen gives the game the whole screen, below the corner buttons
    (the Okey table and the backgammon board keep them a place of their own) */
-:fullscreen #detail:not(:has(.fit, .bg-fit)) {
+:fullscreen #detail:not(:has(.fit, .tb-fit)) {
   padding: 56px 0 0;
 }
 

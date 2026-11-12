@@ -41,6 +41,26 @@ export const useVolume = create(
   }),
 );
 
+// backgammon's home on the left on this device, as some play it (its ⋯ menu)
+export const useLeftHome = create(
+  persist((set) => ({ left: false, setLeft: (left) => set({ left }) }), {
+    name: "left-home",
+    storage: createJSONStorage(() => localStorage),
+  }),
+);
+
+// two playing on this device sit face to face, the screen between them:
+// what's one's to read is turned to them (each table's ⋯ menu)
+export const useFacing = create(
+  persist(
+    (set) => ({ facing: false, setFacing: (facing) => set({ facing }) }),
+    {
+      name: "facing",
+      storage: createJSONStorage(() => localStorage),
+    },
+  ),
+);
+
 // the level the Okey table kept for itself before, moved here once: set,
 // so it's saved (loading alone saves nothing)
 try {

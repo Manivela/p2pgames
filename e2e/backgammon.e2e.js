@@ -3,33 +3,31 @@ import { expect, test } from "@playwright/test";
 // Two players at the backgammon board, each in a browser of their own:
 // labels in English (desktop) or Turkish (phones). Positions and dice are
 // set through the dev-only window.backgammon.
-const SIT = /^(Sit|Otur)$/;
-const BOTH = /^(Play both sides|İki tarafı da oyna)$/;
-const MENU = /^(Table menu|Masa menüsü)$/;
-const NEXT = /^(Next game|Sonraki oyun)$/;
-const NET = { timeout: 15000 };
+import {
+  BOTH,
+  FACING,
+  MENU,
+  NET,
+  NEXT,
+  SIT,
+  moving,
+  room,
+  sitDown as sit,
+} from "./seats";
+
+const LEFT = /^(Home on the left|Ev solda)$/;
+const WINS = /^(Ayşe wins!|Ayşe kazandı!)/;
 
 const game = (page) => page.evaluate(() => window.backgammon?.get());
 
-// a page in a fresh room, named, its seat taken (0 white, 1 black)
-async function sitDown(browser, info, room, name, seat) {
-  const { viewport, hasTouch, locale } = info.project.use;
-  const context = await browser.newContext({ viewport, hasTouch, locale });
-  const page = await context.newPage();
-  await page.goto(`/${room}/backgammon`);
-  await page.getByRole("textbox").fill(name);
-  await page.getByRole("button", { name: /^(Go|Gir)$/ }).click();
-  const sit = page.locator(".bg-plate").getByRole("button", { name: SIT });
-  // the other's seat may arrive over the network after the page: the
-  // board lists the far seat first, white for a page that hasn't sat
-  await sit.nth(seat ? 0 : 1).click();
-  return page;
-}
+// a page in `room`, named, its seat taken (0 white, 1 black)
+const sitDown = (browser, info, room, name, seat) =>
+  sit(browser, info, room, "backgammon", name, seat);
 
 async function twoPlayers(browser, info) {
-  const room = `e2e-bg-${Math.random().toString(36).slice(2, 10)}`;
-  const white = await sitDown(browser, info, room, "Ayşe", 0);
-  const black = await sitDown(browser, info, room, "Bora", 1);
+  const at = room("bg");
+  const white = await sitDown(browser, info, at, "Ayşe", 0);
+  const black = await sitDown(browser, info, at, "Bora", 1);
   await expect.poll(() => game(white), NET).toBeTruthy();
   return { white, black };
 }
@@ -93,6 +91,19 @@ test("each player sees their own home bottom right", async ({
       );
     await expect.poll(there).toBe(5);
   }
+  // black plays with their home on the left: the board the other way
+  // round, the tray on the left too, kept on a reload
+  await black.getByRole("button", { name: MENU }).click();
+  await black.getByRole("checkbox", { name: LEFT }).check();
+  await black.locator(".tb-menu .backdrop").click();
+  await black.reload();
+  const mid = async (n) => {
+    const b = await point(black, n).boundingBox();
+    return b.x + b.width / 2;
+  };
+  await expect.poll(() => mid(6)).toBeLessThan(await mid(25));
+  expect(await mid(0)).toBeLessThan(await mid(6));
+  expect(await mid(13)).toBeGreaterThan(await mid(25));
 });
 
 test("a reload shows the board as it is: nothing slides or is tossed", async ({
@@ -102,18 +113,9 @@ test("a reload shows the board as it is: nothing slides or is tossed", async ({
   await black.reload();
   // every frame for a while, as the room arrives and the board turns to
   // black's side: how many checkers and dice were moving
-  const moving = await black.evaluate(async () => {
-    let most = 0;
-    for (const start = performance.now(); performance.now() - start < 2500;) {
-      const els = document.querySelectorAll(".bg-checker, .bg-die, .bg-die *");
-      const now = [...els].filter((el) => el.getAnimations().length).length;
-      most = Math.max(most, now);
-      await new Promise(requestAnimationFrame);
-    }
-    return most;
-  });
+  const most = await moving(black, ".bg-checker, .bg-die, .bg-die *");
   expect(await game(black)).toBeTruthy();
-  expect(moving).toBe(0);
+  expect(most).toBe(0);
 });
 
 test("3-2 also offers 5, played in one go, seen by the other", async ({
@@ -139,17 +141,21 @@ test("bearing off the last checker: mars, 2-0 on both pages", async ({
   await setUp(white, { 1: 1, 0: 14 }, { 19: 15 }, [1, 2]);
   await point(white, 1).click();
   await point(white, 0).click();
-  // each page lists the other first: Bora 0 – 2 Ayşe, Ayşe 2 – 0 Bora
-  await expect(white.locator(".bg-score")).toHaveText("0–2");
-  await expect(black.locator(".bg-score")).toHaveText("2–0", NET);
+  // each page lists the other first, the points on each one's plate
+  await expect(white.locator(".tb-points")).toHaveText(["0", "2"]);
+  await expect(black.locator(".tb-points")).toHaveText(["2", "0"], NET);
+  // no card: who won on the board, the dice lit to start the next game
+  for (const page of [white, black]) {
+    await expect(page.locator(".bg-status")).toContainText(WINS);
+    await expect(page.locator(".bg-status .mars")).toHaveCount(1);
+  }
   await black.getByRole("button", { name: NEXT }).click();
   await expect.poll(async () => (await game(white)).winner, NET).toBe(null);
   expect((await game(white)).score).toEqual([2, 0]);
 });
 
 test("one device plays both sides, taking turns", async ({ browser }, info) => {
-  const room = `e2e-bg-${Math.random().toString(36).slice(2, 10)}`;
-  const page = await sitDown(browser, info, room, "Ayşe", 0);
+  const page = await sitDown(browser, info, room("bg"), "Ayşe", 0);
   // the empty seat offers no Sit to someone seated: black's seat too is in
   // the menu, and the game starts on this page alone
   await expect(page.getByRole("button", { name: SIT })).toHaveCount(0);
@@ -157,17 +163,25 @@ test("one device plays both sides, taking turns", async ({ browser }, info) => {
   await page.getByRole("button", { name: BOTH }).click();
   await expect.poll(() => game(page), NET).toBeTruthy();
   await setUp(page, { 13: 1, 6: 14 }, { 13: 1, 6: 14 }, [3, 2]);
+  // the two sit face to face: what's black's to read is turned to black,
+  // white's isn't
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("checkbox", { name: FACING }).check();
+  await page.locator(".tb-menu .backdrop").click();
   await point(page, 13).click();
+  await expect(page.locator(".bg-mark")).toHaveCount(3);
+  await expect(page.locator(".bg-mark.over")).toHaveCount(0);
   await point(page, 8).click();
-  // black to roll, here; white's move can still be taken back
-  await expect(page.locator(".bg-roll")).toHaveCount(1);
+  // black to roll, here, by a tap on the dice; white's move can still be
+  // taken back
+  await expect(page.locator(".bg-throw")).toHaveCount(1);
   await expect(page.locator(".bg-undo")).toHaveCount(1);
   await page.evaluate(() => (window.backgammon.dice = [6, 5]));
-  await page.locator(".bg-roll").click({ force: true });
+  await page.locator(".bg-throw").click();
   // the board stays white's way round: black's 13 is white's 12, and
   // 6-5 takes it to black's 2, white's 23
   await point(page, 12).click();
-  const marks = await page.locator(".bg-mark").allTextContents();
+  const marks = await page.locator(".bg-mark.over").allTextContents();
   expect(marks.sort()).toEqual(["11", "5", "6"]);
   await point(page, 23).click();
   const g = await game(page);

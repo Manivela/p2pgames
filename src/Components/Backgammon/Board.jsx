@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { toast } from "react-hot-toast";
+import useSound from "use-sound";
+import { useVolume } from "../../hooks/useStore";
 import { BAR, OFF, move, roll, sources, targets, undo, whyNot } from "./rules";
 import { t } from "../../i18n";
+import { Undo, tell as told, useChangedAt } from "../Table";
+import diceSound from "./assets/dice.mp3";
 
 // The board as the viewer sits at it: their home bottom right, their
 // checkers coming round from top right, the borne-off tray on the right,
-// a case's other side compartment on the left. Everything is placed in
+// a case's other side compartment on the left; or all of it the other way
+// round, home bottom left, for those who play so (`left`, the ⋯ menu). The
+// dice land on the right either way. Everything is placed in
 // point widths, --p (backgammon.css fits the board to the screen), from
 // these:
 const FRAME = 0.4;
@@ -23,11 +28,16 @@ const BAR_X = FIELD_X + 6;
 const TRAY_X = FIELD_X + 12 + BAR_W + FRAME;
 
 // a point's column (0 left … 11 right) and row, as the viewer sees a seat's
-// point n: their 1 bottom right, 12 bottom left, 13 top left, 24 top right
-function spot(viewer, seat, n) {
+// point n: their 1 bottom right, 12 bottom left, 13 top left, 24 top right,
+// or the other way round with their home on the `left`
+function spot({ viewer, left }, seat, n) {
   const v = seat === viewer ? n : 25 - n;
-  return v <= 12 ? { col: 12 - v, top: false } : { col: v - 13, top: true };
+  const col = v <= 12 ? 12 - v : v - 13;
+  return { col: left ? 11 - col : col, top: v > 12 };
 }
+// where the borne-off checkers go, and the other side's compartment
+const trayX = ({ left }) => (left ? FRAME : TRAY_X);
+const spareX = ({ left }) => (left ? TRAY_X : FRAME);
 const colX = (col) => FIELD_X + col + (col >= 6 ? BAR_W : 0);
 const MIDDLE = BAR_X + BAR_W / 2;
 
@@ -38,19 +48,19 @@ const inside = (w) => ({ "--y": FRAME, "--w": w, "--h": H - FRAME * 2 });
 const gap = (count) => (count > 5 ? (POINT_H - C) / (count - 1) : STEP);
 
 // the top left of the i-th checker of `count` on a seat's `pos`
-function place(viewer, seat, pos, i, count) {
-  const near = seat === viewer;
+function place(view, seat, pos, i, count) {
+  const near = seat === view.viewer;
   if (pos === OFF) {
-    const x = TRAY_X + (TRAY_W - 1) / 2;
+    const x = trayX(view) + (TRAY_W - 1) / 2;
     return { x, y: near ? H - FRAME - FLAT * (i + 1) : FRAME + FLAT * i };
   }
   const g = gap(count);
-  // out from the middle, clear of Roll there
+  // out from the middle, each on its own side of it
   if (pos === BAR) {
     const x = BAR_X + (BAR_W - C) / 2;
     return { x, y: near ? H / 2 + 0.55 + i * g : H / 2 - 0.55 - C - i * g };
   }
-  const { col, top } = spot(viewer, seat, pos);
+  const { col, top } = spot(view, seat, pos);
   const x = colX(col) + (1 - C) / 2;
   return { x, y: top ? FRAME + i * g : H - FRAME - C - i * g };
 }
@@ -81,19 +91,6 @@ function useCheckerStacks(checkers) {
   });
   ref.current = { checkers, stacks };
   return stacks;
-}
-
-// When `value` last changed in a live game this page was already showing:
-// 0 when it came with the game. Checkers slide and dice are tossed only for
-// a play seen happen, not when the game arrives, the board turns to the
-// viewer's side as they sit, or the screen resizes.
-function useChangedAt(value, live) {
-  const seen = useRef(null);
-  const s = seen.current;
-  if (!live) seen.current = null;
-  else if (!s) seen.current = { value, at: 0 };
-  else if (s.value !== value) seen.current = { value, at: Date.now() };
-  return seen.current?.at ?? 0;
 }
 
 // as long as a checker takes to slide (backgammon.css); dice put up
@@ -147,23 +144,25 @@ function landing(count) {
   return Math.random() < 0.5 ? spots : spots.reverse();
 }
 
-// Thrown into the case once a roll, from the thrower's side (`from`: 1 the
-// viewer's, -1 the other's): it flies in from a height, bounces on the felt
-// as it tumbles and comes to rest at x, y on `n`, every throw its own way
-// (backgammon.css), its shadow under it on the felt. Dice already up when
-// the page opens are `still`.
-function Die({ n, used, from, still, x, y, yaw }) {
-  const [toss] = useState(() => {
-    if (still) return null;
-    const r = (a, b) => a + Math.random() * (b - a);
-    // where it comes from, relative to where it stops: the thrower's side
-    const fx = r(-2.4, 2.4);
-    const fy = from * r(2.8, 5.2);
-    // It tumbles the way it goes, over its leading edge: about the axis
-    // across its path, (-fy, fx) turned a quarter, by one to three turns
-    // (rotate3d, backgammon.css), twisting a little as it goes
-    const go = Math.hypot(fx, fy);
-    return {
+// A die's throw, from the thrower's side (`from`: 1 the viewer's, -1 the
+// other's): it flies in from a height, bounces on the felt as it tumbles
+// and comes to rest on `n`, every throw its own way (backgammon.css).
+// `lands`: when it first hits the felt, in ms.
+function toss(yaw, from) {
+  const r = (a, b) => a + Math.random() * (b - a);
+  // where it comes from, relative to where it stops: the thrower's side
+  const fx = r(-2.4, 2.4);
+  const fy = from * r(2.8, 5.2);
+  // It tumbles the way it goes, over its leading edge: about the axis
+  // across its path, (-fy, fx) turned a quarter, by one to three turns
+  // (rotate3d, backgammon.css), twisting a little as it goes
+  const go = Math.hypot(fx, fy);
+  const dur = r(750, 1350);
+  const delay = r(0, 180);
+  return {
+    // the first fall takes 45% of it (bg-hop)
+    lands: delay + 0.45 * dur,
+    style: {
       "--ax": fy / go,
       "--ay": -fx / go,
       "--roll0": `${-360 * r(1, 3)}deg`,
@@ -175,16 +174,22 @@ function Die({ n, used, from, still, x, y, yaw }) {
       // under 0.5 it hardly leaves the felt again: one bounce, not two
       "--b2": r(0.4, 0.9),
       "--ease": r(0.05, 0.3),
-      "--dur": `${Math.round(r(750, 1350))}ms`,
-      "--delay": `${Math.round(r(0, 180))}ms`,
-    };
-  });
+      "--dur": `${Math.round(dur)}ms`,
+      "--delay": `${Math.round(delay)}ms`,
+    },
+  };
+}
+
+// a die at x, y on `n`, turned `yaw`, its shadow under it on the felt:
+// thrown in (`toss`), or lying still, up already when the page opened;
+// lit when it's `ready` to be picked up and thrown again
+function Die({ n, used, toss, x, y, yaw, ready }) {
   return (
     <span
-      className={`bg-die${used ? " used" : ""}${toss ? "" : " still"}`}
+      className={`bg-die${used ? " used" : ""}${toss ? "" : " still"}${ready ? " ready" : ""}`}
       data-n={n}
       style={{
-        ...toss,
+        ...toss?.style,
         "--x": x,
         "--y": y,
         "--rx": `${SHOWN[n][0]}deg`,
@@ -212,41 +217,114 @@ function Die({ n, used, from, still, x, y, yaw }) {
   );
 }
 
-// the roll, the dice played faded: tossed once, then they stay where they
-// came to rest till the next roll (keyed by it, Board)
-function Dice({ state, viewer, still }) {
+// The roll, the dice played faded: thrown once, heard as the first of them
+// hits the felt (`onLand`), then they stay where they came to rest till
+// the next roll (keyed by it, Board). The next to roll picks them up
+// where they lie, and so does whoever starts the next game: a tap on
+// them, `onThrow` (`label`), lit till then.
+function Dice({ state, viewer, still, onLand, onThrow, label }) {
   const { dice, left } = state;
   const all = dice[0] === dice[1] ? [...dice, ...dice] : dice;
   const [spots] = useState(() => landing(all.length));
   // the other's throw lands in their right half: the viewer's left
   const near = state.by === viewer;
+  const [throws] = useState(() =>
+    still ? null : spots.map(({ yaw }) => toss(yaw, near ? 1 : -1)),
+  );
+  const land = useRef(onLand);
+  land.current = onLand;
+  useEffect(() => {
+    if (!throws) return;
+    const first = Math.min(...throws.map((t) => t.lands));
+    const heard = setTimeout(() => land.current(), first);
+    return () => clearTimeout(heard);
+  }, [throws]);
   const unused = [...left];
-  return all.map((n, i) => {
+  const shown = all.map((n, i) => {
     const at = unused.indexOf(n);
     if (at >= 0) unused.splice(at, 1);
     const { x, y, yaw } = spots[i];
-    return (
-      <Die
-        key={i}
-        n={n}
-        used={at < 0}
-        from={near ? 1 : -1}
-        still={still}
-        x={near ? x : 2 * MIDDLE - x}
-        y={near ? y : H - y}
-        yaw={yaw}
-      />
-    );
+    return {
+      n,
+      used: at < 0,
+      x: near ? x : 2 * MIDDLE - x,
+      y: near ? y : H - y,
+      yaw,
+    };
   });
+  // round the dice, room for a finger
+  const xs = shown.map((d) => d.x);
+  const ys = shown.map((d) => d.y);
+  const [x0, y0] = [Math.min(...xs) - 0.7, Math.min(...ys) - 0.7];
+  return (
+    <>
+      {shown.map((d, i) => (
+        <Die key={i} {...d} toss={throws?.[i]} ready={!!onThrow} />
+      ))}
+      {onThrow && (
+        <button
+          className="bg-throw"
+          style={{
+            "--x": x0,
+            "--y": y0,
+            "--w": Math.max(...xs) + 0.7 - x0,
+            "--h": Math.max(...ys) + 0.7 - y0,
+          }}
+          aria-label={label}
+          title={label}
+          onClick={onThrow}
+        />
+      )}
+    </>
+  );
 }
+
+// ten throws of two dice on a board (OpenGameArt, CC0), each from its first
+// hit: where each starts in dice.mp3, and how long it lasts, in ms
+const THROWS = {
+  0: [0, 1033],
+  1: [1500, 1062],
+  2: [3000, 732],
+  3: [4500, 967],
+  4: [6000, 1116],
+  5: [7500, 971],
+  6: [9000, 850],
+  7: [10500, 1098],
+  8: [12000, 1091],
+  9: [13500, 959],
+};
 
 // how a dragged checker follows the pointer before it counts as a drag
 const SLOP = 6;
 
 // `mine`: the seats this page plays, both on one device, the one to move
-// playing
-export default function Board({ state, live, mine, viewer, names, note, act }) {
+// playing. `across`: the two playing on it sit face to face, the board
+// between them: what's one's to read is turned to them (`over`). `deal`:
+// the next game, once one's won, for those seated.
+export default function Board({
+  state,
+  live,
+  mine,
+  viewer,
+  across,
+  left,
+  names,
+  note,
+  act,
+  deal,
+}) {
   const me = mine.includes(state.turn) ? state.turn : mine[0];
+  const view = { viewer, left };
+  const away = (seat) => across && seat !== viewer;
+  const over = (seat) => (away(seat) ? " over" : "");
+  const tell = (why) => told(why, away(me));
+  // one of the throws, at this device's sound level, as the dice land
+  const { volume } = useVolume();
+  const [rattle] = useSound(diceSound, {
+    volume: 0.5 * volume,
+    sprite: THROWS,
+  });
+  const thrown = () => rattle({ id: String(Math.floor(Math.random() * 10)) });
   const [picked, setPicked] = useState(null);
   const [drag, setDrag] = useState(null);
   const dragged = useRef(false);
@@ -285,7 +363,7 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
       const why =
         (sel !== null && pos !== sel && whyNot(state, sel, pos)) ||
         (state.checkers[me][pos] && whyNot(state, pos));
-      if (why) toast(t(why), { id: "why" });
+      if (why) tell(why);
       setPicked(pos === sel && from.length > 1 ? null : picked);
     }
   };
@@ -321,7 +399,7 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
       if (steps) act(move(state, me, pos, dest));
       else if (at && dest !== pos) {
         const why = whyNot(state, pos, dest);
-        if (why) toast(t(why), { id: "why" });
+        if (why) tell(why);
       }
       setPicked(null);
     };
@@ -343,7 +421,7 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
 
   const points = [];
   for (let n = 1; n <= 24; n++) {
-    const { col, top } = spot(viewer, viewer, n);
+    const { col, top } = spot(view, viewer, n);
     const dark = (col + (top ? 0 : 1)) % 2;
     points.push(
       <div
@@ -361,7 +439,7 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
   stacks.forEach((seatStacks, seat) =>
     seatStacks.forEach((ids, pos) =>
       ids.forEach((id, i) => {
-        const { x, y } = place(viewer, seat, pos, i, ids.length);
+        const { x, y } = place(view, seat, pos, i, ids.length);
         const top = i === ids.length - 1;
         const mine = seat === me;
         const cls = [
@@ -378,7 +456,9 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
             className={cls.filter(Boolean).join(" ")}
             style={{ "--x": x, "--y": y }}
           >
-            {top && ids.length > 5 && pos !== OFF && <b>{ids.length}</b>}
+            {top && ids.length > 5 && pos !== OFF && (
+              <b className={away(seat) ? "over" : undefined}>{ids.length}</b>
+            )}
           </div>,
         );
       }),
@@ -392,8 +472,8 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
       return (
         <span
           key="off"
-          className="bg-mark off"
-          style={{ "--x": TRAY_X, "--y": H / 2 + MID / 2 }}
+          className={`bg-mark off${over(me)}`}
+          style={{ "--x": trayX(view), "--y": H / 2 + MID / 2 }}
         >
           {pips}
         </span>
@@ -401,16 +481,20 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
     }
     const count = state.checkers[me][pos];
     // on top of the stack, closed up as it will be (over a blot it hits)
-    const { x, y } = place(viewer, me, pos, count, count + 1);
+    const { x, y } = place(view, me, pos, count, count + 1);
     return (
-      <span key={pos} className="bg-mark" style={{ "--x": x, "--y": y }}>
+      <span
+        key={pos}
+        className={`bg-mark${over(me)}`}
+        style={{ "--x": x, "--y": y }}
+      >
         {pips}
       </span>
     );
   });
 
-  // Roll in the middle; the dice in the thrower's right half, and a word
-  // and Undo in the other: the right one when the far player threw
+  // the dice in the thrower's right half, a word and Undo in the other:
+  // the right one when the far player threw
   const rolled = state.dice.length > 0;
   const freeRight = rolled && state.by !== viewer;
   const canRoll =
@@ -424,18 +508,29 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
   const passed =
     state.last.kind === "roll" && state.turn !== state.by && rolled;
   const name = (seat) => names[seat];
+  const won = state.winner;
+  // who won: the half's width, to be read at a glance
+  const statusW = won || across ? 5.6 : 3.3;
 
-  // a word in the middle of the board: `note` before a game, then who
-  // starts, who couldn't move, whose roll it is
+  // a word in the middle of the board: `note` before a game, then who won,
+  // who starts, who couldn't move, whose roll it is
   const status =
     note ??
-    (state.opening && !state.undo.length
-      ? t(`${name(state.turn)} starts`)
-      : passed
-        ? t(`${name(state.by)}: no moves`)
-        : !state.winner && state.turn !== me && !state.left.length
-          ? t(`Waiting for ${name(state.turn)}`)
-          : null);
+    (won ? (
+      <>
+        {t(`${name(won.seat)} wins!`)}
+        {won.points === 2 && (
+          // one line each, face to face: the score says it's 2
+          <span className="mars">{t(across ? "Mars!" : "Mars! 2 points")}</span>
+        )}
+      </>
+    ) : state.opening && !state.undo.length ? (
+      t(`${name(state.turn)} starts`)
+    ) : passed ? (
+      t(`${name(state.by)}: no moves`)
+    ) : !state.winner && state.turn !== me && !state.left.length ? (
+      t(`Waiting for ${name(state.turn)}`)
+    ) : null);
 
   // the board is a case seen from above (CSS); the dice fly in the air
   // over it, and a dragged checker follows the pointer over both
@@ -447,7 +542,10 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className={`bg-board${sliding ? " sliding" : ""}`}>
-        <div className="bg-tray" style={{ "--x": FRAME, ...inside(TRAY_W) }} />
+        <div
+          className="bg-tray"
+          style={{ "--x": spareX(view), ...inside(TRAY_W) }}
+        />
         <div className="bg-field" style={{ "--x": FIELD_X, ...inside(6) }} />
         <div className="bg-field" style={{ "--x": colX(6), ...inside(6) }} />
         <div
@@ -457,7 +555,7 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
         />
         <div
           className={`bg-tray${to.has(OFF) ? " target" : ""}`}
-          style={{ "--x": TRAY_X, ...inside(TRAY_W) }}
+          style={{ "--x": trayX(view), ...inside(TRAY_W) }}
           {...hit(OFF)}
         />
         {points}
@@ -465,47 +563,27 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
         {marks}
         {status && (
           <span
-            className="bg-status"
+            className={`bg-status${won ? " won" : ""}${across ? " pair" : ""}`}
             style={{
-              "--x": freeRight ? colX(6) + 6 - 0.2 - 3.3 : FIELD_X + 0.2,
+              "--x": freeRight ? colX(6) + 6 - 0.2 - statusW : FIELD_X + 0.2,
               "--y": FRAME + POINT_H,
+              "--w": statusW,
             }}
           >
-            {status}
+            {/* face to face: a copy turned to each */}
+            {across && <span className="over">{status}</span>}
+            <span>{status}</span>
           </span>
         )}
         {canUndo && (
-          <button
-            className="bg-undo"
+          <Undo
+            className={`bg-undo${over(state.by)}`}
             style={{ "--x": MIDDLE + (freeRight ? 2.6 : -2.6), "--y": H / 2 }}
-            aria-label={t("Undo")}
-            title={t("Undo")}
             onClick={() => {
               act(undo(state, state.by));
               setPicked(null);
             }}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 14 4 9l5-5" />
-              <path d="M4 9h11a5 5 0 0 1 0 10h-3" />
-            </svg>
-          </button>
-        )}
-        {canRoll && (
-          <button
-            className="bg-roll"
-            style={{ "--x": MIDDLE, "--y": H / 2 }}
-            onClick={() => act(rollFor(state, me))}
-          >
-            {t("Roll")}
-          </button>
+          />
         )}
       </div>
       <div className="bg-air">
@@ -515,6 +593,11 @@ export default function Board({ state, live, mine, viewer, names, note, act }) {
             state={state}
             viewer={viewer}
             still={Date.now() - rolledAt > SLIDE_MS}
+            onLand={thrown}
+            onThrow={
+              canRoll ? () => act(rollFor(state, me)) : won ? deal : null
+            }
+            label={t(won ? "Next game" : "Roll")}
           />
         )}
       </div>

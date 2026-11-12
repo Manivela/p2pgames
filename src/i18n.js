@@ -291,6 +291,7 @@ const TR = [
   [/^(.+) wins!$/, "$1 kazandı!"],
   [/^(.+) & (.+) win!$/, "$1 & $2 kazandı!"],
   [/^No tiles left$/, "Taş kalmadı"], // before "(.+) left"
+  [/^Home on the left$/, "Ev solda"], // before "(.+) left"
   [/^(.+) left$/, "$1 ayrıldı"],
   [/^(.+) changed the rules$/, "$1 kuralları değiştirdi"],
   // how the round finished (LastTurn)
@@ -422,11 +423,28 @@ const TR = [
   [/^Pips to go$/, "Kalan yol"],
   [/^Sit down to play$/, "Oynamak için otur"],
   [/^Play both sides$/, "İki tarafı da oyna"],
+  [/^Face to face$/, "Karşılıklı"],
   [/^Waiting for a second player$/, "İkinci oyuncu bekleniyor"],
   [/^Waiting for (.+)$/, "$1 bekleniyor"],
   [/^(.+) starts$/, "$1 başlıyor"],
   [/^(.+): no moves$/, "$1: oynayacak hamle yok"],
   [/^Mars! 2 points$/, "Mars! 2 puan"],
+  // TicTacToe, Go
+  [/^Draw$/, "Berabere"],
+  [/^That square is taken$/, "Bu kare dolu"],
+  [/^That point is taken$/, "Orası dolu"],
+  [/^That stone would have no liberties$/, "Orada taşın nefesi kalmaz"],
+  [/^Ko: play elsewhere first$/, "Ko: önce başka yere oyna"],
+  [/^Pass$/, "Pas"],
+  [/^Prisoners$/, "Esirler"],
+  [/^Board$/, "Tahta"],
+  [/^Game$/, "Oyun"],
+  [/^Classic$/, "Klasik"],
+  [/^Super$/, "Süper"],
+  [/^That board is decided$/, "O tahta bitti"],
+  [/^Play in the lit board$/, "Işıklı tahtaya oyna"],
+  [/^(.+) passed$/, "$1 pas geçti"],
+  [/^(.+) wins by (.+)$/, "$1 $2 farkla kazandı"],
   [/^Next game$/, "Sonraki oyun"],
   [/^Play your checker on the bar first$/, "Önce kırık taşını oyna"],
   [

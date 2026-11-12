@@ -1,0 +1,354 @@
+/* A light wooden board on the felt, slate and shell stones, and each
+   player's bowl at their side of it: right of the board and to the left
+   for the one across (the screen held flat between two, they sit at its
+   top and bottom), or below and above it on a screen held upright. In
+   --s and --u (below), as Board.jsx draws. Names start with go-, clear
+   of Bootstrap 3's. */
+/* --s: the scene's unit, a 9×9 board's spacing, whatever the board; --u:
+   the lines', a board --b wide (Board.jsx) in the same room */
+.go-scene {
+  --s: min(100cqw / 15.4, 100cqh / 9.8);
+  --u: calc(var(--s) * 9.8 / var(--b));
+  display: grid;
+  grid-template-columns:
+    calc(var(--s) * 2.8) calc(var(--s) * 9.8)
+    calc(var(--s) * 2.8);
+  grid-template-rows: calc(var(--s) * 9.8);
+}
+
+@container (aspect-ratio < 1) {
+  .go-scene {
+    --s: min(100cqw / 9.8, 100cqh / 15.4);
+    grid-template-columns: calc(var(--s) * 9.8);
+    grid-template-rows:
+      calc(var(--s) * 2.8) calc(var(--s) * 9.8)
+      calc(var(--s) * 2.8);
+  }
+}
+
+.go-board {
+  position: relative;
+  border-radius: calc(var(--s) * 0.12);
+  background:
+    repeating-linear-gradient(
+      91deg,
+      rgba(120, 70, 20, 0.07) 0 calc(var(--s) * 0.05),
+      transparent 0 calc(var(--s) * 0.31)
+    ),
+    radial-gradient(ellipse at 30% 20%, #f1cd8a, #dcae64 60%, #c99a52);
+  box-shadow:
+    inset 0 0 0 calc(var(--s) * 0.04) rgba(255, 255, 255, 0.25),
+    0 calc(var(--s) * 0.08) calc(var(--s) * 0.3) rgba(0, 0, 0, 0.5);
+}
+
+.go-board svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.go-board path {
+  stroke: #3b2a14;
+  stroke-width: 0.03;
+}
+
+.go-board circle {
+  fill: #3b2a14;
+}
+
+/* a stone, and the seats' on their plates (.go-dot): slate, shell */
+.go-stone {
+  position: absolute;
+  left: calc(var(--u) * (var(--x) - 0.47));
+  top: calc(var(--u) * (var(--y) - 0.47));
+  width: calc(var(--u) * 0.94);
+  height: calc(var(--u) * 0.94);
+  box-shadow: calc(var(--u) * 0.04) calc(var(--u) * 0.07) calc(var(--u) * 0.1)
+    rgba(0, 0, 0, 0.45);
+}
+
+.go-stone,
+.go-dot {
+  border-radius: 50%;
+}
+
+:is(.go-stone, .go-dot).black,
+.go-board.black {
+  --stone: radial-gradient(
+    circle at 35% 30%,
+    #6a6a6a,
+    #1c1c1c 45%,
+    #050505 100%
+  );
+}
+
+:is(.go-stone, .go-dot).white,
+.go-board.white {
+  --stone:
+    repeating-radial-gradient(
+      circle at 120% 50%,
+      transparent 0 6%,
+      rgba(160, 150, 130, 0.08) 6% 7%
+    ),
+    radial-gradient(circle at 35% 30%, #fff, #eeebe3 55%, #c8c3b6 100%);
+}
+
+:is(.go-stone, .go-dot) {
+  background: var(--stone);
+}
+
+/* the last stone put down: a ring on it */
+.go-stone.last::after {
+  content: "";
+  position: absolute;
+  inset: 30%;
+  border: calc(var(--u) * 0.05) solid #c62828;
+  border-radius: 50%;
+}
+
+/* put down, seen: a little drop; taken off: gone */
+.go-stone.fresh {
+  animation: go-drop 0.18s ease-in backwards;
+}
+
+@keyframes go-drop {
+  from {
+    scale: 1.2;
+    box-shadow: calc(var(--u) * 0.2) calc(var(--u) * 0.3) calc(var(--u) * 0.3)
+      rgba(0, 0, 0, 0.3);
+  }
+}
+
+.go-stone.going {
+  animation: go-off 0.45s ease-in 0.15s forwards;
+}
+
+@keyframes go-off {
+  to {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+/* whose an empty point would count for: after a pass, and at the end */
+.go-own {
+  position: absolute;
+  left: calc(var(--u) * (var(--x) - 0.14));
+  top: calc(var(--u) * (var(--y) - 0.14));
+  width: calc(var(--u) * 0.28);
+  height: calc(var(--u) * 0.28);
+  border-radius: calc(var(--u) * 0.04);
+}
+
+.go-own.black {
+  background: #111;
+}
+
+.go-own.white {
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+/* where a stone can go, the stone to come there under a mouse */
+.go-point {
+  position: absolute;
+  left: calc(var(--u) * (var(--x) - 0.5));
+  top: calc(var(--u) * (var(--y) - 0.5));
+  width: var(--u);
+  height: var(--u);
+  padding: 0;
+  border-radius: 50%;
+  background: none;
+  box-shadow: none;
+}
+
+.go-point:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+
+.go-point.open {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .go-point.open:hover::after {
+    content: "";
+    position: absolute;
+    inset: 3%;
+    border-radius: 50%;
+    background: var(--stone);
+    opacity: 0.45;
+  }
+}
+
+/* the game's over: the board glows, a tap on it starts the next */
+.go-board.ready::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 calc(var(--s) * 0.5) calc(var(--s) * 0.15) #ffd54f;
+  animation: tb-call 1.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.go-next {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.go-next:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+
+/* A side: its word, Undo, and the bowl at the end, the player's right. The
+   one across is laid out the other way round, or turned to them face to
+   face (.over), which lays it out the other way round for us. */
+.go-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: calc(var(--s) * 0.3);
+  padding: calc(var(--s) * 0.3);
+  min-width: 0;
+}
+
+.go-side.far {
+  flex-direction: column-reverse;
+}
+
+.go-side.far.over {
+  flex-direction: column;
+}
+
+@container (aspect-ratio < 1) {
+  .go-side {
+    flex-direction: row;
+  }
+
+  .go-side.far {
+    flex-direction: row-reverse;
+  }
+
+  .go-side.far.over {
+    flex-direction: row;
+  }
+}
+
+.go-said {
+  display: grid;
+  gap: 0.2em;
+  margin: 0;
+  color: #fff;
+  font-size: max(calc(var(--s) * 0.36), 12px);
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+@container (aspect-ratio < 1) {
+  .go-said {
+    flex: 1;
+  }
+}
+
+.go-said small {
+  font-size: 0.75em;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.go-side .tb-modes {
+  font-size: max(calc(var(--s) * 0.32), 12px);
+}
+
+.go-undo {
+  flex: none;
+  width: max(calc(var(--s) * 0.9), 32px);
+  height: max(calc(var(--s) * 0.9), 32px);
+}
+
+/* a bowl of the side's stones, turned wood; a tap on it a pass */
+.go-bowl {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: end center;
+  width: calc(var(--s) * 2.1);
+  height: calc(var(--s) * 2.1);
+  padding: 0 0 calc(var(--s) * 0.3);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #4a2c14 0 52%,
+    #7a4a22 56%,
+    #a8733b 66%,
+    #8a5a2b 82%,
+    #5c3a1c 100%
+  );
+  box-shadow: 0 calc(var(--s) * 0.08) calc(var(--s) * 0.2) rgba(0, 0, 0, 0.5);
+}
+
+.go-bowl:is(:hover, :active) {
+  box-shadow: 0 calc(var(--s) * 0.08) calc(var(--s) * 0.2) rgba(0, 0, 0, 0.5);
+  transform: none;
+}
+
+/* a few of its stones in it */
+.go-bowl i {
+  position: absolute;
+  width: calc(var(--s) * 0.6);
+  height: calc(var(--s) * 0.6);
+  border-radius: 50%;
+  background: var(--stone);
+  box-shadow: 0 calc(var(--s) * 0.03) calc(var(--s) * 0.06) rgba(0, 0, 0, 0.5);
+}
+
+.go-bowl.black {
+  --stone: radial-gradient(circle at 35% 30%, #6a6a6a, #1c1c1c 45%, #050505);
+}
+
+.go-bowl.white {
+  --stone: radial-gradient(circle at 35% 30%, #fff, #eeebe3 55%, #c8c3b6);
+}
+
+.go-bowl i:nth-child(1) {
+  left: 28%;
+  top: 30%;
+}
+
+.go-bowl i:nth-child(2) {
+  left: 45%;
+  top: 38%;
+}
+
+.go-bowl i:nth-child(3) {
+  left: 33%;
+  top: 48%;
+}
+
+.go-bowl span {
+  position: relative;
+  padding: 0 0.5em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1b5e20;
+  font-size: max(calc(var(--s) * 0.3), 11px);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go-stone.fresh,
+  .go-board.ready::after {
+    animation: none;
+  }
+}

@@ -2,237 +2,11 @@
    window leaves it (Board.jsx places everything in them). Names stay clear
    of Bootstrap 3's global classes: everything here starts with bg-. */
 
-/* the felt out to the window's edges, as at the Okey table */
-#detail:has(.bg-fit) {
-  padding: 0;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse at 50% 42%, #3b8f2c 0%, #2a6a1f 48%, #163f10 100%);
-  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.45);
-}
-
-/* the buttons sized as at the Okey table on this screen: --t, its tile
-   width (rack.css), which the site's corner buttons (index.css) go by */
-html:has(.bg-fit) {
-  overflow: hidden;
-  --t: clamp(40px, min(100dvh, 100dvw) / 7.4, 70px);
-}
-
-/* the site's menu and fullscreen buttons bottom left and ⋯ bottom right,
-   dark see-through circles: where they are at the Okey table and as they
-   look there (rack.css) */
-#root:has(.bg-fit) .corner {
-  top: auto;
-  bottom: calc(var(--t) * 0.14);
-  gap: calc(var(--t) * 0.1);
-}
-
-#root:has(.bg-fit) .corner button,
-.bg-menu > .dots {
-  width: calc(var(--t) * 0.64);
-  height: calc(var(--t) * 0.64);
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  font-size: calc(var(--t) * 0.3);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.38);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
-
-.bg-fit {
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .5' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  height: 100%;
-  display: grid;
-  /* the players, the board, and room for ⋯ in the corner */
-  grid-template-columns: auto minmax(0, 1fr) calc(var(--t) * 0.92);
-  color: #fff;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-/* the players and the score in a column left of the board, the other's
-   at the top and yours at the bottom, as they sit, above the corner
-   buttons */
-.bg-head {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  width: 190px;
-  padding: 8px 0 calc(var(--t) * 0.92) 8px;
-  font-size: 16px;
-}
-
-.bg-plate {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  height: 36px;
-  padding: 0 12px 0 6px;
-  border: 2px solid transparent;
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.3);
-  transition:
-    border-color 0.3s,
-    box-shadow 0.3s;
-}
-
-/* whose turn it is */
-.bg-plate.turn {
-  border-color: #ffd54f;
-  box-shadow: 0 0 12px rgba(255, 213, 79, 0.6);
-}
-
-.bg-plate .name {
-  overflow: hidden;
-  font-weight: 700;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.bg-plate .name.empty {
-  font-weight: 400;
-  opacity: 0.6;
-}
-
-.bg-plate small {
-  font-size: 12px;
-  opacity: 0.75;
-}
-
-.bg-plate .away {
-  color: #ffccbc;
-}
-
-.bg-dot {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-}
-
-.bg-sit {
-  height: 28px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 14px;
-  background: #ffd54f;
-  color: #3e2a00;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.bg-score {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-/* the table's menu, bottom right, opening upwards in groups as at the
-   Okey table (TableMenu.jsx) */
-.bg-menu {
-  position: fixed;
-  right: calc(var(--t) * 0.14);
-  bottom: calc(var(--t) * 0.14);
-  z-index: 40;
-}
-
-.bg-menu .backdrop {
-  position: fixed;
-  inset: 0;
-}
-
-.bg-menu .menu {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: calc(100dvh - 72px);
-  overflow-y: auto;
-  padding: 8px;
-  border-radius: 8px;
-  background: #fff;
-  color: #222;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  white-space: nowrap;
-}
-
-.bg-menu .group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.bg-menu .group:empty {
-  display: none;
-}
-
-.bg-menu .group:not(:empty) ~ .group:not(:empty) {
-  padding-top: 8px;
-  border-top: 1px solid #e0e0e0;
-}
-
-/* the moves that end or replace the game */
-.bg-menu .ends button:not(.armed) {
-  color: #c62828;
-}
-
-/* this device's sound level */
-.bg-menu .volume {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  padding: 2px 6px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.bg-menu .volume input {
-  flex: 1;
-  min-width: 90px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  box-shadow: none;
-  background: none;
-}
-
-.bg-menu .menu button {
-  font-size: 15px;
-}
-
-/* a second tap confirms (Confirm.jsx) */
-.bg-menu .menu button.armed {
-  background-color: #e53935;
-  color: #fff;
-}
-
-/* the board, as big as the room left fits */
-.bg-wrap {
-  position: relative;
-  container-type: size;
-  display: grid;
-  place-items: center;
-  padding: 8px;
-}
-
 /* The board is a wooden case on the table, seen from above, lit from the
    top left: its felt sunk below the frame, the checkers raised off it. The
    dice fly over it (.bg-air), each in 3D of its own. */
 .bg-scene {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .5' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --p: min(100cqw / var(--board-w), 100cqh / var(--board-h));
   position: relative;
   width: calc(var(--p) * var(--board-w));
@@ -442,6 +216,7 @@ html:has(.bg-fit) {
 .bg-checker,
 .bg-dot {
   --u: var(--p, 30px);
+  border-radius: 50%;
   --light: rgba(255, 255, 255, 0.5);
   /* a flat face, its chamfered edge a narrow band round it, lit a little
      from the top left */
@@ -559,58 +334,59 @@ html:has(.bg-fit) {
   border-radius: calc(var(--p) * 0.2);
 }
 
-/* in the middle of the board, where the dice land */
-.bg-roll {
-  translate: -50% -50%;
-  height: calc(var(--p) * 0.95);
-  padding: 0 calc(var(--p) * 0.5);
-  border: none;
-  border-radius: calc(var(--p) * 0.5);
-  background: #ffd54f;
-  color: #3e2a00;
-  font-size: calc(var(--p) * 0.45);
-  font-weight: 800;
-  box-shadow:
-    0 calc(var(--p) * 0.08) 0 #c9a227,
-    0 calc(var(--p) * 0.15) calc(var(--p) * 0.2) rgba(0, 0, 0, 0.5);
-  animation: bg-call 1.6s ease-in-out 4;
-}
-
-@keyframes bg-call {
-  50% {
-    scale: 1.06;
-  }
-}
-
 /* beside the dice, always in the same place */
 .bg-undo {
   translate: -50% -50%;
-  display: grid;
-  place-items: center;
   width: calc(var(--p) * 0.85);
   height: calc(var(--p) * 0.85);
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-}
-
-.bg-undo svg {
-  width: 55%;
-  height: 55%;
 }
 
 /* a word, between the rows of the left half */
 .bg-status {
   display: grid;
   place-items: center;
-  width: calc(var(--p) * 3.3);
+  width: calc(var(--p) * var(--w));
   height: calc(var(--p) * 1.4);
   color: #3b2419;
   font-weight: 700;
   text-align: center;
   pointer-events: none;
+}
+
+/* who won, big enough on a phone */
+.bg-status.won {
+  font-size: max(calc(var(--p) * 0.6), 15px);
+  line-height: 1.15;
+}
+
+.bg-status > span {
+  display: grid;
+  place-items: center;
+}
+
+/* a mars, under who won it */
+.bg-status .mars {
+  color: #c62828;
+  font-size: 0.8em;
+}
+
+/* face to face: a line turned to each, the far one's above */
+.bg-status.pair {
+  font-size: max(calc(var(--p) * 0.42), 12px);
+  line-height: 1.15;
+}
+
+.bg-status.pair.won {
+  font-size: max(calc(var(--p) * 0.5), 13px);
+}
+
+.bg-status.pair > span {
+  display: block;
+  white-space: nowrap;
+}
+
+.bg-status.pair .mars::before {
+  content: " · ";
 }
 
 /* The dice fly over the board: thrown in, they fall to the felt, bounce,
@@ -683,6 +459,37 @@ html:has(.bg-fit) {
   place-self: center;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #444, #111);
+}
+
+/* the next to roll's, lit till they're picked up (.bg-throw) */
+.bg-die.ready::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  border-radius: 25%;
+  rotate: var(--rz);
+  box-shadow: 0 0 calc(var(--p) * 0.25) calc(var(--p) * 0.06) #ffd54f;
+  animation: tb-call 1.2s ease-in-out infinite alternate;
+}
+
+/* the dice, a tap on them throws them */
+.bg-throw {
+  position: absolute;
+  left: calc(var(--p) * var(--x));
+  top: calc(var(--p) * var(--y));
+  width: calc(var(--p) * var(--w));
+  height: calc(var(--p) * var(--h));
+  padding: 0;
+  border-radius: calc(var(--p) * 0.3);
+  background: none;
+  box-shadow: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.bg-throw:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
 }
 
 /* played: greyed */
@@ -781,91 +588,8 @@ html:has(.bg-fit) {
 
 @media (prefers-reduced-motion: reduce) {
   .bg-die,
+  .bg-die::before,
   .bg-die :is(.shadow, .hop, .cube) {
     animation: none;
-  }
-}
-
-/* the game's end, over the middle of the board */
-.bg-won {
-  position: absolute;
-  z-index: 20;
-  padding: 16px 28px;
-  border-radius: 12px;
-  background: #fff;
-  color: #222;
-  text-align: center;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-  font-size: 16px;
-}
-
-.bg-won p {
-  margin: 0 0 8px;
-}
-
-.bg-won .who {
-  font-size: 24px;
-  font-weight: 800;
-}
-
-.bg-won .mars {
-  color: #c62828;
-  font-weight: 700;
-}
-
-.bg-won button {
-  height: 40px;
-  padding: 0 22px;
-  border: none;
-  border-radius: 20px;
-  background: #ffd54f;
-  color: #3e2a00;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-/* upright: the players and the score along the top, and a row at the
-   bottom for the corner buttons */
-@media (orientation: portrait) {
-  .bg-fit {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) calc(var(--t) * 0.92);
-  }
-
-  .bg-head {
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    width: auto;
-    padding: 8px 8px 0;
-  }
-}
-
-/* a phone upright: the two share the width */
-@media (orientation: portrait) and (max-width: 600px) {
-  .bg-head {
-    gap: 8px;
-    font-size: 14px;
-  }
-
-  .bg-plate {
-    flex: 1 1 0;
-  }
-}
-
-/* a phone on its side: a narrower column */
-@media (orientation: landscape) and (max-height: 500px) {
-  .bg-head {
-    width: 150px;
-    font-size: 14px;
-  }
-
-  .bg-plate {
-    height: 32px;
-  }
-
-  .bg-dot {
-    width: 20px;
-    height: 20px;
   }
 }

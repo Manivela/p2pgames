@@ -1,0 +1,242 @@
+/* A sheet of squared paper on the felt, as big as the room left fits and
+   a little askew, the grid in pencil, X in blue ink and O in red. Sizes in
+   cqw, hundredths of the sheet's width, as Sheet.jsx draws in. Names start
+   with tt-, clear of Bootstrap 3's. */
+.tt-sheet {
+  position: relative;
+  container-type: inline-size;
+  width: min(100cqw, 100cqh * 100 / 124);
+  aspect-ratio: 100 / 124;
+  rotate: -1.2deg;
+  border-radius: 0.6cqw;
+  background:
+    linear-gradient(#d3e3f3 0.25cqw, transparent 0.25cqw) 0 0 / 5cqw 5cqw,
+    linear-gradient(90deg, #d3e3f3 0.25cqw, transparent 0.25cqw) 0 0 / 5cqw 5cqw,
+    #fdfbf4;
+  box-shadow:
+    0 0.4cqw 0.8cqw rgba(0, 0, 0, 0.25),
+    0 2cqw 5cqw rgba(0, 0, 0, 0.35);
+}
+
+.tt-sheet svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tt-grid path,
+.tt-ink path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tt-grid path {
+  stroke: #555;
+  stroke-width: 0.9;
+  opacity: 0.85;
+}
+
+.tt-ink path {
+  stroke-width: 2.4;
+}
+
+:is(.tt-ink, .tt-glyph).x {
+  --ink: #1f3d99;
+}
+
+:is(.tt-ink, .tt-glyph).o {
+  --ink: #b8322a;
+}
+
+.tt-ink {
+  stroke: var(--ink);
+}
+
+/* drawn as it's made: an X's two strokes one after the other, an O's one
+   round; a win's line through the three after the last of them */
+/* (the dash clear of the path's start till then: a dash ending on it
+   shows as a dot, its round cap) */
+.tt-ink.fresh path {
+  stroke-dasharray: 1 2;
+  animation: tt-draw 0.14s ease-in-out backwards;
+}
+
+.tt-ink.x.fresh path + path {
+  animation-delay: 0.19s;
+}
+
+.tt-ink.o.fresh path {
+  animation-duration: 0.26s;
+}
+
+/* Super: its small grids finer, its marks smaller; a board taken, its
+   marks faint under its taker's big one, drawn after the mark that took
+   it; where the next mark goes, a highlighter's wash */
+.tt-grid .fine {
+  stroke-width: 0.45;
+  opacity: 0.7;
+}
+
+.tt-ink.small path {
+  stroke-width: 1.1;
+}
+
+.tt-ink.done {
+  opacity: 0.3;
+}
+
+.tt-ink.big path {
+  stroke-width: 3.2;
+}
+
+.tt-ink.big.fresh path {
+  animation-delay: 0.35s;
+}
+
+.tt-ink.big.x.fresh path + path {
+  animation-delay: 0.54s;
+}
+
+.tt-sheet.super .tt-strike.fresh path {
+  animation-delay: 0.8s;
+}
+
+.tt-lit {
+  fill: rgba(255, 224, 0, 0.28);
+}
+
+.tt-strike path {
+  stroke-width: 1.6;
+  opacity: 0.85;
+}
+
+.tt-strike.fresh path {
+  animation: tt-draw 0.4s ease-in-out 0.38s backwards;
+}
+
+@keyframes tt-draw {
+  from {
+    stroke-dashoffset: 1.2;
+  }
+}
+
+.tt-cell {
+  fill: transparent;
+}
+
+.tt-cell.open {
+  cursor: pointer;
+}
+
+/* a word in the margin, below the grid, or above it turned to the one
+   across the table (.over); below it, while no game's in play, how to
+   play (Table's Modes) */
+.tt-margin {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5cqw;
+  height: 23cqw;
+  color: #2b2b2b;
+  font-size: 6cqw;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.tt-margin.over {
+  inset: 0 0 auto;
+}
+
+/* over the next-game tap (.tt-next), all but the modes letting it through */
+.tt-margin {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tt-margin .tb-modes {
+  pointer-events: auto;
+}
+
+.tt-margin p {
+  margin: 0;
+}
+
+.tt-margin .tb-modes {
+  font-size: 3.6cqw;
+}
+
+/* in the margin of the one who can take back, at their right */
+.tt-undo {
+  position: absolute;
+  right: 5cqw;
+  bottom: 7cqw;
+  width: 9cqw;
+  height: 9cqw;
+}
+
+.tt-undo.over {
+  inset: 7cqw auto auto 5cqw;
+}
+
+/* the game's over: the sheet glows, a tap on it starts the next */
+.tt-sheet.ready::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 3cqw 1cqw #ffd54f;
+  animation: tb-call 1.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.tt-next {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.tt-next:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+
+/* a new sheet, put down on the table */
+.tt-sheet.fresh {
+  animation: tt-put 0.35s ease-out;
+}
+
+@keyframes tt-put {
+  from {
+    translate: 0 30%;
+    opacity: 0;
+  }
+}
+
+/* the seats' marks on the players' plates: ink on a scrap of the paper */
+.tt-glyph {
+  border-radius: 4px;
+  background: #fdfbf4;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-ink.fresh path,
+  .tt-strike.fresh path,
+  .tt-sheet.fresh,
+  .tt-sheet.ready::after {
+    animation: none;
+  }
+}

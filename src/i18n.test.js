@@ -8,10 +8,14 @@ test("every message the rules return has a Turkish version", () => {
     "Okey/okey.js",
     "Okey/rulesets.js",
     "Backgammon/rules.js",
+    "TicTacToe/rules.js",
+    "Go/rules.js",
   ]
     .map((f) => readFileSync(`src/Components/${f}`, "utf8"))
     .join("\n");
-  const messages = [...rules.matchAll(/return "([^"]+)"/g)].map((m) => m[1]);
+  const messages = [...rules.matchAll(/(?:return|why:) "([^"]+)"/g)].map(
+    (m) => m[1],
+  );
   assert.isNotEmpty(messages);
   for (const m of messages) assert.notEqual(t(m, true), m, m);
 });

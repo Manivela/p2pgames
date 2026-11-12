@@ -1,160 +1,184 @@
-import React from "react";
-import { BOARD_SIZE } from ".";
+import { Modes, Undo, tell, useChangedAt } from "../Table";
+import { t } from "../../i18n";
+import { count, pass, play, sizeOf, undo, whyNot } from "./rules";
 
-function Board({ player, boardState, handleIntersectionClick }) {
-  const bigPoints =
-    BOARD_SIZE === 19
-      ? [
-          [3, 3],
-          [3, 9],
-          [3, 15],
-          [9, 3],
-          [9, 9],
-          [9, 15],
-          [15, 3],
-          [15, 9],
-          [15, 15],
-        ]
-      : [];
-  const baseBoardWidth = BOARD_SIZE === 19 ? 1000 : 500; // Change this value to adjust the board width
-  const cellSize = baseBoardWidth / (BOARD_SIZE - 1);
-  const padding = cellSize * 1.5;
-  const boardWidth = baseBoardWidth + 2 * padding; // Change this value to adjust the board width
+// The board on the table, each player's bowl of stones at their side of it
+// (go.css lays them out). The board is in --u, the lines' spacing: the
+// grid and a margin of MARGIN round it, --b wide.
+const MARGIN = 0.9;
+// the star points, by row and column, on each size of board
+const STARS = {
+  9: [2, 6],
+  13: [3, 9],
+  19: [3, 9, 15],
+};
+const stars = (size) => {
+  const at = STARS[size] ?? [];
+  const middle = (size - 1) / 2;
+  const all = at.flatMap((row) => at.map((col) => [row, col]));
+  // the middle one, where the others don't make it
+  return at.includes(middle) ? all : [...all, [middle, middle]];
+};
+// how long a stone takes to come down, and a taken one to go
+const DROP_MS = 600;
+// the points by the board's letters and numbers: A9 top left on a 9×9
+const LETTERS = "ABCDEFGHJKLMNOPQRST";
+const COLOR = ["black", "white"];
 
-  const renderVerticalLines = () => {
-    const lines = [];
-    for (let i = 0; i < BOARD_SIZE; i++) {
-      lines.push(
-        <line
-          key={`vertical-${i}`}
-          x1={padding + cellSize * i}
-          x2={padding + cellSize * i}
-          y1={padding}
-          y2={padding + baseBoardWidth}
-          stroke="black"
-          strokeWidth="1"
-          index={i}
-        />,
-      );
-    }
-    return lines;
-  };
-
-  const renderHorizontalLines = () => {
-    const lines = [];
-    for (let i = 0; i < BOARD_SIZE; i++) {
-      lines.push(
-        <line
-          key={`horizontal-${i}`}
-          x1={padding}
-          x2={padding + baseBoardWidth}
-          y1={padding + cellSize * i}
-          y2={padding + cellSize * i}
-          stroke="black"
-          strokeWidth="1"
-          index={i}
-        />,
-      );
-    }
-    return lines;
-  };
-
-  const renderDots = () => {
-    const dots = [];
-    for (let i = 0; i < BOARD_SIZE; i++) {
-      for (let j = 0; j < BOARD_SIZE; j++) {
-        const intersectionState = boardState[i][j];
-        const intersectionColor =
-          intersectionState === 1
-            ? "black"
-            : intersectionState === 2
-              ? "white"
-              : "empty";
-        // empty space
-        if (intersectionState === 0) {
-          if (bigPoints.some(([a, b]) => a === i && b === j)) {
-            dots.push(
-              <circle
-                key={`dot-big-${i}-${j}`}
-                cx={padding + cellSize * j}
-                cy={padding + cellSize * i}
-                fill={intersectionColor}
-                r={5}
-              />,
-            );
-          }
-          // interactive circle
-          dots.push(
-            <circle
-              key={`dot-empty-handle-${i}-${j}`}
-              cx={padding + cellSize * j}
-              cy={padding + cellSize * i}
-              fill={player === 1 ? "black" : "white"}
-              r={25}
-              opacity={0}
-              onClick={() => {
-                handleIntersectionClick(i, j);
-              }}
-              onPointerMove={(event) => {
-                // Set the radius to 10 when the mouse is over the circle
-                event.target.setAttribute("opacity", 0.5);
-              }}
-              onPointerLeave={(event) => {
-                // Set the radius back to 1 when the mouse leaves the circle
-                event.target.setAttribute("opacity", 0);
-              }}
-            />,
-          );
-        } else {
-          // filled space
-          dots.push(
-            <circle
-              key={`dot-filled-${i}-${j}`}
-              cx={padding + cellSize * j}
-              cy={padding + cellSize * i}
-              fill={intersectionColor}
-              r={25}
-            />,
-          );
-        }
-      }
-    }
-    return dots;
-  };
-
+// A side of the table: a word for its player, Undo when they can take
+// their last move back, and their bowl, a tap on it a pass (`onPass`) when
+// it's theirs to move
+function Side({ seat, far, over, said, modes, onUndo, onPass }) {
+  const Bowl = onPass ? "button" : "div";
   return (
-    <svg width={boardWidth} height={boardWidth}>
-      <defs>
-        <pattern
-          id="wood"
-          x="0"
-          y="0"
-          width="50"
-          height="50"
-          patternUnits="userSpaceOnUse"
-        >
-          <image
-            href="https://st.depositphotos.com/2464895/3334/i/600/depositphotos_33347685-stock-photo-light-wood-texture-for-background.jpg"
-            x="0"
-            y="0"
-            width="50"
-            height="50"
-            preserveAspectRatio="xMinYMin slice"
-          />
-        </pattern>
-      </defs>
-      <rect
-        x="0"
-        y="0"
-        width={boardWidth}
-        height={boardWidth}
-        fill="url(#wood)"
-      />
-      {renderVerticalLines()}
-      {renderHorizontalLines()}
-      {renderDots()}
-    </svg>
+    <div className={`go-side${far ? " far" : ""}${over ? " over" : ""}`}>
+      {said && <p className="go-said">{said}</p>}
+      {modes}
+      {onUndo && <Undo className="go-undo" onClick={onUndo} />}
+      <Bowl
+        className={`go-bowl ${COLOR[seat]}`}
+        title={onPass && t("Pass")}
+        onClick={onPass}
+      >
+        <i />
+        <i />
+        <i />
+        {onPass && <span>{t("Pass")}</span>}
+      </Bowl>
+    </div>
   );
 }
 
-export default Board;
+// The game on its board (`table`, Table's useTable): the seat to move puts
+// a stone on a free point, or passes at their bowl; the last move is its
+// maker's to take back; after a pass, and once it's over, each empty
+// point shows whose it would count for; then a tap on the board starts the
+// next game.
+export default function Board({ state, table }) {
+  const { live, mine, near, far, across, names, note, act, deal } = table;
+  const me = mine.includes(state.turn) ? state.turn : mine[0];
+  const playing = me !== undefined && state.turn === me;
+  const away = (seat) => across && seat !== near;
+  const seenAt = useChangedAt(state.last.n, live);
+  const fresh = Date.now() - seenAt < DROP_MS;
+  const { last, winner } = state;
+  const size = sizeOf(state.stones);
+  const spot = (i) => ({
+    "--x": MARGIN + (i % size),
+    "--y": MARGIN + Math.floor(i / size),
+  });
+  const named = (i) => `${LETTERS[i % size]}${size - Math.floor(i / size)}`;
+  const wide = size - 1 + MARGIN * 2;
+
+  const tap = (i) => {
+    if (!playing) return;
+    const why = whyNot(state, i);
+    if (why) tell(why, away(me));
+    else act(play(state, me, i));
+  };
+
+  // whose each empty point would be, counted now
+  const counted = winner || state.passes ? count(state.stones).owner : [];
+  const over = state.turn === null && !note;
+  const said =
+    note ??
+    (winner ? (
+      <>
+        {t(`${names[winner.seat]} wins by ${winner.by}`)}
+        <small>
+          {names[0]} {state.area[0]} · {names[1]} {state.area[1]}
+        </small>
+      </>
+    ) : state.passes ? (
+      t(`${names[1 - state.turn]} passed`)
+    ) : me !== undefined && !playing ? (
+      t(`Waiting for ${names[state.turn]}`)
+    ) : null);
+  const next = over && deal;
+  // a side's: words to both face to face, Undo and Pass to whoever's it is
+  const side = (seat, isFar) => (
+    <Side
+      seat={seat}
+      far={isFar}
+      over={across && isFar}
+      said={(!isFar || across) && said}
+      modes={!isFar && <Modes table={table} />}
+      onUndo={
+        state.back?.seat === seat && mine.includes(seat)
+          ? () => act(undo(state, seat))
+          : null
+      }
+      onPass={playing && me === seat ? () => act(pass(state, seat)) : null}
+    />
+  );
+  // stones taken by the last move, going
+  const off = fresh && last.kind === "stone" ? last.off : [];
+
+  return (
+    <div className="go-scene" style={{ "--b": wide }}>
+      {side(far, true)}
+      <div
+        className={`go-board${next ? " ready" : ""} ${COLOR[state.turn] ?? ""}`}
+      >
+        <svg viewBox={`0 0 ${wide} ${wide}`}>
+          {Array.from({ length: size }, (_, k) => (
+            <path
+              key={k}
+              d={`M${MARGIN} ${MARGIN + k}h${size - 1}M${MARGIN + k} ${MARGIN}v${size - 1}`}
+            />
+          ))}
+          {stars(size).map(([row, col]) => (
+            <circle
+              key={`${row}-${col}`}
+              cx={MARGIN + col}
+              cy={MARGIN + row}
+              r="0.09"
+            />
+          ))}
+        </svg>
+        {counted.map(
+          (seat, i) =>
+            seat !== null && (
+              <i key={i} className={`go-own ${COLOR[seat]}`} style={spot(i)} />
+            ),
+        )}
+        {state.stones.map(
+          (seat, i) =>
+            seat !== null && (
+              <i
+                key={i}
+                className={`go-stone ${COLOR[seat]}${last.at === i && last.kind === "stone" ? " last" : ""}${fresh && last.kind === "stone" && last.at === i ? " fresh" : ""}`}
+                style={spot(i)}
+              />
+            ),
+        )}
+        {off.map((i) => (
+          <i
+            key={`off-${i}`}
+            className={`go-stone ${COLOR[1 - state.stones[last.at]]} going`}
+            style={spot(i)}
+          />
+        ))}
+        {state.stones.map((seat, i) => (
+          <button
+            key={i}
+            className={`go-point${playing && seat === null ? " open" : ""}`}
+            style={spot(i)}
+            data-at={i}
+            aria-label={named(i)}
+            onClick={() => tap(i)}
+          />
+        ))}
+        {next && (
+          <button
+            className="go-next"
+            aria-label={t("Next game")}
+            title={t("Next game")}
+            onClick={deal}
+          />
+        )}
+      </div>
+      {side(near, false)}
+    </div>
+  );
+}
