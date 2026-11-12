@@ -1602,13 +1602,14 @@ test("a discard during the others' wait is held, then thrown", async ({
   await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
-  // Deniz's discard is on offer from now, for 2 s
+  // Deniz's discard is on offer from now, for 30 s: time for the drag on a
+  // busy machine (the wait is cut short below)
   await page.evaluate(() => {
     const s = window.okey.get();
     window.okey.set({
       ...s,
       offer: { ...s.offer, at: Date.now() },
-      rules: { ...s.rules, claimWaitSeconds: 2 },
+      rules: { ...s.rules, claimWaitSeconds: 30 },
     });
   });
   const id = (await handIds(page))[5];
@@ -1618,8 +1619,13 @@ test("a discard during the others' wait is held, then thrown", async ({
   await expect(pile.locator(`.ghost [data-tile-id="${id}"]`)).toBeVisible();
   await expect(slot(page, 5).locator(".tile")).toHaveCount(0);
   await expect(page.getByText(/Give the others|Diğerlerine/)).toHaveCount(0);
-  // Bora takes Deniz's discard meanwhile
+  // Bora takes Deniz's discard meanwhile, and the wait is nearly up: half a
+  // second left, then mine is thrown
   await table(page, "claim", 2);
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    window.okey.set({ ...s, offer: { ...s.offer, at: Date.now() - 29500 } });
+  });
   await expect
     .poll(async () => (await state(page)).players[0].discardPile.at(-1)?.id)
     .toBe(id);
