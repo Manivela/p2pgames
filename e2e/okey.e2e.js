@@ -1419,7 +1419,7 @@ test("your name is remembered, and changed in the menu", async ({
 });
 
 // the menu's games, found by name: one picked opens it and closes the
-// menu, as Esc does
+// menu, as Esc does. On a short screen the coffee and the credits make way
 test("the menu finds a game by name and goes to it", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "not about the layout");
   await sitDown(page);
@@ -1429,6 +1429,12 @@ test("the menu finds a game by name and goes to it", async ({ page }, info) => {
   await expect(page.locator(".site-menu .games a.active")).toHaveAccessibleName(
     "Okey",
   );
+  const footer = page.locator(".site-menu footer");
+  await expect(footer).toBeVisible();
+  await page.setViewportSize({ width: 1348, height: 250 });
+  await expect(footer).toBeHidden();
+  await page.setViewportSize({ width: 1348, height: 870 });
+  await expect(footer).toBeVisible();
   await page.getByRole("searchbox").fill("BACK");
   await expect(games).toHaveText(["Backgammon"]);
   await games.click();

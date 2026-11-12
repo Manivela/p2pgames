@@ -570,7 +570,6 @@ const TR = [
   // the site's menu (Menu.jsx)
   [/^Find a game$/, "Oyun bul"],
   [/^No game by that name$/, "Bu adda oyun yok"],
-  [/^Room$/, "Oda"],
   [/^you$/, "sen"],
   [/^Change your name$/, "Adını değiştir"],
   [/^Sound Effects from$/, "Ses efektleri:"],

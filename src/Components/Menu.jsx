@@ -179,11 +179,12 @@ function Here() {
 }
 
 // The site's menu, from ☰ in the corner: a card over the game, as the
-// table's ⋯ opens from the other corner. The games, found by name, in a
-// grid that scrolls once there are more than fit (from the one you're
-// at); then the room: its invite link and who's here. A tap outside, Esc
-// or a game picked closes it. Opened afresh each time (root.jsx): its
-// search empty, your name not being changed.
+// table's ⋯ opens from the other corner. A search over the games, and
+// beside it the room's code, a tap on it copying the invite; the games in
+// a grid that scrolls once there are more than fit (from the one you're
+// at); then who's here. A tap outside, Esc or a game picked closes it.
+// Opened afresh each time (root.jsx): its search empty, your name not
+// being changed.
 export default function Menu({ onClose }) {
   const { roomId } = useParams();
   const [q, setQ] = useState("");
@@ -194,6 +195,23 @@ export default function Menu({ onClose }) {
   useEffect(() => {
     list.current.querySelector(".active")?.scrollIntoView({ block: "nearest" });
   }, []);
+  // the coffee and the credits go once the card runs out of room (a phone
+  // on its side, a room full of people), so it scrolls only when nothing
+  // else can go: checked as the screen, the people or the games change
+  const card = useRef();
+  const foot = useRef();
+  useEffect(() => {
+    const fit = () => {
+      foot.current.style.display = "";
+      const over = card.current.scrollHeight > card.current.clientHeight;
+      foot.current.style.display = over ? "none" : "";
+    };
+    const seen = new ResizeObserver(fit);
+    seen.observe(document.documentElement);
+    seen.observe(list.current);
+    seen.observe(card.current.querySelector(".here"));
+    return () => seen.disconnect();
+  }, []);
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     addEventListener("keydown", onKey);
@@ -202,15 +220,36 @@ export default function Menu({ onClose }) {
   return (
     <>
       <div className="site-menu-backdrop" onClick={onClose} />
-      <div className="site-menu">
-        <input
-          className="find"
-          type="search"
-          placeholder={t("Find a game")}
-          aria-label={t("Find a game")}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+      <div className="site-menu" ref={card}>
+        <div className="top">
+          <input
+            className="find"
+            type="search"
+            placeholder={t("Find a game")}
+            aria-label={t("Find a game")}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <button
+            className="invite"
+            onClick={share}
+            aria-label={t("Copy invite link")}
+            title={t("Copy invite link")}
+          >
+            <b>{roomId}</b>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="9" y="9" width="11" height="11" rx="2" />
+              <path d="M15 5H6a1 1 0 0 0-1 1v9" />
+            </svg>
+          </button>
+        </div>
         <nav className="games" ref={list} onClick={onClose}>
           {games.map((g) => (
             <NavLink key={g.path} to={g.path}>
@@ -223,16 +262,8 @@ export default function Menu({ onClose }) {
         </nav>
         {!games.length && <p className="none">{t("No game by that name")}</p>}
         <aside>
-          <div className="room">
-            <span>
-              {t("Room")} <b>{roomId}</b>
-            </span>
-            <button className="invite" onClick={share}>
-              {t("Copy invite link")}
-            </button>
-          </div>
           <Here />
-          <footer>
+          <footer ref={foot}>
             <a
               className="bmc-btn"
               href="https://buymeacoffee.com/manivela"

@@ -39,9 +39,30 @@
   flex: none;
 }
 
+/* its scrollbar always shown, so a card that scrolls never looks cut off:
+   a phone's own shows only while it's being scrolled */
+.site-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.site-menu::-webkit-scrollbar-track {
+  margin: 14px 0;
+}
+
+.site-menu::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: #c4c4bf;
+}
+
+/* the search, and the room's code beside it */
+.site-menu .top {
+  display: flex;
+  gap: 8px;
+}
+
 .site-menu input.find {
-  display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 38px;
   padding: 0 12px 0 36px;
   border-radius: 10px;
@@ -122,39 +143,38 @@
   border-top: 1px solid #e6e6e6;
 }
 
-/* the invite on a line of its own when the two don't fit (Turkish's is
-   long) */
-.site-menu .room {
+/* the room's code and a copy icon, its invite copied on a tap; a long
+   code (a room named in the address) cut short */
+.site-menu button.invite {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.site-menu .room span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.site-menu .room b {
-  font-size: 18px;
+  gap: 6px;
+  max-width: 50%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #f1f1ee;
+  box-shadow: none;
+  color: inherit;
+  font-size: 16px;
   letter-spacing: 0.05em;
 }
 
-/* green with white: the table's white-with-green, on white */
-.site-menu button.invite {
-  height: 32px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 16px;
-  background: #2e7d32;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+.site-menu button.invite:is(:hover, :focus-visible) {
+  box-shadow: inset 0 0 0 1px #ddd;
+}
+
+.site-menu button.invite b {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.site-menu button.invite svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  opacity: 0.6;
 }
 
 .site-menu .here {
@@ -286,45 +306,5 @@
 @media (max-width: 500px) {
   .site-menu {
     width: calc(100vw - 16px);
-  }
-}
-
-/* a phone on its side: the games down the left, the room down the right,
-   each as tall as the card, scrolling on its own */
-@media (orientation: landscape) and (max-height: 500px) {
-  .site-menu {
-    display: grid;
-    grid-template:
-      "find aside" auto
-      "games aside" minmax(0, 1fr)
-      / minmax(0, 1fr) minmax(0, 0.8fr);
-    gap: 10px 16px;
-    width: min(660px, calc(100vw - 16px));
-    height: calc(100dvh - var(--t, 57px) * 0.92 - 8px);
-    overflow: hidden;
-  }
-
-  .site-menu .find {
-    grid-area: find;
-  }
-
-  .site-menu :is(.games, .none) {
-    grid-area: games;
-    max-height: none;
-  }
-
-  .site-menu aside {
-    grid-area: aside;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  .site-menu aside > .room {
-    padding-top: 0;
-    border-top: 0;
-  }
-
-  .site-menu aside > footer {
-    margin-top: auto;
   }
 }
