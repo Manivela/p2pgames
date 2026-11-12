@@ -232,8 +232,13 @@ const label = (e) =>
     .slice(0, 18)}"`;
 
 // the table's parts that overlap each other or leave the screen; `ignore`:
-// selectors that open over the table on purpose
-export function check(ignore = []) {
+// selectors that open over the table on purpose. Measured two frames on:
+// the table sizes itself (--t, Board.jsx) in a ResizeObserver, in the
+// frame after it renders, before that frame is painted
+export async function check(ignore = []) {
+  await new Promise((r) =>
+    requestAnimationFrame(() => requestAnimationFrame(r)),
+  );
   const els = [
     ...new Set(SEL.flatMap((s) => [...document.querySelectorAll(s)])),
   ].filter((e) => {
