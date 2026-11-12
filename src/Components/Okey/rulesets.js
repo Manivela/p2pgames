@@ -189,8 +189,9 @@ export const ONE_O_ONE = {
   // Americano's can't)
   takeCaught: true,
   okeyDiscardPenalty: 101, // discarding the okey, unless it's your last tile
-  // the previous discard can be taken only to use it in a meld that turn,
-  // or put back for this
+  // before opening, the previous discard can be taken only to open with it
+  // that turn, or put back for this; once open, as anyone likes (the
+  // user's call)
   takeMustBeUsed: true,
   returnPenalty: 101,
   pairsAddMax: 2, // tiles a pairs opener adds to sets and runs a turn

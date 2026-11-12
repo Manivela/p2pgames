@@ -296,7 +296,7 @@ test("101: no out-of-turn takes", () => {
   assert.equal(okey.claimDiscard(s, 3, 25), "Nothing to take right now");
 });
 
-test("101: a discard taken must go into a meld that turn, or back on its pile", () => {
+test("101: a discard taken before opening must be opened with that turn, or go back on its pile", () => {
   let s = start();
   s = okey.discardTile(s, 1, tileIn(s, 1, "black9-0"));
   const taken = player(s, 1).discardPile.at(-1);
@@ -322,6 +322,21 @@ test("101: a discard taken must go into a meld that turn, or back on its pile", 
   s = okey.discardTile(s, 2, tileIn(s, 2, "yellow12-0"));
   assert.equal(s.currentPlayer, 1);
   assertAllTiles(s);
+});
+
+test("101: once open, a discard can be taken as you like", () => {
+  let s = okey.openHand(start(), 1, [opening]);
+  s = okey.discardTile(s, 1, tileIn(s, 1, "black2-0"));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.discardTile(s, 2, tileIn(s, 2, "yellow12-0"));
+  s = okey.drawTile(s, 1, player(s, 2).discardPile.at(-1), 25);
+  assert.isOk(tileIn(s, 1, "yellow12-0"));
+  // kept, not laid: the turn ends all the same
+  const on = okey.discardTile(s, 1, tileIn(s, 1, "black3-0"));
+  assert.equal(on.currentPlayer, 2);
+  assertAllTiles(on);
+  // and put back, it costs nothing
+  assert.isUndefined(okey.returnDiscard(s, 1).penalties?.[1]);
 });
 
 test("101: a turn written from before the tile went back is told from a move", () => {

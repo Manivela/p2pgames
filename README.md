@@ -13,7 +13,7 @@ demo: <https://p2p.yunusgulcu.com/>
   - tap Sit on a name plate to take X or O; anyone else watches
   - X and O are drawn in ink as they're made, and a win struck through; the two take turns to start
   - the last mark can be taken back till the other marks; a tap on the sheet starts the next game
-  - ⋯ picks Classic or Super: nine small boards in a big one, each mark sending the other to the matching small board, three boards in a row to win
+  - Classic or Super, picked on the sheet: nine small boards in a big one, each mark sending the other to the matching small board, three boards in a row to win
 - message each other using the very basic messaging UI (disabled for liability concerns)
   - the order of messages should be the same for everyone thanks to the YArray data structure.
   - automatically scrolls when messages start overflowing the container.
@@ -25,22 +25,17 @@ demo: <https://p2p.yunusgulcu.com/>
   - a mars (the other has borne nothing off) counts two, and the score carries from game to game
   - a tap on the dice rolls them, and starts the next game once one's won
   - ⋯ has the home on the left for those who play so
-- play a very basic implementation of Minecraft made by [danba340](https://github.com/danba340/minecraft-react)
-  - players are assigned a random color when they first join the main room and the spheres use this color.
-  - player location is updated for all players using the YJS awareness api
-  - players can place blocks on the ground or on another block by clicking
-  - blocks placed by one player will be placed for all players
-  - players can remove blocks using the <kbd>Alt</kbd>+<kbd>Click</kbd>
-  - you can place other block types by changing the active block type using <kbd>1</kbd>,<kbd>2</kbd>,<kbd>3</kbd>,<kbd>4</kbd>,<kbd>5</kbd> keys
+  - the back of the case is a checkerboard: American checkers or Turkish dama, picked on the board between games, against each other or a bot
 - play Okey made by [me](https://github.com/Manivela)
   - 2 to 4 players
   - check [wikipedia](https://en.wikipedia.org/wiki/Okey) for the rules
-- play Go made by [me](https://github.com/Manivela), on a 9×9, 13×13 or 19×19 board (⋯)
+- play Go made by [me](https://github.com/Manivela), on a 9×9, 13×13 or 19×19 board, picked beside your bowl
   - tap Sit on a name plate to take black or white; a tap on your bowl passes
   - counted as the [Tromp-Taylor rules](https://tromp.github.io/go.html) count: two passes in a row end the game and count it, every stone on the board alive (capture dead stones first: it costs nothing), white 7.5 more for moving second; no suicide, and plain ko
   - after a pass the board shows whose each empty point would count for
   - check [wikipedia](https://en.wikipedia.org/wiki/Rules_of_Go) for the rules
-- in every two-player game, ⋯ lets one device play both sides, and Face to face turns each player's words to them when they sit across the screen
+- every game's rules, in brief, are a tap away: ? in the corner, or ⋯ → How to play at the Okey table
+- in every two-player game, 🤖 on an empty seat puts a bot in it (in either seat, or both to watch them play), ⋯ lets one device play both sides, and Face to face turns each player's words to them when they sit across the screen
 
 ## FAQ
 
@@ -48,18 +43,7 @@ demo: <https://p2p.yunusgulcu.com/>
 
 **A:** disable dark mode extensions
 
-**Q: My computer struggles with the minecraft example**
-
-**A:** make sure hardware acceleration is enabled in your browser
-
 ## Known bugs and improvements
-
-### Minecraft
-
-- other players movement isn't very natural we should use physics to move players instead of setting their positions this would also enable doing player collisions.
-- we should change the player model from a sphere to a rectangle similar to how minecraft has it to get more accurate movement.
-- ground should be made out of cubes instead of being a special plane to allow players to dig and get the preview when placing a cube.
-- change cube breaking to holding LMB on a cube instead of using the <kbd>alt</kbd> modifier key
 
 ### Okey
 

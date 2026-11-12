@@ -333,8 +333,8 @@ function gain(state, player, tile) {
   );
 }
 
-// 101: a discard taken goes into a meld this turn, laid (opened) or opened
-// with
+// 101: a discard taken before opening is opened with this turn (once
+// open, any's taken that helps: gain)
 function usable(state, player, tile) {
   const tiles = [...hand(state, player), tile];
   const has = ({ melds }) => melds.some((m) => m.tiles.includes(tile));
@@ -359,21 +359,27 @@ function uses(state, player, now) {
   return false;
 }
 
-function draw(state, player, now, mistakes) {
+function draw(state, player, now, mistakes, turnStart) {
   const slot = Math.max(0, okey.seat(state, player).hand.indexOf(null));
   const top = okey.previous(state.players, player).discardPile.at(-1);
+  // 101, not open yet: only one it opens with
+  const must = state.rules.takeMustBeUsed && !state.opened?.[player];
   const wanted =
-    top &&
-    (state.rules.takeMustBeUsed
-      ? usable(state, player, top)
-      : gain(state, player, top) > 0);
+    top && (must ? usable(state, player, top) : gain(state, player, top) > 0);
   if (wanted && !slips(state, mistakes, player, "take")) {
-    const took = ok(okey.drawTile(state, player, top, slot, now));
-    if (took && (!state.rules.takeMustBeUsed || uses(took, player, now))) {
+    const took = ok(okey.drawTile(state, player, top, slot, now, turnStart));
+    if (took && (!must || uses(took, player, now))) {
       return took;
     }
   }
-  return okey.drawTile(state, player, state.drawPile.at(-1), slot, now);
+  return okey.drawTile(
+    state,
+    player,
+    state.drawPile.at(-1),
+    slot,
+    now,
+    turnStart,
+  );
 }
 
 // Out of turn, the discard up for claim (okey.claimDiscard), when it
@@ -538,23 +544,27 @@ const throwTile = (state, player, now, mistakes) =>
 // One move of the bot whose turn it is, through the rules: a new state, or
 // a message (nothing it may do yet: the others' time to take the discard).
 // `mistakes`: how often it slips (the rules' botMistakes; 0 plays its
-// best).
+// best). `turnStart`: when the turn reached it, which the others' time to
+// take the discard runs from, as it does for a player (okey.drawTile).
 export function step(
   state,
   player,
   now = Date.now(),
   mistakes = mistakesOf(state),
+  turnStart = now,
 ) {
   if (state.gameState !== "play" || state.currentPlayer !== player) return;
   if (okey.pileOut(state, player)) return okey.shuffleDiscards(state, player);
   const slip = (what) => slips(state, mistakes, player, what);
-  if (!state.drawn) return draw(state, player, now, mistakes);
+  if (!state.drawn) return draw(state, player, now, mistakes, turnStart);
   const tiles = hand(state, player);
   const opened = state.opened?.[player];
   // a discard taken to open with (101) opens: the same slip each time it's
   // taken would put it back, +101, and take it again, on and on
   const took =
-    state.rules.takeMustBeUsed && state.tookDiscard?.player === player;
+    state.rules.takeMustBeUsed &&
+    state.tookDiscard?.player === player &&
+    !state.tookDiscard.opened;
   const opening = !okey.isElden(state) && !opened && (took || !slip("open"));
   return (
     ok(finishFromHand(state, player)) ||

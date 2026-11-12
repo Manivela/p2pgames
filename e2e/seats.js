@@ -1,6 +1,5 @@
 // The table's seats in the e2e tests (Table, src/Components/Table): labels
 // in English (desktop) or Turkish (phones)
-import { expect } from "@playwright/test";
 
 export const SIT = /^(Sit|Otur)$/;
 export const BOTH = /^(Play both sides|İki tarafı da oyna)$/;
@@ -14,18 +13,34 @@ export const NET = { timeout: 30000 };
 export const room = (game) =>
   `e2e-${game}-${Math.random().toString(36).slice(2, 10)}`;
 
-// a page at `game` in `room`, named, its seat taken (0 or 1)
-export async function sitDown(browser, info, room, game, name, seat) {
+// a page at `game` in `room`, named, watching
+export async function enter(browser, info, room, game, name) {
   const { viewport, hasTouch, locale } = info.project.use;
   const context = await browser.newContext({ viewport, hasTouch, locale });
   const page = await context.newPage();
   await page.goto(`/${room}/${game}`);
   await page.getByRole("textbox").fill(name);
   await page.getByRole("button", { name: /^(Go|Gir)$/ }).click();
+  return page;
+}
+
+// a page at `game` in `room`, named, its seat taken (0 or 1)
+export async function sitDown(browser, info, room, game, name, seat) {
+  const page = await enter(browser, info, room, game, name);
   const sit = page.locator(".tb-plate").getByRole("button", { name: SIT });
   // the board lists the far seat first, the first seat's for a page that
   // hasn't sat
   await sit.nth(seat ? 0 : 1).click();
+  return page;
+}
+
+export const BOT = /^(Add a bot|Bot ekle)$/;
+
+// a page in the first seat, a bot in the other, its moves 100 ms apart
+export async function againstBot(browser, info, room, game) {
+  const page = await sitDown(browser, info, room, game, "Ayşe", 0);
+  await page.evaluate(() => sessionStorage.setItem("botPace", "100"));
+  await page.getByRole("button", { name: BOT }).click();
   return page;
 }
 
@@ -55,5 +70,3 @@ export const moving = (page, selector, ms = 5000) =>
     },
     [selector, ms],
   );
-
-export { expect };

@@ -93,7 +93,7 @@ const GROUPS = [
       ],
       [
         "takeMustBeUsed",
-        "A discard taken goes into a meld before that turn's discard, or back on its pile",
+        "A discard taken before opening is opened with that turn, or goes back on its pile; once open, any can be taken",
       ],
       [
         "returnPenalty",

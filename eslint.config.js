@@ -18,8 +18,6 @@ export default [
       "prettier/prettier": ["error", { endOfLine: "auto" }],
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
-      // react-three-fiber's props (position, args…)
-      "react/no-unknown-property": "off",
       "no-unused-vars": "warn",
       "no-constant-condition": "off",
     },

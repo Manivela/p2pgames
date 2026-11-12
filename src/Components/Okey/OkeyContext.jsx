@@ -731,9 +731,13 @@ export function OkeyProvider({ children }) {
     }
   }, [okeyState, localID, setOkeyState]);
   // its turn, on the page that plays it: a move at a pace the table can
-  // follow, or another try in a second while the rules say wait (the
-  // others' time to take the discard); sessionStorage botPace in ms
-  const pace = Number(stored("botPace") ?? 900);
+  // follow, and a discard the rules hold back (the others' time to take
+  // the one before) the moment they let it go. A little slower where that
+  // time is kept (outOfTurnTakes, Americano's), the turn as long anyway;
+  // sessionStorage botPace in ms
+  const pace = Number(
+    stored("botPace") ?? (okeyState.rules?.outOfTurnTakes ? 1200 : 900),
+  );
   const botTurn = React.useRef({});
   React.useEffect(() => {
     const p = okeyState.players.find((x) => x.id === okeyState.currentPlayer);
@@ -754,9 +758,11 @@ export function OkeyProvider({ children }) {
     );
     let timer;
     const move = () => {
-      const next = bots.step(okeyState, p.id);
-      if (next && typeof next !== "string") setOkeyState(next);
-      else timer = setTimeout(move, 1000);
+      const at = botTurn.current.at;
+      const next = bots.step(okeyState, p.id, Date.now(), undefined, at);
+      if (next && typeof next !== "string") return setOkeyState(next);
+      const left = okey.claimWait(okeyState, p.id);
+      timer = setTimeout(move, left > 0 ? Math.ceil(left * 1000) : 1000);
     };
     timer = setTimeout(move, Math.max(pace, wait * 1000));
     return () => clearTimeout(timer);

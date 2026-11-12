@@ -1,5 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { NET, NEXT, bothSides, moving, room, sitDown } from "./seats";
+import {
+  NET,
+  NEXT,
+  againstBot,
+  bothSides,
+  enter,
+  moving,
+  room,
+  sitDown,
+} from "./seats";
 
 // Go at the table: two browsers, or one device playing both sides. Its
 // state through the dev-only window.go.
@@ -106,4 +115,24 @@ test("a 13×13 board, picked beside the bowl", async ({ browser }, info) => {
   // the far corner, on the bigger board
   await page.locator('[data-at="168"]').click();
   expect((await game(page)).stones[168]).toBe(0);
+});
+
+test("a bot answers each stone", async ({ browser }, info) => {
+  const page = await againstBot(browser, info, room("go"), "go");
+  await expect.poll(async () => (await game(page))?.turn, NET).toBe(0);
+  await point(page, 4, 4).click();
+  await expect.poll(() => stones(page)).toBe(2);
+  expect((await game(page)).turn).toBe(0);
+});
+
+test("? in the corner: how to play, closed by a tap outside", async ({
+  browser,
+}, info) => {
+  const page = await enter(browser, info, room("go"), "go", "Ayşe");
+  await page
+    .getByRole("button", { name: /^(How to play|Nasıl oynanır)$/ })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText(/7[.,]5/);
+  await page.locator(".how-to").click({ position: { x: 5, y: 5 } });
+  await expect(page.locator(".how-to")).toHaveCount(0);
 });

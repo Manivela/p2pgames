@@ -132,6 +132,19 @@ html:has(.tb-fit) {
   font-weight: 700;
 }
 
+/* a bot for the seat, beside its Sit */
+.tb-bot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 15px;
+  line-height: 1;
+}
+
 /* the games a seat has won, at the end of its plate */
 .tb-points {
   margin-left: auto;
@@ -277,7 +290,7 @@ html:has(.tb-fit) {
   }
 
   .tb-plate {
-    gap: 5px;
+    gap: 4px;
     height: 32px;
     padding-right: 6px;
   }
@@ -288,7 +301,13 @@ html:has(.tb-fit) {
   }
 
   .tb-sit {
-    padding: 0 9px;
+    padding: 0 7px;
+    font-size: 13px;
+  }
+
+  .tb-bot {
+    width: 24px;
+    height: 24px;
     font-size: 13px;
   }
 }

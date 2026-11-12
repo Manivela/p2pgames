@@ -6,6 +6,7 @@ import { useAwareness, useDoc, useMap, useWebRtc } from "../../vendor/y-react";
 import { useAuthStore, useFacing, useVolume } from "../../hooks/useStore";
 import { signalingServers, peerOpts } from "../../constants";
 import { Confirm } from "../Confirm";
+import { usePlaying } from "../HowToPlay";
 import { t } from "../../i18n";
 import tok from "./assets/tok.mp3";
 import "./table.css";
@@ -13,19 +14,29 @@ import "./table.css";
 // A table for two in the room, for a game played in turns (Backgammon, Go,
 // TicTacToe): its own Yjs map, `name`, with `seat-0` and `seat-1`, who
 // plays each side, each written by whoever sits or stands, and `game`, the
-// rules' state, written by the player to move, or by anyone seated for a
+// rules' state, written by the player to move, or by its hosts for a
 // new game. Only one player moves at a time, so one key holds the whole
 // game. A game's state has `turn`, the seat to move, `winner` ({ seat })
 // once one's won, and `score`, carried over by `newGame(prev, ids, mode)`
 // while the same two sit. `sides`: what the seats are called, white and
 // black. `modes`: the ways the game can be played, { label, list: [{ id,
 // name }] }, the first the default; the table's, `mode` in the map, chosen
-// by those seated on the board while no game is in play (Modes): before
-// the first move, it deals again; once a game's over, the next one.
-export function useTable(name, newGame, sides, modes) {
+// by those seated on the board while no game is in play (Modes, `idle`):
+// before a player's first move (`touched`), it deals again; once a game's
+// over, the next one.
+// `bot`: the game's, { play(state, seat): its move, the next state;
+// wait(state): ms before it, 900 when not given }.
+export function useTable(name, newGame, sides, modes, bot) {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, { signaling: signalingServers, peerOpts });
-  const { states } = useAwareness(provider.awareness);
+  const { states, localID, setLocalState } = useAwareness(provider.awareness);
+  // the room's pages say which game they show (one page goes from game to
+  // game in the room): who's at this table, to play its bots
+  useEffect(() => {
+    setLocalState((s) => ({ ...s, table: name }));
+    return () => setLocalState((s) => ({ ...s, table: null }));
+  }, [name, setLocalState]);
+  const at = (id) => states.get(id)?.table === name;
   const currentUser = useAuthStore((s) => s.currentUser);
   useMap(name); // re-render on every change
   const map = useDoc().getMap(name);
@@ -42,6 +53,13 @@ export function useTable(name, newGame, sides, modes) {
   // or playing both
   const near = both ? 0 : (mine[0] ?? 0);
   const full = seats.every(Boolean);
+  // no game in play: none yet, one over, or one no player has moved in yet
+  // (a bot may have: a mode picked deals again)
+  const idle = !game || game.turn === null || !!game.winner || !game.touched;
+  // who deals and picks the mode: the players, or with a bot in each seat,
+  // anyone watching them
+  const bots = seats.every((u) => u?.bot);
+  const hosts = seated || bots;
   const ids = seats.map((u) => u?.id ?? null);
 
   const sit = (i) => map.set(`seat-${i}`, currentUser);
@@ -49,15 +67,58 @@ export function useTable(name, newGame, sides, modes) {
   const deal = (m = mode) => map.set("game", newGame(game, ids, m));
   const setMode = (m) => {
     map.set("mode", m);
-    const fresh = !game || game.last.kind === "new" || game.turn === null;
-    if (full && fresh) deal(m);
+    if (full && idle) deal(m);
   };
 
-  // the first game starts once both seats are taken, from whichever seated
+  // the first game starts once both seats are taken, from whichever host's
   // page sees it first (two at once: one game wins, the same for everyone)
   useEffect(() => {
-    if (!game && full && seated) deal();
+    if (!game && full && hosts) deal();
   });
+
+  // A bot sits in an empty seat, either or both, and plays its turns
+  // through the same rules, played by the page that seated it (`runner`),
+  // or while that one's gone or at another game, the first page at this
+  // table; anyone not
+  // seated can take its seat. sessionStorage botPace: ms before each move.
+  const addBot = (i) =>
+    map.set(`seat-${i}`, {
+      id: `bot-${i}`,
+      name: "Bot",
+      bot: true,
+      runner: localID,
+    });
+  const up = game && !game.winner && game.turn !== null && seats[game.turn];
+  const runner =
+    up?.bot &&
+    (at(up.runner) ? up.runner : Math.min(...[...states.keys()].filter(at)));
+  const plays = runner === localID;
+  useEffect(() => {
+    if (!plays) return;
+    let pace = null;
+    try {
+      pace = sessionStorage.getItem("botPace");
+    } catch {
+      // blocked: its own pace
+    }
+    const timer = setTimeout(
+      () => {
+        // as it is now: a score reset since doesn't come back
+        const now = map.get("game");
+        if (now.turn !== null && !now.winner && seats[now.turn]?.bot) {
+          const next = bot.play(now, now.turn);
+          if (next) map.set("game", next);
+        }
+      },
+      Number(pace ?? bot.wait?.(game) ?? 900),
+    );
+    return () => clearTimeout(timer);
+  }, [plays, game?.last.n]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // the mode in play, the game's own (backgammon's says none: the first),
+  // or before a game the one picked: How to play's (root.jsx)
+  const playing = game ? (game.mode ?? modes?.list[0].id) : mode;
+  useEffect(() => usePlaying.setState({ mode: playing }), [playing]);
 
   // a new name (the sidebar) goes on your seats
   useEffect(() => {
@@ -79,7 +140,7 @@ export function useTable(name, newGame, sides, modes) {
   }, [map, name]);
 
   // one name on both seats says nothing: the sides, then
-  const named = (s) => (!both && seats[s]?.name) || t(sides[s]);
+  const named = (s) => (!both && !bots && seats[s]?.name) || t(sides[s]);
   return {
     map,
     sides,
@@ -87,6 +148,8 @@ export function useTable(name, newGame, sides, modes) {
     game,
     mine,
     seated,
+    hosts,
+    bots,
     both,
     full,
     near,
@@ -105,22 +168,27 @@ export function useTable(name, newGame, sides, modes) {
       : seats.some(Boolean)
         ? t("Waiting for a second player")
         : t("Sit down to play"),
-    act: (next) => next && map.set("game", next),
+    // a player's move (a bot's is written by the bot's driver, above)
+    act: (next) => next && map.set("game", { ...next, touched: true }),
     sit,
+    // a bot for an empty seat
+    addBot: (i) => bot && !seats[i] && (() => addBot(i)),
     stand: () => mine.forEach((i) => map.set(`seat-${i}`, null)),
     free: (i) => map.set(`seat-${i}`, null),
-    // the next game, for those seated at a full table
-    deal: seated && full ? () => deal() : null,
+    // the next game, for the hosts of a full table
+    deal: hosts && full ? () => deal() : null,
     modes,
     mode,
-    setMode: seated && modes ? setMode : null,
+    idle,
+    setMode: hosts && modes ? setMode : null,
   };
 }
 
 // A seat: the side's piece (`mark`), who sits there, or Sit while it's
-// free, a number by the name (`info`: { value, title }), and the games
-// they've won (`points`), on their own plate, so there's no telling whose
-// is whose
+// free (and 🤖, a bot: `bot`), a number by the name (`info`: { value,
+// title }), and the games they've won (`points`), on their own plate, so
+// there's no telling whose is whose. A bot's, to someone not seated, has
+// the Sit that takes it over in place of the number.
 function Plate({
   mark,
   name,
@@ -130,23 +198,33 @@ function Plate({
   info,
   points,
   sit,
+  bot,
   over,
   empty,
 }) {
   return (
     <div className={`tb-plate${turn ? " turn" : ""}${over ? " over" : ""}`}>
       <span className="tb-mark">{mark}</span>
-      {user ? (
-        <span className="name">{name}</span>
-      ) : sit ? (
+      {user && <span className="name">{name}</span>}
+      {sit ? (
         <button className="tb-sit" onClick={sit}>
           {t("Sit")}
         </button>
       ) : (
-        <span className="name empty">{empty}</span>
+        !user && <span className="name empty">{empty}</span>
+      )}
+      {bot && (
+        <button
+          className="tb-bot"
+          aria-label={t("Add a bot")}
+          title={t("Add a bot")}
+          onClick={bot}
+        >
+          🤖
+        </button>
       )}
       {user && !here && <small className="away">{t("away")}</small>}
-      {info && <small title={info.title}>{info.value}</small>}
+      {info && !sit && <small title={info.title}>{info.value}</small>}
       <b className="tb-points" title={t("Score")}>
         {points}
       </b>
@@ -260,14 +338,17 @@ export function Table({ table, mark, info, options, children }) {
   const plate = (s) => (
     <Plate
       mark={mark(s)}
-      name={table.names[s]}
+      // a bot's plate says so; the sides name two in what's said
+      name={seats[s]?.bot ? seats[s].name : table.names[s]}
       user={seats[s]}
       // whose turn it is, or who's won
       turn={game && (game.winner?.seat ?? game.turn) === s}
-      here={table.here.has(seats[s]?.id)}
-      info={info?.(s)}
+      here={seats[s]?.bot || table.here.has(seats[s]?.id)}
+      // a seat nobody's in has no pips or prisoners to speak of
+      info={seats[s] && info?.(s)}
       points={score[s]}
-      sit={!seated && !seats[s] ? () => table.sit(s) : null}
+      sit={!seated && (!seats[s] || seats[s].bot) ? () => table.sit(s) : null}
+      bot={table.addBot(s)}
       over={across && s === far}
       empty={t(table.sides[s])}
     />
@@ -289,12 +370,12 @@ export function Table({ table, mark, info, options, children }) {
             .filter((i) => seats[i] && !mine.includes(i))
             .map((i) => ({
               seat: i,
-              name: seats[i].name,
+              name: table.names[i],
               go: () => table.free(i),
             }))}
           newGame={table.deal}
           resetScore={
-            seated &&
+            table.hosts &&
             game?.score.some(Boolean) &&
             (() => table.act({ ...game, score: [0, 0] }))
           }
@@ -308,8 +389,7 @@ export function Table({ table, mark, info, options, children }) {
 // How the game's played, picked on the board while none is in play: before
 // anyone's moved, or once it's over (useTable's `modes`)
 export function Modes({ table }) {
-  const { modes, mode, setMode, game } = table;
-  const idle = !game || game.last.kind === "new" || game.turn === null;
+  const { modes, mode, setMode, idle } = table;
   if (!setMode || !idle) return null;
   return (
     <div className="tb-modes" role="group" aria-label={t(modes.label)}>
@@ -374,11 +454,15 @@ const TOKS = {
 };
 
 // a piece set down on wood, a checker or a stone, each a little
-// different, at this device's sound level
+// different, never the one just heard, at this device's sound level
 export function useTok() {
   const { volume } = useVolume();
   const [play] = useSound(tok, { volume: 0.5 * volume, sprite: TOKS });
-  return () => play({ id: String(Math.floor(Math.random() * 5)) });
+  const last = useRef(0);
+  return () => {
+    last.current = (last.current + 1 + Math.floor(Math.random() * 4)) % 5;
+    play({ id: String(last.current) });
+  };
 }
 
 // takes back the last move: a round button, an arrow turning back, placed

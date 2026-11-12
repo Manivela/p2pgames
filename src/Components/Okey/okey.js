@@ -849,12 +849,14 @@ export function drawTile(
     penalize(s, Number(tile.source.split("-")[1]), state.rules.catchPenalty);
   }
   // a discard taken can go back on its pile this turn (returnDiscard); in
-  // 101 it must, unless it goes into a meld (takeMustBeUsed)
+  // 101, taken before opening, it must, unless it's opened with
+  // (takeMustBeUsed): `opened`, taken once open, as anyone likes
   if (tile.source.startsWith("discard-")) {
     s.tookDiscard = {
       player,
       tileId: tile.id,
       from: Number(tile.source.split("-")[1]),
+      opened: !!state.opened?.[player],
     };
   }
   if (!state.rules.outOfTurnTakes) return s;
@@ -1041,6 +1043,7 @@ function throwTile(state, player, tile, now = Date.now()) {
   if (
     state.rules.takeMustBeUsed &&
     took?.player === player &&
+    !took.opened &&
     seat(state, player).hand.some((t) => t?.id === took.tileId)
   ) {
     return "Use the tile you took from the discard, or put it back";
@@ -1093,8 +1096,8 @@ export function penaltiesSoFar(state, player) {
 }
 
 // A discard taken goes back on its pile while it's still in the hand, and
-// the player draws from the pile instead; in 101, where it must be used
-// (takeMustBeUsed), for returnPenalty
+// the player draws from the pile instead; in 101, taken before opening,
+// where it must be opened with (takeMustBeUsed), for returnPenalty
 export function returnDiscard(state, player) {
   const took = state.tookDiscard;
   const tile = seat(state, player)?.hand.find((t) => t?.id === took?.tileId);
@@ -1110,7 +1113,7 @@ export function returnDiscard(state, player) {
   game.unlog(s, "took", tile.id);
   // back on the pile, a caught tile counts there again
   if (isCaught(s, tile.id)) penalize(s, from.id, -s.rules.catchPenalty);
-  const cost = s.rules.takeMustBeUsed && s.rules.returnPenalty;
+  const cost = s.rules.takeMustBeUsed && !took.opened && s.rules.returnPenalty;
   if (cost) {
     penalize(s, player, cost);
     s.message = `${me.user?.name} put the tile back: +${cost}`;

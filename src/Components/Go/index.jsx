@@ -1,10 +1,11 @@
 import { Table, useHeard, useTable, useTok } from "../Table";
 import { t } from "../../i18n";
 import Board from "./Board";
+import bot from "./bot";
 import { SIZES, newGame } from "./rules";
 import "./go.css";
 
-// the board's sizes, chosen in ⋯ (Table)
+// the board's sizes, chosen beside your bowl (Table's Modes)
 const MODES = {
   label: "Board",
   list: SIZES.map((n) => ({ id: String(n), name: `${n}×${n}` })),
@@ -26,7 +27,7 @@ function useStoneSounds(game) {
 }
 
 export default function Go() {
-  const table = useTable("go", newGame, ["Black", "White"], MODES);
+  const table = useTable("go", newGame, ["Black", "White"], MODES, bot);
   // the board before a game: empty, the size chosen, no one's turn
   const state = table.game ?? { ...newGame(null, [], table.mode), turn: null };
   useStoneSounds(table.game);

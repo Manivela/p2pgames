@@ -10,6 +10,7 @@ import {
   NET,
   NEXT,
   SIT,
+  againstBot,
   moving,
   room,
   sitDown as sit,
@@ -188,4 +189,58 @@ test("one device plays both sides, taking turns", async ({ browser }, info) => {
   expect(g.checkers[1][2]).toBe(1);
   expect(g.checkers[1][13]).toBe(0);
   expect(g.turn).toBe(0);
+});
+
+test("a bot rolls and plays its turns", async ({ browser }, info) => {
+  const page = await againstBot(browser, info, room("bg"), "backgammon");
+  // whoever the opening roll picks, it comes round to white
+  await expect.poll(async () => (await game(page))?.turn, NET).toBe(0);
+  // white plays its dice: the first way the rules allow, a step at a time
+  await page.evaluate(async () => {
+    const rules = await import("/src/Components/Backgammon/rules.js");
+    let g = window.backgammon.get();
+    if (!g.left.length) g = rules.roll(g, 0);
+    while (g.turn === 0 && g.left.length) {
+      const [step] = rules.plays(g)[0];
+      g = rules.move(g, 0, step.from, step.to);
+    }
+    window.backgammon.set(g);
+  });
+  // the bot's roll, its checkers played, and white's turn again
+  await expect
+    .poll(async () => {
+      const g = await game(page);
+      return g.turn === 0 && g.by === 1;
+    })
+    .toBe(true);
+});
+
+test("checkers on the case's back: picked on the board, a bot answers", async ({
+  browser,
+}, info) => {
+  const page = await againstBot(browser, info, room("bg"), "backgammon");
+  await expect.poll(async () => (await game(page))?.turn, NET).not.toBeNull();
+  await page
+    .getByRole("button", { name: /^(Checkers|Amerikan daması)$/ })
+    .click();
+  // dealt again as checkers: black, the bot, starts, and it's white's turn
+  await expect.poll(async () => (await game(page)).mode).toBe("checkers");
+  await expect.poll(async () => (await game(page)).turn).toBe(0);
+  const [from, to] = await page.evaluate(async () => {
+    const rules = await import("/src/Components/Checkers/rules.js");
+    const [p] = rules.plays(window.backgammon.get());
+    return [p.from, p.hops[0].to];
+  });
+  await page.locator(`[data-at="${from}"]`).click();
+  await page.locator(`[data-at="${to}"]`).click();
+  expect((await game(page)).cells[to]?.seat).toBe(0);
+  // a move made: no more picking; the bot's answer (its turn, its to take
+  // back till white moves), and white's turn again
+  await expect(page.locator(".tb-modes")).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const g = await game(page);
+      return g.turn === 0 && g.back?.seat === 1;
+    })
+    .toBe(true);
 });

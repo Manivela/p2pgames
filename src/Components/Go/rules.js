@@ -28,7 +28,7 @@ export const SIZES = [9, 13, 19];
 export const KOMI = 7.5;
 
 export const sizeOf = (stones) => Math.round(Math.sqrt(stones.length));
-const next = (i, size) => {
+export const next = (i, size) => {
   const [row, col] = [Math.floor(i / size), i % size];
   return [
     row > 0 && i - size,
@@ -39,7 +39,7 @@ const next = (i, size) => {
 };
 
 // the points joined to `i` that hold what it holds, and what they touch
-function reach(stones, i) {
+export function reach(stones, i) {
   const size = sizeOf(stones);
   const all = new Set([i]);
   const touch = new Set();

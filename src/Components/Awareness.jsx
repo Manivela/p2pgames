@@ -8,7 +8,7 @@ import { t } from "../i18n";
 
 const colors = ["orange", "blue", "yellow", "green"];
 
-const disabledPaths = ["okey", "minecraft", "backgammon"];
+const disabledPaths = ["okey", "backgammon"];
 
 export default function Awareness() {
   const { roomId } = useParams();

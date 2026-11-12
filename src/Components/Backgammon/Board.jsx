@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import useSound from "use-sound";
 import { useVolume } from "../../hooks/useStore";
-import { BAR, OFF, move, roll, sources, targets, undo, whyNot } from "./rules";
+import {
+  BAR,
+  OFF,
+  apply,
+  move,
+  roll,
+  sources,
+  targets,
+  undo,
+  whyNot,
+} from "./rules";
 import { t } from "../../i18n";
-import { Undo, tell as told, useChangedAt } from "../Table";
+import { Undo, tell as told, useChangedAt, useHeard, useTok } from "../Table";
 import diceSound from "./assets/dice.mp3";
 
 // The board as the viewer sits at it: their home bottom right, their
@@ -68,10 +78,12 @@ function place(view, seat, pos, i, count) {
 // Each checker keeps who it is from one state to the next, so it slides
 // from where it was to where it's gone (a CSS transition): the ones that
 // left a point are matched to the points that gained one, nearest first.
+// `moved`: the ones that did, each as `${seat}-${id}`.
 function useCheckerStacks(checkers) {
   const ref = useRef(null);
   const prev = ref.current;
-  if (prev?.checkers === checkers) return prev.stacks;
+  if (prev?.checkers === checkers) return prev;
+  const moved = new Set();
   const stacks = checkers.map((counts, seat) => {
     let next = 0;
     if (!prev)
@@ -81,6 +93,7 @@ function useCheckerStacks(checkers) {
     s.forEach((ids, pos) => {
       while (ids.length > counts[pos]) loose.push({ id: ids.pop(), pos });
     });
+    for (const { id } of loose) moved.add(`${seat}-${id}`);
     for (let pos = BAR; pos >= OFF; pos--) {
       while (s[pos].length < counts[pos]) {
         loose.sort((a, b) => Math.abs(a.pos - pos) - Math.abs(b.pos - pos));
@@ -89,13 +102,55 @@ function useCheckerStacks(checkers) {
     }
     return s;
   });
-  ref.current = { checkers, stacks };
-  return stacks;
+  ref.current = { checkers, stacks, moved };
+  return ref.current;
 }
 
 // as long as a checker takes to slide (backgammon.css); dice put up
 // longer ago than that, shown again or already there, aren't tossed
 const SLIDE_MS = 400;
+// from one point a checker stops on to the next: a slide and a rest
+export const STOP_MS = SLIDE_MS + 150;
+
+// A checker moved by more than one die (3-2 to 5) stops on each point on
+// its way: the board after each step but the last, STOP_MS apiece, then as
+// it is (`checkers`), till `end`, when the last slide is done. Only for a
+// move seen happen, from the board shown before it: one that came with
+// others at once just slides there, as one put down by hand on this page
+// (`dropped`, its n) does. `count`: the stops this move makes.
+function useStops(state, live, dropped) {
+  const seen = useRef(null);
+  const s = seen.current;
+  if (!live || !s) {
+    seen.current = { n: state.last.n, from: state.checkers, stops: [], at: 0 };
+  } else if (s.n !== state.last.n) {
+    const stops = [];
+    // (a move from an older build has no steps: it slides straight there)
+    const steps = state.last.kind === "move" ? (state.last.steps ?? []) : [];
+    for (const step of steps) {
+      stops.push(apply(stops.at(-1) ?? s.from, state.by, step));
+    }
+    const end = stops.pop();
+    const fits =
+      state.last.n !== dropped &&
+      JSON.stringify(end) === JSON.stringify(state.checkers);
+    seen.current = {
+      n: state.last.n,
+      from: state.checkers,
+      stops: fits ? stops : [],
+      at: Date.now(),
+    };
+  }
+  const { stops, at } = seen.current;
+  const k = Math.floor((Date.now() - at) / STOP_MS);
+  return {
+    count: stops.length,
+    checkers: k < stops.length ? stops[k] : state.checkers,
+    // when the board changes next: the next stop, or the last slide done
+    next: k < stops.length ? at + (k + 1) * STOP_MS : Infinity,
+    end: at + stops.length * STOP_MS + SLIDE_MS,
+  };
+}
 
 // a die's pips, by row and column of three
 const PIPS = {
@@ -312,6 +367,7 @@ export default function Board({
   note,
   act,
   deal,
+  modes,
 }) {
   const me = mine.includes(state.turn) ? state.turn : mine[0];
   const view = { viewer, left };
@@ -329,19 +385,35 @@ export default function Board({
   const [drag, setDrag] = useState(null);
   const dragged = useRef(false);
   const scene = useRef();
-  const stacks = useCheckerStacks(state.checkers);
+  // the move this page put down by hand: it goes where it's dropped
+  const dropped = useRef(null);
+  const stops = useStops(state, live, dropped.current);
+  // Everyone hears a checker land: a wooden tok as it comes down (the
+  // slide, backgammon.css), on each point it stops on, each a little
+  // different. The dice are heard as they land (Dice). The table's sound
+  // level is tried out by the page (index.jsx).
+  const tak = useTok();
+  useHeard(
+    state.last,
+    ({ kind }) => {
+      if (kind !== "move" && kind !== "undo") return;
+      const lands = kind === "move" ? stops.count + 1 : 1;
+      for (let i = 0; i < lands; i++) setTimeout(tak, 330 + i * STOP_MS);
+    },
+    () => {},
+  );
+  const { stacks, moved } = useCheckerStacks(stops.checkers);
   const movedAt = useChangedAt(state.checkers, live);
-  const sliding = Date.now() - movedAt < SLIDE_MS;
-  // drawn again once it's slid, without the transition
-  const [, slid] = useState(0);
+  const still = Math.max(movedAt + SLIDE_MS, stops.end);
+  const sliding = Date.now() < still;
+  // drawn again at each stop, and once it's slid, without the transition
+  const wake = sliding ? Math.min(stops.next, still) : null;
+  const [, woke] = useState(0);
   useEffect(() => {
-    if (!sliding) return;
-    const done = setTimeout(
-      () => slid(movedAt),
-      movedAt + SLIDE_MS - Date.now(),
-    );
-    return () => clearTimeout(done);
-  }, [sliding, movedAt]);
+    if (!wake) return;
+    const timer = setTimeout(() => woke(wake), wake - Date.now());
+    return () => clearTimeout(timer);
+  }, [wake]);
   const rolledAt = useChangedAt(state.rolled, live);
   const playing = me !== undefined && state.turn === me && state.left.length;
   const from = playing ? sources(state) : [];
@@ -396,8 +468,10 @@ export default function Board({
         ?.closest("[data-pos]");
       const dest = at && own(Number(at.dataset.pos));
       const steps = at && targets(state, pos).get(dest);
-      if (steps) act(move(state, me, pos, dest));
-      else if (at && dest !== pos) {
+      if (steps) {
+        dropped.current = state.last.n + 1;
+        act(move(state, me, pos, dest));
+      } else if (at && dest !== pos) {
         const why = whyNot(state, pos, dest);
         if (why) tell(why);
       }
@@ -454,7 +528,12 @@ export default function Board({
           <div
             key={`${seat}-${id}`}
             className={cls.filter(Boolean).join(" ")}
-            style={{ "--x": x, "--y": y }}
+            style={{
+              "--x": x,
+              "--y": y,
+              // over the ones standing while it slides
+              zIndex: sliding && moved.has(`${seat}-${id}`) ? 20 : i + 1,
+            }}
           >
             {top && ids.length > 5 && pos !== OFF && (
               <b className={away(seat) ? "over" : undefined}>{ids.length}</b>
@@ -464,6 +543,11 @@ export default function Board({
       }),
     ),
   );
+  // In the same order every time, so none is moved in the page: a moved
+  // element doesn't slide (its transition never starts), it jumps. The
+  // stack's own order, which lies on which, is the z-index, the board's
+  // own (backgammon.css).
+  pieces.sort((a, b) => a.key.localeCompare(b.key));
 
   // where the picked checker can go, each with what it takes: 2, 3 or 5
   const marks = [...to].map(([pos, steps]) => {
@@ -561,19 +645,34 @@ export default function Board({
         {points}
         {pieces}
         {marks}
-        {status && (
-          <span
-            className={`bg-status${won ? " won" : ""}${across ? " pair" : ""}`}
+        {/* the game to play, in the word's place while none is in play
+            (and its win said): this half's free of the dice */}
+        {modes && !won ? (
+          <div
+            className="bg-picker"
             style={{
-              "--x": freeRight ? colX(6) + 6 - 0.2 - statusW : FIELD_X + 0.2,
+              "--x": freeRight ? colX(6) + 0.2 : FIELD_X + 0.2,
               "--y": FRAME + POINT_H,
-              "--w": statusW,
+              "--w": 5.6,
             }}
           >
-            {/* face to face: a copy turned to each */}
-            {across && <span className="over">{status}</span>}
-            <span>{status}</span>
-          </span>
+            {modes}
+          </div>
+        ) : (
+          status && (
+            <span
+              className={`bg-status${won ? " won" : ""}${across ? " pair" : ""}`}
+              style={{
+                "--x": freeRight ? colX(6) + 6 - 0.2 - statusW : FIELD_X + 0.2,
+                "--y": FRAME + POINT_H,
+                "--w": statusW,
+              }}
+            >
+              {/* face to face: a copy turned to each */}
+              {across && <span className="over">{status}</span>}
+              <span>{status}</span>
+            </span>
+          )
         )}
         {canUndo && (
           <Undo

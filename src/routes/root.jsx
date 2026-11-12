@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Awareness from "../Components/Awareness";
 import Credits from "../Components/Credits";
+import HowToPlay, { RULES, usePlaying } from "../Components/HowToPlay";
 import { useAuthStore } from "../hooks/useStore";
 import coffee from "../assets/coffee.svg";
 import { t } from "../i18n";
@@ -45,6 +46,12 @@ const docked = () => matchMedia("(min-width: 1025px)").matches;
 export default function Root() {
   // closed to start; the button hides and shows it on any screen
   const [menuOpen, setMenuOpen] = useState(false);
+  // the game's How to play, from ? in the corner (the Okey table's is in
+  // its ⋯: its corner has room for two)
+  const game = useLocation().pathname.split("/")[2];
+  const [help, setHelp] = useState(false);
+  const playing = usePlaying((s) => s.mode);
+  const helps = game in RULES && game !== "okey";
   // fullscreen is just the game (the button brings the sidebar back);
   // leaving it, with the button or Esc, puts the sidebar back as it was
   const wasOpen = useRef(false);
@@ -91,16 +98,6 @@ export default function Root() {
                 }
               >
                 Backgammon
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="minecraft"
-                className={({ isActive, isPending }) =>
-                  isActive ? "active" : isPending ? "pending" : ""
-                }
-              >
-                Minecraft
               </NavLink>
             </li>
             <li>
@@ -193,7 +190,20 @@ export default function Root() {
             </svg>
           </button>
         )}
+        {helps && (
+          <button
+            className="help-toggle"
+            aria-label={t("How to play")}
+            title={t("How to play")}
+            onClick={() => setHelp(true)}
+          >
+            ?
+          </button>
+        )}
       </div>
+      {helps && help && (
+        <HowToPlay game={game} mode={playing} onClose={() => setHelp(false)} />
+      )}
       <div id="detail">
         <Outlet />
       </div>

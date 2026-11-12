@@ -38,7 +38,6 @@ if (import.meta.env.PROD && location.hostname !== "localhost") {
 }
 
 const TicTacToe = React.lazy(() => import("./Components/TicTacToe"));
-const Minecraft = React.lazy(() => import("./Components/Minecraft/App"));
 // const Chat = React.lazy(() => import("./Components/Chat"));
 const Backgammon = React.lazy(() => import("./Components/Backgammon"));
 const Go = React.lazy(() => import("./Components/Go"));
@@ -64,14 +63,6 @@ const router = createBrowserRouter(
             element={
               <React.Suspense fallback={<>...</>}>
                 <TicTacToe />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="minecraft"
-            element={
-              <React.Suspense fallback={<>...</>}>
-                <Minecraft />
               </React.Suspense>
             }
           />

@@ -8,7 +8,167 @@ export const turkish = /^tr\b/i.test(globalThis.navigator?.language ?? "");
 
 const COLORS = { red: "kırmızı", black: "siyah", blue: "mavi", yellow: "sarı" };
 
+// a whole sentence as it's written, its . ( ) ? as themselves
+const exact = (text) =>
+  new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+
 const TR = [
+  // How to play (HowToPlay.jsx), above any pattern that might take a line
+  ...[
+    ["How to play", "Nasıl oynanır"],
+    ["Tic-tac-toe", "XOX"],
+    ["Super tic-tac-toe", "Süper XOX"],
+    ["Backgammon", "Tavla"],
+    ["Checkers", "Amerikan daması"],
+    ["Dama", "Dama"],
+    ["Jump on with the same piece", "Aynı taşla yemeye devam et"],
+    ["Take the most pieces you can", "Yiyebileceğin en çok taşı ye"],
+    ["A jump has to be taken", "Taş yemek zorunlu"],
+    [
+      "Take turns marking a square, X first; the other starts the next game.",
+      "Sırayla bir kareye işaret koyun, önce X; sonraki oyuna öteki başlar.",
+    ],
+    [
+      "Three of yours in a row, across, down or diagonally, wins the game and a point.",
+      "Yan yana, alt alta ya da çapraz üç işaretin oyunu ve bir puanı kazandırır.",
+    ],
+    [
+      "Nine small boards in one. Where you mark in a small board sends the other to that board of the nine.",
+      "Dokuz küçük tahta bir arada. Küçük tahtada nereye işaret koyarsan öteki, dokuzun o yerdeki tahtasına oynar.",
+    ],
+    [
+      "Three in a row takes a small board; three boards in a row win the game and a point. Sent to a board that's decided, play anywhere.",
+      "Küçük tahtada üçlü yapan o tahtayı alır; yan yana üç tahta oyunu ve bir puanı kazandırır. Gönderildiğin tahta bitmişse istediğin yere oyna.",
+    ],
+    [
+      "Race your 15 checkers round to your home, the last six points, then bear them off. The first to bear off all 15 wins.",
+      "15 pulunu evine, son altı haneye getir, sonra topla. 15 pulunu ilk toplayan kazanır.",
+    ],
+    [
+      "Tap the dice to roll. Each die moves a checker that many points; a double moves four times. Every die that can be played must be.",
+      "Zar atmak için zarlara dokun. Her zar bir pulu o kadar hane götürür; çift gelirse dört kez oynanır. Oynanabilen her zar oynanmalı.",
+    ],
+    [
+      "Two or more of the other's checkers close a point. A lone one is a blot: land on it to hit it, and it goes to the bar.",
+      "Ötekinin iki ya da daha çok pulu haneyi kapatır. Tek pul açıktır: üstüne gelirsen vurursun, pul bara gider.",
+    ],
+    [
+      "A checker on the bar comes back in on the other's home board before anything else moves.",
+      "Bardaki pul, başka bir pul oynamadan önce ötekinin evinden içeri girer.",
+    ],
+    [
+      "A win is a point; a mars, the other having borne none off, is two.",
+      "Kazanmak bir puan; mars, öteki hiç pul toplamamışken, iki puan.",
+    ],
+    [
+      "Men step diagonally forward on the dark squares; black moves first.",
+      "Taşlar koyu karelerde çapraz ileri gider; önce siyah oynar.",
+    ],
+    [
+      "Jump a piece next to yours, onto the empty square past it, to take it, and jump on while you can. A jump has to be taken.",
+      "Yanındaki taşın üstünden arkasındaki boş kareye atlayarak onu ye, yiyebildikçe atlamaya devam et. Yemek zorunludur.",
+    ],
+    [
+      "A man reaching the far row becomes a king, stepping and jumping both ways.",
+      "Son sıraya varan taş dama olur, iki yöne de gider ve yer.",
+    ],
+    [
+      "Take or block all the other's pieces to win. 40 moves each with no jump and no man going forward is a draw.",
+      "Ötekinin bütün taşlarını ye ya da kıpırdayamaz bırak. Kimse taş yemeden ve ileri taş sürmeden geçen kişi başı 40 hamle berabere biter.",
+    ],
+    [
+      "Men step straight forward or sideways, never back; white moves first.",
+      "Taşlar düz ileri ya da yana gider, geri gitmez; önce beyaz oynar.",
+    ],
+    [
+      "Jump a piece next to yours to take it, and jump on while you can. A jump has to be taken, and of them the one taking the most.",
+      "Yanındaki taşın üstünden atlayarak onu ye, yiyebildikçe devam et. Yemek zorunludur, en çok taş yiyen yol seçilir.",
+    ],
+    [
+      "A man reaching the far row becomes a king: it goes any distance straight, and jumps a piece from afar, landing anywhere past it.",
+      "Son sıraya varan taş dama olur: düz istediği kadar gider, uzaktaki taşın üstünden atlayıp arkasında istediği boş kareye konar.",
+    ],
+    [
+      "Take or block all the other's pieces to win. A king against a lone man is a draw, as are 40 moves each with no jump and no man going forward.",
+      "Ötekinin bütün taşlarını ye ya da kıpırdayamaz bırak. Tek taşa karşı dama berabere biter; kimse taş yemeden ve ileri taş sürmeden geçen kişi başı 40 hamle de öyle.",
+    ],
+    [
+      "Take turns putting a stone on an empty point, black first. Tap your bowl to pass.",
+      "Sırayla boş bir noktaya taş koyun, önce siyah. Pas geçmek için kâsene dokun.",
+    ],
+    [
+      "Stones with no empty point beside them, alone or joined in a line, are captured.",
+      "Yanında boş nokta kalmayan taşlar, tek başına ya da birbirine bağlı, esir alınır.",
+    ],
+    [
+      "No stone may go where it would have none, unless it captures; nor may a capture undo the last one at once (ko).",
+      "Esir almıyorsa taş nefessiz kalacağı yere konmaz; bir esir alma da bir öncekini hemen geri alamaz (ko).",
+    ],
+    [
+      "Two passes in a row end the game. Each side counts its stones on the board and the empty points only its stones surround; white gets 7.5 more for going second.",
+      "Art arda iki pas oyunu bitirir. Her taraf tahtadaki taşlarını ve yalnız kendi taşlarının çevirdiği boş noktaları sayar; beyaz ikinci oynadığı için 7,5 fazla alır.",
+    ],
+    [
+      "Every stone left counts, so capture the other's dead stones before you pass. After a pass the board shows whose each empty point would be.",
+      "Kalan her taş sayılır; pas geçmeden ötekinin ölü taşlarını esir al. Bir pastan sonra tahta, her boş noktanın kime sayılacağını gösterir.",
+    ],
+    [
+      "The higher count wins the game and a point.",
+      "Sayısı yüksek olan oyunu ve bir puanı kazanır.",
+    ],
+    [
+      "2 to 4 players. 106 tiles: 1 to 13 in four colours, two of each, and two fake okeys.",
+      "2 ile 4 oyuncu. 106 taş: dört renkte 1'den 13'e, her birinden iki tane, ve iki sahte okey.",
+    ],
+    [
+      "The tile turned up at the deal is the indicator. The okey, its colour one higher, stands for any tile; a fake okey stands for the okey's own colour and number.",
+      "Dağıtımda açılan taş göstergedir. Onun renginde bir büyüğü okeydir ve her taşın yerini tutar; sahte okey, okeyin kendi rengi ve sayısı yerine geçer.",
+    ],
+    [
+      "A turn: draw from the middle, or take the tile the player before you threw; then throw one.",
+      "Sıran gelince ortadan taş çek ya da senden önceki oyuncunun attığı taşı al; sonra bir taş at.",
+    ],
+    [
+      "Sets: one number in different colours. Runs: one colour in a row. Three tiles or more each.",
+      "Küt: farklı renklerde aynı sayı. Seri: aynı renkte sıralı sayılar. En az üçer taş.",
+    ],
+    [
+      "Finish by laying your whole hand in sets and runs, or seven pairs, as you throw your last tile.",
+      "Son taşını atarken bütün elini küt ve serilerle ya da yedi çiftle açarak bit.",
+    ],
+    [
+      "The finisher scores −20, the others the numbers on their tiles (an okey 25). The lowest total wins.",
+      "Biten −20 yazar, diğerleri taşlarının sayılarını (okey 25). En düşük toplam kazanır.",
+    ],
+    [
+      "13 hands, each opened with the melds it names; the last is finished from the hand in one go, nothing laid before.",
+      "13 el; her el söylediği perlerle açılır, sonuncusu önceden hiçbir şey açmadan tek seferde elden bitirilir.",
+    ],
+    [
+      "Once open, lay more melds and add to anyone's; finish by throwing your last tile.",
+      "Açtıktan sonra yeni perler aç, herkesin perine işle; son taşını atarak bit.",
+    ],
+    [
+      "A discard can be claimed out of turn, with a tile from the middle as a penalty; a tile thrown that fits a meld on the table can be caught, and its thrower pays 20.",
+      "Atılan taş sırası gelmeden istenebilir, ceza olarak ortadan bir taşla; yerdeki bir pere işleyen atılan taş yakalanabilir, atan 20 öder.",
+    ],
+    [
+      "Finishing scores −20, not opening 100, the rest their tiles (an okey 25); the okey thrown last doubles them. The lowest total after 13 hands wins.",
+      "Biten −20, açmayan 100, diğerleri taşlarını yazar (okey 25); son atılan okey bunları ikiye katlar. 13 elin sonunda en düşük toplam kazanır.",
+    ],
+    [
+      "11 hands. Open with sets and runs worth 101 or more at face value, or with five pairs.",
+      "11 el. Değeri 101 ya da daha fazla eden küt ve serilerle ya da beş çiftle aç.",
+    ],
+    [
+      "Before you open, take a discard only to open with it that turn; once open, take them as you like, and lay and add to melds.",
+      "Açmadan yandan taşı ancak onunla o tur açacaksan alabilirsin; açtıktan sonra istediğini al, per aç ve işle.",
+    ],
+    [
+      "Finishing scores −101, not opening 202, the rest their tiles (an okey 101); pairs and the okey thrown last double the scores. The lowest total after 11 hands wins.",
+      "Biten −101, açmayan 202, diğerleri taşlarını yazar (okey 101); çiftle bitmek ve son atılan okey puanları katlar. 11 elin sonunda en düşük toplam kazanır.",
+    ],
+  ].map(([en, tr]) => [exact(en), tr]),
   [/^Not your turn$/, "Sıra sende değil"],
   [/^Draw a tile first$/, "Önce taş çek"],
   [/^Can't draw more tiles$/, "Daha fazla taş çekemezsin"],
@@ -125,8 +285,8 @@ const TR = [
     "Herkes son atılan taşı sırası gelmeden alabilir, desteden bir taş daha alarak",
   ],
   [
-    /^A discard taken goes into a meld before that turn's discard, or back on its pile$/,
-    "Yandan alınan taş o tur atmadan önce işlenir, ya da geri bırakılır",
+    /^A discard taken before opening is opened with that turn, or goes back on its pile; once open, any can be taken$/,
+    "Açmadan yandan alınan taşla o tur açılır, ya da taş geri bırakılır; açtıktan sonra istenen alınır",
   ],
   [
     /^Lay more melds and add to the table on the turn you open$/,

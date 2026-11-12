@@ -1,0 +1,173 @@
+/* The back of the backgammon case (Board.jsx): eight by eight squares,
+   ash and walnut, framed in the case's wood, each player's side beside it:
+   right of the board and left for the one across (the screen held flat
+   between two), or below and above on a screen held upright. In --q, a
+   square. Names start with ck-, clear of Bootstrap 3's. */
+.ck-scene {
+  --q: min(100cqw / 14.4, 100cqh / 8.8);
+  display: grid;
+  grid-template-columns:
+    calc(var(--q) * 2.8) calc(var(--q) * 8.8)
+    calc(var(--q) * 2.8);
+  grid-template-rows: calc(var(--q) * 8.8);
+}
+
+@container (aspect-ratio < 1) {
+  .ck-scene {
+    --q: min(100cqw / 8.8, 100cqh / 14.4);
+    grid-template-columns: calc(var(--q) * 8.8);
+    grid-template-rows:
+      calc(var(--q) * 2.8) calc(var(--q) * 8.8)
+      calc(var(--q) * 2.8);
+  }
+}
+
+/* the case's walnut round the squares, as on its inside */
+.ck-board {
+  position: relative;
+  padding: calc(var(--q) * 0.4);
+  border-radius: calc(var(--q) * 0.12);
+  background: linear-gradient(160deg, #4d3226, #3b2419 50%, #2d1a11);
+  box-shadow:
+    inset calc(var(--q) * 0.03) calc(var(--q) * 0.04) calc(var(--q) * 0.03)
+      rgba(255, 220, 180, 0.25),
+    calc(var(--q) * 0.15) calc(var(--q) * 0.25) calc(var(--q) * 0.6)
+      rgba(0, 0, 0, 0.6);
+}
+
+/* the squares, and the backgammon checkers on them (--p, a square) */
+.ck-squares {
+  --p: var(--q);
+  position: relative;
+  width: calc(var(--q) * 8);
+  height: calc(var(--q) * 8);
+  isolation: isolate;
+}
+
+.ck-square {
+  position: absolute;
+  left: calc(var(--q) * var(--x));
+  top: calc(var(--q) * var(--y));
+  width: var(--q);
+  height: var(--q);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(135deg, #efe3cc, #e2d2b4);
+  box-shadow: none;
+}
+
+.ck-square.dark {
+  background: linear-gradient(135deg, #6e4b33, #5a3a26);
+}
+
+.ck-square:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+
+/* where the picked piece can go */
+.ck-square.target::after {
+  content: "";
+  position: absolute;
+  inset: 34%;
+  border: calc(var(--q) * 0.05) dashed #a87b00;
+  border-radius: 50%;
+  background: rgba(255, 213, 79, 0.7);
+}
+
+.ck-squares .bg-checker {
+  position: absolute;
+}
+
+/* a hop seen happen slides, over the pieces standing */
+.ck-board.sliding .bg-checker {
+  transition:
+    translate 0.35s cubic-bezier(0.3, 0.7, 0.4, 1),
+    scale 0.15s;
+}
+
+/* a king: a gold ring on its face */
+.ck-squares .bg-checker.king::after {
+  content: "";
+  width: 44%;
+  height: 44%;
+  border: calc(var(--p) * 0.07) solid #d9a520;
+  border-radius: 50%;
+  box-shadow: 0 0 calc(var(--p) * 0.06) rgba(0, 0, 0, 0.35);
+}
+
+/* once it's over, a tap on the board starts the next game */
+.ck-next {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.ck-next:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+
+/* a side: its word, the modes and Undo, as Go's (go.css) */
+.ck-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: calc(var(--q) * 0.3);
+  padding: calc(var(--q) * 0.3);
+  min-width: 0;
+}
+
+.ck-side.far {
+  flex-direction: column-reverse;
+}
+
+.ck-side.far.over {
+  flex-direction: column;
+}
+
+@container (aspect-ratio < 1) {
+  .ck-side {
+    flex-direction: row;
+  }
+
+  .ck-side.far {
+    flex-direction: row-reverse;
+  }
+
+  .ck-side.far.over {
+    flex-direction: row;
+  }
+}
+
+.ck-said {
+  margin: 0;
+  color: #fff;
+  font-size: max(calc(var(--q) * 0.36), 12px);
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.ck-side .tb-modes {
+  flex-direction: column;
+  font-size: max(calc(var(--q) * 0.3), 12px);
+}
+
+@container (aspect-ratio < 1) {
+  .ck-side .tb-modes {
+    flex-direction: row;
+  }
+}
+
+.ck-undo {
+  flex: none;
+  width: max(calc(var(--q) * 0.9), 32px);
+  height: max(calc(var(--q) * 0.9), 32px);
+}

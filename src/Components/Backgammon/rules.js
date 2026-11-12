@@ -68,7 +68,7 @@ function landing(checkers, seat, from, die) {
   return OFF;
 }
 
-function apply(checkers, seat, { from, to }) {
+export function apply(checkers, seat, { from, to }) {
   const next = [[...checkers[0]], [...checkers[1]]];
   const mine = next[seat];
   const theirs = next[1 - seat];
@@ -125,7 +125,7 @@ function sequences(checkers, seat, dice) {
 
 // the turn's legal sequences, worked out once for each state
 const known = new WeakMap();
-function plays(state) {
+export function plays(state) {
   if (!known.has(state)) {
     known.set(
       state,
@@ -244,7 +244,8 @@ export function move(state, seat, from, to) {
     checkers,
     left: remove(state.left, steps),
     undo: [...state.undo, before],
-    last: { n: state.last.n + 1, kind: "move" },
+    // the steps it took, a die each (Board.jsx stops on each)
+    last: { n: state.last.n + 1, kind: "move", steps },
   };
   if (checkers[seat][OFF] === 15) {
     // mars: the other has borne nothing off, and it counts two

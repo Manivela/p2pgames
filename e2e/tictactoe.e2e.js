@@ -1,5 +1,16 @@
 import { expect, test } from "@playwright/test";
-import { NET, NEXT, bothSides, moving, room, sitDown } from "./seats";
+import {
+  NET,
+  BOT,
+  NEXT,
+  SIT,
+  againstBot,
+  enter,
+  bothSides,
+  moving,
+  room,
+  sitDown,
+} from "./seats";
 
 // Tic-tac-toe at the table: two browsers, or one device playing both
 // sides. Its state through the dev-only window.tictactoe.
@@ -145,4 +156,82 @@ test("Super picked before the other sits: both sheets Super", async ({
   }
   await o.reload();
   await expect(o.locator(".tt-grid .fine")).toHaveCount(36, NET);
+});
+
+test("a bot answers each mark, played on when its page goes, its seat anyone's", async ({
+  browser,
+}, info) => {
+  const at = room("ttt");
+  const page = await againstBot(browser, info, at, "tictactoe");
+  await expect(page.locator(".tb-plate .name").first()).toHaveText("Bot");
+  const marks = async (p = page) =>
+    (await game(p))?.cells.filter((c) => c !== null).length;
+  await expect.poll(async () => (await game(page))?.turn, NET).toBe(0);
+  await cell(page, 4).click();
+  await expect.poll(() => marks()).toBe(2);
+  expect((await game(page)).turn).toBe(0);
+  // Bora comes to watch (the game kept while Ayşe's page reloads); the
+  // page that seated the bot gone, one still here plays it
+  const bora = await enter(browser, info, at, "tictactoe", "Bora");
+  await expect.poll(() => marks(bora), NET).toBe(2);
+  await page.reload();
+  await expect.poll(async () => (await game(page))?.turn, NET).toBe(0);
+  const free = (await game(page)).cells.findIndex((c) => c === null);
+  await cell(page, free).click();
+  await expect.poll(() => marks(), NET).toBe(4);
+  // Bora takes the bot's seat, the game theirs to play on
+  await bora.getByRole("button", { name: SIT }).click();
+  await expect(page.locator(".tb-plate .name").first()).toHaveText("Bora", NET);
+  expect(await marks()).toBe(4);
+});
+
+test("two bots play each other for whoever's watching", async ({
+  browser,
+}, info) => {
+  const page = await enter(browser, info, room("ttt"), "tictactoe", "Can");
+  await page.evaluate(() => sessionStorage.setItem("botPace", "50"));
+  await page.getByRole("button", { name: BOT }).first().click();
+  await page.getByRole("button", { name: BOT }).click();
+  // each a bot, with the Sit that takes it over
+  await expect(page.locator(".tb-plate .name")).toHaveText(["Bot", "Bot"]);
+  await expect(
+    page.locator(".tb-plate").getByRole("button", { name: SIT }),
+  ).toHaveCount(2);
+
+  // dealt and played to the end; the next game theirs to start
+  await expect.poll(async () => (await game(page))?.turn, NET).toBe(null);
+  // a win named by its side
+  await expect(page.locator(".tt-margin p")).toHaveText(
+    /^([XO] (wins!|kazandı!)|Draw|Berabere)$/,
+  );
+  const sheet = (await game(page)).sheet;
+  await page.getByRole("button", { name: NEXT }).click();
+  await expect
+    .poll(async () => (await game(page)).sheet)
+    .toBeGreaterThan(sheet);
+});
+
+test("a bot plays on when its page goes to another game in the room", async ({
+  browser,
+}, info) => {
+  const at = room("ttt");
+  const page = await againstBot(browser, info, at, "tictactoe");
+  // slow, so it hasn't answered before Ayşe leaves
+  await page.evaluate(() => sessionStorage.setItem("botPace", "3000"));
+  const bora = await enter(browser, info, at, "tictactoe", "Bora");
+  await expect.poll(async () => (await game(bora))?.turn, NET).toBe(0);
+  await cell(page, 4).click();
+  // Ayşe goes to the Okey table, the page still in the room
+  await page.evaluate(() => {
+    history.pushState(null, "", location.pathname.replace("tictactoe", "okey"));
+    dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(page.locator(".tt-sheet")).toHaveCount(0);
+  // the bot answers all the same, played by Bora's page
+  await expect
+    .poll(
+      async () => (await game(bora))?.cells.filter((c) => c !== null).length,
+      NET,
+    )
+    .toBe(2);
 });

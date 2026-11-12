@@ -22,6 +22,8 @@
 
 /* the case: walnut, its rim catching the light, its shadow on the table */
 .bg-board {
+  /* its checkers' z-indexes its own: the dice fly over all of it */
+  isolation: isolate;
   border-radius: calc(var(--p) * 0.12);
   background:
     var(--grain), linear-gradient(160deg, #4d3226, #3b2419 50%, #2d1a11);
@@ -317,6 +319,7 @@
 
 /* where the picked checker can go, with what it takes: 2, 3 or 5 */
 .bg-mark {
+  z-index: 30;
   display: grid;
   place-items: center;
   width: calc(var(--p) * 0.92);
@@ -336,6 +339,7 @@
 
 /* beside the dice, always in the same place */
 .bg-undo {
+  z-index: 30;
   translate: -50% -50%;
   width: calc(var(--p) * 0.85);
   height: calc(var(--p) * 0.85);
@@ -343,6 +347,7 @@
 
 /* a word, between the rows of the left half */
 .bg-status {
+  z-index: 30;
   display: grid;
   place-items: center;
   width: calc(var(--p) * var(--w));
@@ -351,6 +356,19 @@
   font-weight: 700;
   text-align: center;
   pointer-events: none;
+}
+
+/* the game to play, a row of choices across the half (Board.jsx) */
+.bg-picker {
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: calc(var(--p) * var(--w));
+  height: calc(var(--p) * 1.4);
+}
+
+.bg-picker .tb-modes {
+  font-size: max(calc(var(--p) * 0.3), 12px);
 }
 
 /* who won, big enough on a phone */

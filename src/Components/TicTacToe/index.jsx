@@ -2,11 +2,12 @@ import useSound from "use-sound";
 import { useVolume } from "../../hooks/useStore";
 import { Table, useHeard, useTable } from "../Table";
 import Sheet, { Glyph } from "./Sheet";
+import bot from "./bot";
 import { newGame } from "./rules";
 import pen from "./assets/pen.mp3";
 import "./tictactoe.css";
 
-// the ways to play, chosen in ⋯ (Table)
+// the ways to play, chosen on the sheet (Table's Modes)
 const MODES = {
   label: "Game",
   list: [
@@ -50,7 +51,7 @@ function usePen(game) {
 }
 
 export default function TicTacToe() {
-  const table = useTable("tictactoe", newGame, ["X", "O"], MODES);
+  const table = useTable("tictactoe", newGame, ["X", "O"], MODES, bot);
   usePen(table.game);
   // the sheet before a game: empty, the game chosen, no one's turn
   const blank = { ...newGame(null, [], table.mode), turn: null };
