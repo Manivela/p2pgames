@@ -102,13 +102,12 @@ export default function Root() {
   // the menu, from the button in the corner: opened afresh each time
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  // the game's How to play, from ? in the corner (the Okey table's is in
-  // its ⋯: its corner has room for two)
+  // the game's How to play, from ? (at a table, beside its ⋯: index.css)
   const [game] = useRoomGame();
   const Game = GAMES[game];
   const [help, setHelp] = useState(false);
   const playing = usePlaying((s) => s.mode);
-  const helps = game in RULES && game !== "okey";
+  const helps = game in RULES;
   // nothing to pick, nor a game shown, till the room's is known: someone
   // joining would see Okey first, or take the room there
   if (!useKnown()) return <Awareness />;

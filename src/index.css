@@ -143,6 +143,47 @@ form[action$="destroy"] button {
   line-height: 1;
 }
 
+/* At every table the same: the site's buttons in the bottom left corner,
+   the game's in the bottom right, ? beside its ⋯; each table keeps the
+   two corners free (Okey's rack.css, the others' table.css). The table's
+   buttons are dark see-through pills, those in the corners circles, a
+   little smaller: two side by side fit beside Okey's rack on a phone */
+#root:has(.fit, .tb-fit) .corner {
+  gap: calc(var(--t) * 0.1);
+}
+
+#root:has(.fit, .tb-fit) .corner .help-toggle {
+  position: fixed;
+  right: calc(var(--t) * 0.88);
+  bottom: calc(var(--t) * 0.14);
+}
+
+/* (not a bot's avatar as Sit: it stays an avatar) */
+.board button:not(:where(.menu, .dialog) button, :where(.avatar)),
+.scores > summary,
+#root:has(.fit, .tb-fit) .corner button,
+.tb-menu > .dots {
+  border: none;
+  border-radius: 999px;
+  font-size: calc(var(--t) * 0.3);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.38);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+#root:has(.fit, .tb-fit) .corner button,
+.tb-menu > .dots,
+.foot > .controls :is(summary, .dots) {
+  width: calc(var(--t) * 0.64);
+  height: calc(var(--t) * 0.64);
+  padding: 0;
+}
+
 /* How to play (HowToPlay.jsx): a card over the game, a tap outside or ×
    closes it */
 .how-to {

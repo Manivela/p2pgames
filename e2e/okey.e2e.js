@@ -264,6 +264,93 @@ test("a discard that fits waits the others' time to catch it, then comes", async
   await expect(slot(page, free)).not.toHaveClass(/ghost/);
 });
 
+// Space catches the latest discard, as Catch does
+test("Space catches the latest discard", async ({ page }, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "toMyTurn", false);
+  await page.evaluate(() =>
+    window.okey.set({ ...window.okey.get(), discardFits: true }),
+  );
+  const top = (await state(page)).players[3].discardPile.at(-1).id;
+  await expect(page.locator(".foot .catch")).toBeVisible();
+  // and doesn't press the button last tapped as well
+  const elAc = page.locator("button[aria-pressed]");
+  await elAc.focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator(".foot .catch")).toHaveCount(0);
+  expect((await state(page)).players[0].caught).toEqual([top]);
+  await expect(elAc).toHaveAttribute("aria-pressed", "false");
+});
+
+// ? beside ⋯, as at every table, opens How to play for the game played
+test("? beside the table menu opens how to play", async ({ page }) => {
+  await sitDown(page);
+  await stages[101](page);
+  await page
+    .getByRole("button", { name: /^(How to play|Nasıl oynanır)$/ })
+    .click();
+  await expect(page.locator(".how-to h2")).toHaveText("101");
+});
+
+// Take, for whom a drag is hard: on my turn it takes the previous discard
+// as a drag to my rack does, waiting out the others' time to catch it,
+// Cancel meanwhile
+test("Take on my turn waits out the time to catch it, Cancel meanwhile", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "toMyTurn", false);
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    const rules = { ...s.rules, catchWaitSeconds: 60 };
+    window.okey.set({ ...s, discardFits: true, rules });
+  });
+  const top = (await state(page)).players[3].discardPile.at(-1).id;
+  const take = page.locator(".foot .take");
+  await take.click();
+  await expect(take).toHaveText(/^(Cancel|Vazgeç)$/);
+  await expect(page.locator(".rack .ghost")).toHaveCount(1);
+  await take.click();
+  await expect(take).toHaveText(/(Take|Al)$/);
+  await expect(page.locator(".rack .ghost")).toHaveCount(0);
+  expect((await state(page)).drawn).toBeFalsy();
+  await take.click();
+  await expect(take).toHaveText(/^(Cancel|Vazgeç)$/);
+  // the wait over, it comes
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    window.okey.set({ ...s, rules: { ...s.rules, catchWaitSeconds: 0 } });
+  });
+  await expect.poll(async () => (await handIds(page)).includes(top)).toBe(true);
+  await expect(take).toHaveCount(0);
+});
+
+// out of turn it claims the discard on offer, a ghost on my rack, and
+// Cancel takes the claim back; Space doesn't press it again
+test("Take claims the discard out of turn, Cancel takes it back", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora: Bora's discard is up
+  const take = page.locator(".foot .take");
+  await take.click();
+  await expect(take).toHaveText(/^(Cancel|Vazgeç)$/);
+  await expect(page.locator(".rack .ghost")).toHaveCount(1);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  await page.keyboard.press("Space");
+  expect((await state(page)).players[0].claim).toBeTruthy();
+  await take.click();
+  await expect(take).toHaveText(/(Take|Al)$/);
+  await expect(page.locator(".rack .ghost")).toHaveCount(0);
+  expect((await state(page)).players[0].claim).toBeFalsy();
+});
+
 // changed your mind: the waiting draw's ghost goes round the rack, and let
 // go anywhere off it, nothing is drawn
 test("a draw waiting the others' time is undone by dragging it off the rack", async ({

@@ -8,6 +8,7 @@ import {
   canPeek as peekable,
   catchDiscard,
   claimDiscard,
+  drawTile as drawRule,
   returnDiscard,
   cantCatch,
   discardWait,
@@ -354,6 +355,17 @@ function Hands({ players }) {
   );
 }
 
+// where Take puts a tile: the last free slot with nothing beside it, so it
+// joins none of the groups on the rack, else the last free one
+function freeSlot(hand, width) {
+  const clear = (i) =>
+    !hand[i] &&
+    (i % width === 0 || !hand[i - 1]) &&
+    ((i + 1) % width === 0 || !hand[i + 1]);
+  const i = hand.findLastIndex((_, i) => clear(i));
+  return i >= 0 ? i : hand.lastIndexOf(null);
+}
+
 // A player's discard pile, between them and the next player, who may take
 // its top tile; anyone else can catch the latest discard
 export function DiscardPile({ player, small }) {
@@ -365,7 +377,10 @@ export function DiscardPile({ player, small }) {
     discardTile,
     act,
     held,
+    heldDraw,
+    unhold,
     myHand,
+    drawTile,
   } = useContext(OkeyContext);
   function onDiscard(tile, index) {
     const took = okeyState.tookDiscard;
@@ -395,6 +410,46 @@ export function DiscardPile({ player, small }) {
   // meld is for them to see.
   const latest = okeyState.lastDiscard;
   const canCatch = !small && player !== me && me && !cantCatch(okeyState, me);
+  // Space presses it, from anywhere but a text field
+  useEffect(() => {
+    if (!canCatch) return;
+    const onKey = (e) => {
+      if (e.code !== "Space" || e.repeat) return;
+      if (e.target.closest?.("input, textarea, select, [contenteditable]"))
+        return;
+      e.preventDefault(); // nor scrolls, nor presses a focused button
+      act(catchDiscard, me);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [canCatch, act, me]);
+  // Take, under it: the discard onto your rack, as dragging it there does
+  // (Rack's onDrop), for whom a drag is hard. On your turn the previous
+  // discard, waiting out the others' time to catch it; out of turn the one
+  // on offer, claimed (outOfTurnTakes). Only when the rule would let it.
+  // While it waits, a ghost on the rack, it's Cancel, as dragging the
+  // ghost off is.
+  const offer = upForClaim(okeyState);
+  const claimed =
+    offer && okeyState.players.find((p) => p.id === me)?.claim?.id === offer.id;
+  const slot = me ? freeSlot(myHand(me), rowOf(okeyState, me)) : -1;
+  const lets = (s) => s && typeof s !== "string";
+  function takeButton() {
+    if (small || player === me || !me) return null;
+    if (heldDraw?.tile.source === `discard-${player}`)
+      return { cancel: unhold };
+    if (claimed) return { cancel: () => act(claimDiscard, me, null) };
+    if (heldDraw || slot < 0) return null;
+    if (isMyTurn()) {
+      return top && lets(drawRule(okeyState, me, top, slot))
+        ? { tile: top.id, press: () => drawTile(me, top, slot) }
+        : null;
+    }
+    return offer && lets(claimDiscard(okeyState, me, slot))
+      ? { tile: offer.tileId, press: () => act(claimDiscard, me, slot) }
+      : null;
+  }
+  const take = takeButton();
   return (
     <div
       ref={pileRef}
@@ -431,6 +486,25 @@ export function DiscardPile({ player, small }) {
           {/* which tile: it may lie on another pile */}
           <TileFace id={latest} />
           {t("Catch")}
+        </button>
+      )}
+      {take && (
+        <button
+          className="take"
+          onClick={(e) => {
+            // or Space, meant to catch, would press it again
+            e.currentTarget.blur();
+            (take.cancel ?? take.press)();
+          }}
+        >
+          {take.cancel ? (
+            t("Cancel")
+          ) : (
+            <>
+              <TileFace id={take.tile} />
+              {t("Take")}
+            </>
+          )}
         </button>
       )}
     </div>

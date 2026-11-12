@@ -224,6 +224,7 @@ const SEL = [
   ".corner button",
   ".table-menu",
   ".discardPile .catch",
+  ".discardPile .take",
 ];
 
 const label = (e) =>

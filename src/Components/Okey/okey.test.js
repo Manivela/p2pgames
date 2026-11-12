@@ -887,17 +887,17 @@ test("the next player takes the discard once the others had time to catch it", (
   s = { ...s, discardFits: true };
   // the ruleset's seconds, from the turn reaching them
   assert.equal(wait(s, false, turn, turn), AMERICANO.catchWaitSeconds);
-  assert.equal(wait(s, false, turn + 500, turn), 5.5);
-  assert.equal(wait(s, false, turn + 6000, turn), 0);
+  assert.equal(wait(s, false, turn + 500, turn), 2.5);
+  assert.equal(wait(s, false, turn + 3000, turn), 0);
   const five = { ...s.rules, catchWaitSeconds: 5 };
   assert.equal(wait({ ...s, rules: five }, false, turn, turn), 5);
   // a draw from the pile leaves it to catch, unless that ends the catching
   assert.equal(wait(s, true, turn, turn), 0);
   const until = { ...s.rules, catchUntilDraw: true };
-  assert.equal(wait({ ...s, rules: until }, true, turn, turn), 6);
+  assert.equal(wait({ ...s, rules: until }, true, turn, turn), 3);
   // and so does any tile drawn, by where it's drawn from
   const [top, pile] = [player(s, 1).discardPile.at(-1), s.drawPile.at(-1)];
-  assert.equal(okey.waitBefore(s, 2, top, turn, turn), 6);
+  assert.equal(okey.waitBefore(s, 2, top, turn, turn), 3);
   assert.equal(okey.waitBefore(s, 2, pile, turn, turn), 0);
   // not someone else's turn; nor caught already, nor only bots to catch it
   assert.equal(okey.catchWait(s, 3, false, turn, turn), 0);

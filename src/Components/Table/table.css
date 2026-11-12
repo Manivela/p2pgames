@@ -20,38 +20,18 @@ html:has(.tb-fit) {
   --t: clamp(40px, min(100dvh, 100dvw) / 7.4, 70px);
 }
 
-/* the site's menu and fullscreen buttons bottom left and ⋯ bottom right,
-   dark see-through circles: where they are at the Okey table and as they
-   look there (rack.css) */
+/* the site's buttons bottom left, the game's (? and ⋯) bottom right, as
+   at every table (index.css) */
 #root:has(.tb-fit) .corner {
   top: auto;
   bottom: calc(var(--t) * 0.14);
-  gap: calc(var(--t) * 0.1);
-}
-
-#root:has(.tb-fit) .corner button,
-.tb-menu > .dots {
-  width: calc(var(--t) * 0.64);
-  height: calc(var(--t) * 0.64);
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  font-size: calc(var(--t) * 0.3);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.38);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
 }
 
 .tb-fit {
   height: 100%;
   display: grid;
-  /* the players, the board, and room for ⋯ in the corner */
-  grid-template-columns: auto minmax(0, 1fr) calc(var(--t) * 0.92);
+  /* the players, the board, and room for ? and ⋯ in the corner */
+  grid-template-columns: auto minmax(0, 1fr) calc(var(--t) * 1.66);
   color: #fff;
   -webkit-user-select: none;
   user-select: none;

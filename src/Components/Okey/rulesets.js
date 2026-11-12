@@ -150,6 +150,7 @@ export const AMERICANO = {
     { name: "Elden", melds: null },
   ],
   outOfTurnTakes: true, // anyone may claim the discard (maxTakes a round)
+  catchWaitSeconds: 3, // the user's call
   swapOkeys: true, // a table okey can be traded for the tile it stands for
   // from this round on, before opening too
   okeySwapFromRound: 6,

@@ -8,7 +8,6 @@ import { allRulesets } from "./rulesets";
 import { TableSettings } from "./GameSettings";
 import { t } from "../../i18n";
 import { Confirm } from "../Confirm";
-import HowToPlay, { okeyKind } from "../HowToPlay";
 
 export { Confirm };
 
@@ -452,7 +451,6 @@ export default function TableMenu() {
             ))}
           </div>
           <div className="group">
-            <button onClick={() => show("how")}>{t("How to play")}</button>
             <button onClick={() => show("load")}>{t("Saved games")}</button>
             <button onClick={() => show("setup")}>{t("Set up a game")}</button>
             {/* the game's rules, those it reads as it's played (the lobby has ⚙) */}
@@ -505,14 +503,6 @@ export default function TableMenu() {
       {dialog === "load" && <LoadDialog onClose={() => setDialog(null)} />}
       {dialog === "setup" && <SetUpDialog onClose={() => setDialog(null)} />}
       {dialog === "rules" && <TableSettings onClose={() => setDialog(null)} />}
-      {dialog === "how" && (
-        <HowToPlay
-          game="okey"
-          // the game's rules, or in the lobby the ones picked
-          mode={okeyKind(okeyState.rules ?? okeyState.setup)}
-          onClose={() => setDialog(null)}
-        />
-      )}
     </div>
   );
 }

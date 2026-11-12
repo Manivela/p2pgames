@@ -80,7 +80,7 @@ html:has(.fit) {
 }
 
 /* on its left a newer version to reload for, over the draw pile when it's
-   aside */
+   aside; the pile clear of Take, which rises out of the row below */
 .middle > .left {
   grid-column: 1;
   display: flex;
@@ -88,11 +88,12 @@ html:has(.fit) {
   align-items: flex-start;
   gap: calc(var(--t) * 0.2);
   min-height: 0;
+  padding-bottom: calc(var(--t) * 0.6);
 }
 
 /* the site's menu and fullscreen buttons (index.css) go in the corner left
-   of your rack, under its pile and Catch; the score sheet and the table
-   menu in the right one */
+   of your rack, under its pile and Catch; the score sheet, How to play and
+   the table menu in the right one */
 .foot > .corner-room {
   position: absolute;
   left: 0;
@@ -994,37 +995,11 @@ html:has(.fit) {
     0 0 14px 4px rgba(255, 213, 79, 0.9);
 }
 
-/* table buttons, and the site's corner ones over the table: dark
-   see-through pills (not a bot's avatar as Sit: it stays an avatar) */
+/* the table's buttons, dark see-through pills as every table's (index.css) */
 .board button:not(:where(.menu, .dialog) button, :where(.avatar)),
-.scores > summary,
-#root:has(.fit) .corner button {
+.scores > summary {
   height: calc(var(--t) * 0.7);
   padding: 0 calc(var(--t) * 0.3);
-  border: none;
-  border-radius: 999px;
-  font-size: calc(var(--t) * 0.3);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.38);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
-
-/* the corners' round icons, a little smaller than the table's buttons: two
-   side by side fit beside the rack on a phone */
-#root:has(.fit) .corner {
-  gap: calc(var(--t) * 0.1);
-}
-
-#root:has(.fit) .corner button,
-.foot > .controls :is(summary, .dots) {
-  width: calc(var(--t) * 0.64);
-  height: calc(var(--t) * 0.64);
-  padding: 0;
 }
 
 /* the score sheet's, an icon (a podium) */
@@ -1106,8 +1081,9 @@ html:has(.fit) {
   margin: 0 0.3em 0 0;
 }
 
-/* Catch (Yakala) under the pile left of your rack (Rack.jsx), in amber */
-.board .discardPile .catch {
+/* Catch (Yakala) under the pile left of your rack (Rack.jsx), in amber,
+   and Take (Al) above it: under Catch are the site's corner buttons */
+.board .discardPile :is(.catch, .take) {
   --mini-t: calc(var(--t) * 0.36);
   position: absolute;
   z-index: 5;
@@ -1120,12 +1096,20 @@ html:has(.fit) {
   padding: 0 calc(var(--t) * 0.1);
   border-radius: calc(var(--t) * 0.12);
   font-size: calc(var(--t) * 0.27);
+}
+
+.board .discardPile .catch {
   background: #ffb300;
   color: #3a2600;
 }
 
-/* the tile it catches, small, as it may lie on another pile */
-.board .discardPile .catch .tile {
+.board .discardPile .take {
+  top: auto;
+  bottom: calc(100% + var(--t) * 0.3);
+}
+
+/* the tile it catches or takes, small, as it may lie on another pile */
+.board .discardPile :is(.catch, .take) .tile {
   --t: var(--mini-t);
   flex: none;
 }
