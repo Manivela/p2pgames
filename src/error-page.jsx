@@ -12,7 +12,8 @@ export default function ErrorPage() {
     }
   }, [error]);
 
-  if (!error) {
+  // a route that doesn't exist reaches here as a 404 response, not as no error
+  if (!error || error.status === 404) {
     return (
       <div id="error-page">
         <h1>404</h1>
