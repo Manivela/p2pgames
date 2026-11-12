@@ -1104,7 +1104,7 @@ test("the last tile is thrown to the middle to finish", async ({
   page,
 }, info) => {
   anySize(info);
-  await sitDown(page);
+  const room = await sitDown(page);
   await table(page, "start", 4);
   await table(page, "toMyTurn");
   await table(page, "openKut");
@@ -1143,6 +1143,47 @@ test("the last tile is thrown to the middle to finish", async ({
   await expect(page.locator(".melds .tile.marked")).toHaveCount(3);
   await expect(page.locator(".draw .thrown")).toHaveAttribute("data-mark", "2");
   await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(3);
+  // applauded once; not by a page that comes to the round over
+  expect(await page.evaluate(() => window.okeyApplause)).toEqual(["round"]);
+  const other = await secondPlayer(page, room);
+  await expect
+    .poll(async () => (await state(other)).gameState, NET)
+    .toBe("roundEnd");
+  expect(await other.evaluate(() => window.okeyApplause)).toBeUndefined();
+});
+
+test("the last round finished ends the game: the long applause only", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  // a game of this one round, everything else laid down: one tile left
+  const last = await page.evaluate(() => {
+    const s = window.okey.get();
+    const hand = s.players[0].hand;
+    const tile = hand.findLast(Boolean);
+    window.okey.set({
+      ...s,
+      justOpened: null,
+      rules: { ...s.rules, rounds: s.rules.rounds.slice(0, 1) },
+      players: s.players.map((p) =>
+        p.id === 1
+          ? { ...p, hand: hand.map((t) => (t === tile ? t : null)) }
+          : p,
+      ),
+    });
+    return hand.indexOf(tile);
+  });
+  await drag(
+    page,
+    slot(page, last).locator(".tile"),
+    page.locator(".draw .stack"),
+  );
+  await expect.poll(async () => (await state(page)).gameState).toBe("finish");
+  expect(await page.evaluate(() => window.okeyApplause)).toEqual(["game"]);
 });
 
 test("picked tiles move together", async ({ page }, info) => {

@@ -11,6 +11,8 @@ import { readState, replaceState, wentBack, writeState } from "./sync";
 import { t } from "../../i18n";
 import bell from "./assets/bell.mp3";
 import tile1 from "./assets/tile-1.mp3";
+import finished from "./assets/finish.mp3";
+import won from "./assets/won.mp3";
 import { signalingServers, peerOpts } from "../../constants";
 import { BUILD, useSiteBuild } from "../../version";
 import { panOf, playKnock } from "./knock";
@@ -65,6 +67,8 @@ export function OkeyProvider({ children }) {
   const { volume, setVolume } = useVolume();
   const [playBellSound] = useSound(bell, { volume: 0.1 * volume });
   const [playTile1Sound] = useSound(tile1, { volume: 0.5 * volume });
+  const [playFinished] = useSound(finished, { volume: 0.5 * volume });
+  const [playWon] = useSound(won, { volume: 0.5 * volume });
   // a new level clicks at itself, to be heard as it's set (not on load)
   const level = React.useRef(volume);
   React.useEffect(() => {
@@ -220,6 +224,28 @@ export function OkeyProvider({ children }) {
     playBellSound,
     playTile1Sound,
   ]);
+
+  // someone finishing the round, their last tile in the middle: a few at
+  // the table clapping (finish.mp3: Pixabay's "Small group applause", its
+  // first 2 s faded out); the game over, finished or not, the same
+  // applause for longer instead (won.mp3: its first 6 s). Heard by everyone
+  // who saw the round played, not by a page come to it over. Dev-only
+  // window.okeyApplause lists them ("round", "game").
+  const finishTile = okeyState.finishTile?.id;
+  const over = okeyState.gameState === "finish";
+  const sawPlay = React.useRef(false);
+  React.useEffect(() => {
+    if (okeyState.gameState === "play" && !finishTile) sawPlay.current = true;
+    else if ((finishTile || over) && sawPlay.current) {
+      sawPlay.current = false;
+      (over ? playWon : playFinished)();
+      if (import.meta.env.DEV)
+        window.okeyApplause = [
+          ...(window.okeyApplause ?? []),
+          over ? "game" : "round",
+        ];
+    }
+  }, [okeyState.gameState, finishTile, over, playFinished, playWon]);
 
   const isMyTurn = useCallback(
     () => okeyState.currentPlayer === me,
