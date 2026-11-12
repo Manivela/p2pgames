@@ -67,7 +67,7 @@ const tile = (
     </text>
   </>
 );
-const PLAYS = [
+export const PLAYS = [
   {
     game: "tictactoe",
     mode: "classic",

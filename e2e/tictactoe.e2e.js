@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   NET,
   BOT,
+  MENU,
   IN_PLAY,
   NEXT,
   SIT,
@@ -21,6 +22,8 @@ const game = (page) => page.evaluate(() => window.tictactoe?.get());
 const cell = (page, i) => page.locator(`[data-cell="${i}"]`);
 const SUPER = /^(Tic-tac-toe Super|XOX Süper)$/;
 const CLASSIC = /^(Tic-tac-toe Classic|XOX Klasik)$/;
+const NEW_GAME = /^(New Game|Yeni oyun)$/;
+const SAVED = /^(Saved games|Kayıtlı oyunlar)$/;
 
 async function twoPlayers(browser, info) {
   const at = room("ttt");
@@ -214,4 +217,48 @@ test("two bots play each other for whoever's watching", async ({
   await expect
     .poll(async () => (await game(page)).sheet)
     .toBeGreaterThan(sheet);
+});
+
+test("a game kept on this device comes back to the table", async ({
+  browser,
+}, info) => {
+  const page = await sitDown(
+    browser,
+    info,
+    room("ttt"),
+    "tictactoe",
+    "Ayşe",
+    0,
+  );
+  await bothSides(page);
+  await expect.poll(async () => (await game(page))?.turn, NET).toBe(0);
+  await cell(page, 4).click();
+  await cell(page, 0).click();
+  const before = await game(page);
+  // kept a second after the last mark: probed often
+  const kept = () =>
+    page.evaluate(() =>
+      JSON.parse(localStorage.getItem("tictactoe-save") ?? "[]").map(
+        (s) => s.game,
+      ),
+    );
+  await expect.poll(kept, { intervals: [100] }).toEqual([before.id]);
+
+  // a new game in its place, nobody's played in yet: not kept over it
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: NEW_GAME }).click();
+  await page.locator(".tb-menu button.armed").click();
+  await expect.poll(async () => (await game(page)).id).not.toBe(before.id);
+  await expect(page.locator(".tt-ink")).toHaveCount(0);
+  await page.waitForTimeout(1500);
+  expect(await kept()).toEqual([before.id]);
+
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: SAVED }).click();
+  await expect(page.locator(".saves > li")).toHaveCount(1);
+  await page.locator(".saves button").click();
+  await page.locator(".dialog button.armed").click();
+  await expect.poll(async () => (await game(page)).id).toBe(before.id);
+  expect((await game(page)).cells).toEqual(before.cells);
+  await expect(page.locator(".tt-ink")).toHaveCount(2);
 });

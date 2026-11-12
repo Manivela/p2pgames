@@ -1155,8 +1155,7 @@ html:has(.fit) {
 }
 
 .scores .sheet,
-.table-menu .menu,
-.dialog {
+.table-menu .menu {
   border-radius: 8px;
   background-color: #fff;
   color: #222;
@@ -1326,79 +1325,14 @@ html:has(.fit) {
 }
 
 /* a second tap confirms */
-:is(.table-menu, .dialog) button.armed {
+.table-menu button.armed {
   background-color: #e53935;
   color: #fff;
 }
 
 /* Bootstrap 3 (index.html) sets the root font to 10px, so 1rem is tiny */
-.table-menu .menu button,
-.dialog :is(button, input, select, textarea) {
+.table-menu .menu button {
   font-size: 15px;
-}
-
-.dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  /* over the site's corner buttons (index.css), from the settings on body */
-  z-index: 202;
-  display: grid;
-  place-items: center;
-  background-color: rgba(0, 0, 0, 0.4);
-}
-
-.dialog {
-  position: relative;
-  width: min(460px, 92vw);
-  max-height: 90vh;
-  overflow: auto;
-  padding: 12px 16px;
-  font-size: 14px;
-  white-space: normal;
-}
-
-.dialog h3 {
-  margin: 0 32px 8px 0;
-}
-
-.dialog h4 {
-  margin: 12px 0 4px;
-}
-
-.dialog .close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
-
-.dialog textarea {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.dialog .saves {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dialog .saves button {
-  width: 100%;
-  text-align: left;
-}
-
-.dialog .saves small {
-  display: block;
-  opacity: 0.7;
-}
-
-.dialog .seats {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  font-size: 12px;
 }
 
 .dialog .round-pick {

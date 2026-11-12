@@ -1,0 +1,91 @@
+/* A dialog over the table (Saves.jsx): Okey's settings and set-up, every
+   game's saved games */
+
+.dialog {
+  border-radius: 8px;
+  background-color: #fff;
+  color: #222;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* a second tap confirms */
+.dialog button.armed {
+  background-color: #e53935;
+  color: #fff;
+}
+
+/* Bootstrap 3 (index.html) sets the root font to 10px, so 1rem is tiny */
+.dialog :is(button, input, select, textarea) {
+  font-size: 15px;
+}
+
+/* what's typed in stays selectable on a table that isn't: a pasted save
+   code, a total */
+.dialog :is(input, textarea) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  /* over the site's corner buttons (index.css), from the settings on body */
+  z-index: 202;
+  display: grid;
+  place-items: center;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.dialog {
+  position: relative;
+  width: min(460px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 12px 16px;
+  font-size: 14px;
+  white-space: normal;
+}
+
+.dialog h3 {
+  margin: 0 32px 8px 0;
+}
+
+.dialog h4 {
+  margin: 12px 0 4px;
+}
+
+.dialog .close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dialog .saves {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dialog .saves button {
+  width: 100%;
+  text-align: left;
+}
+
+.dialog .saves small {
+  display: block;
+  opacity: 0.7;
+}
+
+.dialog .seats {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+}

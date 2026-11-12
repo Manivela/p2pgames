@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import useSound from "use-sound";
 import { toast } from "react-hot-toast";
@@ -7,6 +7,9 @@ import { useAuthStore, useFacing, useVolume } from "../../hooks/useStore";
 import { signalingServers, peerOpts } from "../../constants";
 import { Confirm } from "../Confirm";
 import { usePlaying } from "../HowToPlay";
+import { PLAYS } from "../Menu";
+import { SavedGames, useAutoSave } from "../Saves";
+import { decodeSave } from "../saveCode";
 import { t } from "../../i18n";
 import tok from "./assets/tok.mp3";
 import "./table.css";
@@ -25,7 +28,8 @@ import "./table.css";
 // by anyone while nobody sits: before a player's first move (`touched`),
 // it deals again; once a game's over, the next one.
 // `bot`: the game's, { play(state, seat): its move, the next state;
-// wait(state): ms before it, 900 when not given }.
+// wait(state): ms before it, 900 when not given }. Each game dealt has an
+// `id`, as it's kept on the device (Saves.jsx).
 export function useTable(name, newGame, sides, first, bot) {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, { signaling: signalingServers, peerOpts });
@@ -57,7 +61,11 @@ export function useTable(name, newGame, sides, first, bot) {
 
   const sit = (i) => map.set(`seat-${i}`, currentUser);
   const mode = map.get("mode") ?? first;
-  const deal = (m = mode) => map.set("game", newGame(game, ids, m));
+  const deal = (m = mode) =>
+    map.set("game", {
+      ...newGame(game, ids, m),
+      id: Math.random().toString(36).slice(2),
+    });
   // with nobody seated, a game left on the board goes with it
   const empty = !seats.some(Boolean);
   const canMode = (hosts && idle) || empty;
@@ -108,7 +116,49 @@ export function useTable(name, newGame, sides, first, bot) {
       Number(pace ?? bot.wait?.(game) ?? 900),
     );
     return () => clearTimeout(timer);
-  }, [plays, game?.last.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [plays, game?.id, game?.last.n]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // the game kept on this device once a move's been made in it, so a deal
+  // nobody's played yet doesn't push out the last one kept; a kept one
+  // played again at today's table (⋯ → Saved games, by its hosts, or
+  // anyone's while nobody sits), each seat going to whoever sits in it now
+  // and the table's mode to its (the game's own, Go's the table's)
+  const kept = useMemo(
+    () => game && { table: name, game, seats, mode: game.mode ?? mode },
+    [game, seats[0], seats[1], mode], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  useAutoSave(name, game?.last.kind !== "new" && kept, game?.id);
+  const play = (s) =>
+    PLAYS.find((p) => p.game === name && p.mode === s.mode) ??
+    PLAYS.find((p) => p.game === name);
+  // who sat there, or as at the table (`named`), its side
+  const sat = (s, i) =>
+    (s.seats[0]?.id !== s.seats[1]?.id && s.seats[i]?.name) || t(sides[i]);
+  const saves = {
+    name,
+    state: kept,
+    decode: async (code) => {
+      const s = await decodeSave(code);
+      return s?.table === name && s.game ? s : null;
+    },
+    summary: (s) =>
+      [
+        [play(s).name, play(s).kind].filter(Boolean).join(" "),
+        s.game.winner
+          ? t(`${sat(s, s.game.winner.seat)} wins!`)
+          : s.game.turn !== null && t(`${sat(s, s.game.turn)}'s turn`),
+        [0, 1].map((i) => `${sat(s, i)} ${s.game.score[i]}`).join(", "),
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    seats: (s) =>
+      [0, 1].map((i) => [t(sides[i]), s.seats[i]?.name, seats[i]?.name]),
+    load: (s) =>
+      map.doc.transact(() => {
+        map.set("mode", s.mode);
+        map.set("game", { ...s.game, players: ids });
+      }),
+  };
 
   // the mode in play, the game's own (backgammon's says none: the first),
   // or before a game the one picked: How to play's (root.jsx) and the menu's
@@ -196,6 +246,7 @@ export function useTable(name, newGame, sides, first, bot) {
     deal: hosts && full ? () => deal() : null,
     mode,
     setMode: canMode ? setMode : null,
+    saves: hosts || empty ? saves : null,
   };
 }
 
@@ -261,8 +312,10 @@ function Menu({
   free,
   newGame,
   resetScore,
+  saves,
 }) {
   const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
   // the menu folds away once an item has done its job
   const then = (action) => () => {
     setOpen(false);
@@ -324,6 +377,13 @@ function Menu({
                 />
               ))}
             </div>
+            <div className="group">
+              {saves && (
+                <button onClick={then(() => setSaved(true))}>
+                  {t("Saved games")}
+                </button>
+              )}
+            </div>
             <div className="group ends">
               {newGame && (
                 <Confirm label={t("New Game")} onConfirm={then(newGame)} />
@@ -337,6 +397,9 @@ function Menu({
             </div>
           </div>
         </>
+      )}
+      {saved && saves && (
+        <SavedGames {...saves} onClose={() => setSaved(false)} />
       )}
     </div>
   );
@@ -389,6 +452,7 @@ export function Table({ table, mark, info, options, children }) {
               go: () => table.free(i),
             }))}
           newGame={table.deal}
+          saves={table.saves}
           resetScore={
             table.hosts &&
             game?.score.some(Boolean) &&
