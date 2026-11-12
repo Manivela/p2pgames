@@ -557,12 +557,19 @@ export function openHand(state, player, groups, withPairs = true) {
 }
 
 // El aç pressed twice with nothing picked: the sets and runs the whole
-// rack opens with, the okeys tried last so a meld without one goes first
+// rack opens with, the highest tiles tried first (left on the rack they
+// count against you) and the okeys last, so a meld without one goes
+// first; then laid as they lie on the rack, an okey where it stands
 export function openAll(state, player) {
   const tiles = seat(state, player).hand.filter(Boolean);
   const okey = (t) => isOkey(t, state.okeyTile);
-  const ids = [...tiles.filter((t) => !okey(t)), ...tiles.filter(okey)];
-  return openHand(state, player, [ids.map((t) => t.id)], false);
+  const high = (t) => -rankOf(t, state.okeyTile);
+  const ids = sortBy(tiles, [okey, high]).map((t) => t.id);
+  const s = openHand(state, player, [ids], false);
+  if (!s || typeof s === "string") return s;
+  const kept = seat(s, player).hand.map((t) => t?.id);
+  const laid = tiles.filter((t) => !kept.includes(t.id));
+  return openHand(state, player, [laid.map((t) => t.id)], false);
 }
 
 // What El aç picks on its first press, to be seen before it's laid: the

@@ -1381,13 +1381,13 @@ test("a claim waits in the slot it was dropped on, and can be taken back", () =>
   assertAllTiles(s);
 });
 
-test("El aç with nothing picked: the round's melds out of the whole rack, okeys last", () => {
+test("El aç with nothing picked: the round's melds out of the whole rack, the highest first, okeys last", () => {
   const hand = ["blue1-0", ...deal.hands[0].slice(0, -1)];
   let s = okey.startGame(seated(2), { ...deal, hands: [hand, p2Hand] });
   s = okey.openAll(s, 1);
   assert.deepEqual(
     s.melds.map((m) => ids(m.tiles)),
-    [kut5],
+    [kut10],
   );
   assert.isOk(tileIn(s, 1, "blue1-0"));
   // pairs are opened with only when picked
@@ -1400,9 +1400,18 @@ test("El aç with nothing picked: the round's melds out of the whole rack, okeys
   assert.equal(okey.openAll(s, 2), "Draw a tile first");
 });
 
-test("El aç's first press picks the round's melds it finds", () => {
-  const s = okey.startGame(seated(2), deal);
-  assert.sameMembers(okey.meldsToLay(s, 1), kut5);
+test("El aç's first press picks the round's melds it finds, the highest first", () => {
+  let s = okey.startGame(seated(2), deal);
+  assert.sameMembers(okey.meldsToLay(s, 1), kut10);
+  // two küts: the 10s and the 5s
+  s = { ...s, round: 4 };
+  assert.sameMembers(okey.meldsToLay(s, 1), [...kut10, ...kut5]);
+  // laid as they lie on the rack, the 5s first
+  s = okey.openAll(s, 1);
+  assert.deepEqual(
+    s.melds.map((m) => ids(m.tiles)),
+    [kut5, kut10],
+  );
 });
 
 test("4 çift: open with four pairs, then lay pairs, sets and runs", () => {
