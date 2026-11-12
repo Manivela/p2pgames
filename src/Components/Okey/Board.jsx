@@ -1,7 +1,7 @@
 import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
-import Rack, { DiscardPile, Seat, freeSlot, useKey } from "./Rack";
+import Rack, { DiscardPile, Seat, useKey } from "./Rack";
 import Slot from "./Slot";
 import Tile, { SLOP } from "./Tile";
 import { LastTurn, Melds, RoundInfo, Scores } from "./AmericanoTable";
@@ -11,7 +11,7 @@ import TableMenu from "./TableMenu";
 import { Lobby } from "./GameSettings";
 import { useMoves } from "./moves";
 import * as okey from "./okey";
-import { ended, isElden, pileOut, rowOf, tableSeats } from "./okey";
+import { ended, freeSlot, isElden, pileOut, rowOf, tableSeats } from "./okey";
 import { useKeyHints } from "../../hooks/useStore";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
@@ -130,7 +130,7 @@ function DrawPile() {
         slot >= 0 &&
         isMyTurn() &&
         !okeyState.drawn &&
-        (() => drawTile(me, nextDrawTile, slot));
+        (() => drawTile(me, nextDrawTile, slot, true));
   useKey("d", draw);
   return (
     <div className="draw">

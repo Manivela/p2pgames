@@ -317,13 +317,15 @@ export function OkeyProvider({ children }) {
   // draw waits as a ghost in the slot it was dropped on, a discard on my
   // pile, out of my rack, and is made when the wait is up. Dragging a held
   // discard back, or a held draw's ghost off my rack, cancels it.
-  const [hold, setHold] = React.useState(null); // { tile, toIndex }
+  const [hold, setHold] = React.useState(null); // { tile, toIndex, flies }
   const held = hold?.tile.source === `hand-${me}` ? hold.tile.id : null;
   const heldDraw = hold && !held ? hold : null;
   const unhold = useCallback(() => setHold(null), []);
+  // `flies`: drawn by a key or a button (Take, D), not dragged: it flies to
+  // the rack (moves.js) instead of only landing
   const drawTile = useCallback(
-    (player, tile, toIndex) => {
-      dragged.current = tile.id;
+    (player, tile, toIndex, flies = false) => {
+      dragged.current = flies ? null : tile.id;
       const [now, at] = [Date.now(), turnStart.current];
       const wait =
         player === me && okey.waitBefore(okeyState, player, tile, now, at);
@@ -333,7 +335,7 @@ export function OkeyProvider({ children }) {
       const next = okey.drawTile(okeyState, player, ...args);
       if (typeof next === "string") toast(t(next));
       if (!next || typeof next === "string") return false;
-      setHold({ tile, toIndex });
+      setHold({ tile, toIndex, flies });
       return true;
     },
     [act, okeyState, me],
@@ -415,7 +417,7 @@ export function OkeyProvider({ children }) {
   React.useEffect(() => setHold(null), [okeyState.deal]);
   React.useEffect(() => {
     if (!hold) return;
-    const { tile, toIndex } = hold;
+    const { tile, toIndex, flies } = hold;
     const discard = tile.source === `hand-${me}`;
     const still = discard
       ? myHand(me).some((t) => t?.id === tile.id)
@@ -434,7 +436,7 @@ export function OkeyProvider({ children }) {
         return;
       }
       setHold(null);
-      dragged.current = tile.id;
+      dragged.current = flies ? null : tile.id;
       if (discard) act(okey.discardTile, me, tile);
       else act(okey.drawTile, me, tile, toIndex, now, at);
     };

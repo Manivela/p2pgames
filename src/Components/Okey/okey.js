@@ -890,9 +890,10 @@ const offerId = (s) => `${s.round}.${s.discards ?? 0}`;
 // is draws from the pile; before that, the previous discard they could still
 // take themselves, so a claim can wait for it (and lapses if they take it).
 export function upForClaim(state) {
-  if (!state.rules?.outOfTurnTakes) return null;
+  // a round finished before a claim came through leaves no offer behind
+  if (!state.rules?.outOfTurnTakes || state.gameState !== "play") return null;
   if (state.offer) return state.offer;
-  if (state.gameState !== "play" || state.drawn) return null;
+  if (state.drawn) return null;
   const from = game.previous(state.players, state.currentPlayer);
   const top = from.discardPile.at(-1);
   return top && top.id === state.lastDiscard && !isCaught(state, top.id)
@@ -940,17 +941,40 @@ export function collectInbox(state, player) {
   if (!seat(state, player)?.inbox?.length) return;
   const s = cloneDeep(state);
   const me = seat(s, player);
-  me.hand = intoHand(me.hand, me.inbox);
+  me.hand = intoHand(me.hand, me.inbox, game.rowOf(s, player));
   me.inbox = [];
   return s;
 }
 
-// a won discard goes to the slot its ghost was in, if that's still free
-function intoHand(hand, tiles) {
+// Where a tile lands on a rack `width` slots a row when nobody picked a
+// slot (Take, D, a claim's penalty tile): the last free slot with nothing
+// beside it, so it joins none of the groups on the rack, else the last free
+// one; -1 if there's none
+export function freeSlot(hand, width) {
+  const clear = (i) =>
+    !hand[i] &&
+    (i % width === 0 || !hand[i - 1]) &&
+    ((i + 1) % width === 0 || !hand[i + 1]);
+  const i = hand.findLastIndex((_, i) => clear(i));
+  return i >= 0 ? i : hand.lastIndexOf(null);
+}
+
+// a won discard goes to the slot its ghost was in, if that's still free;
+// anything after it (a claim's penalty tile) right beside it, in its row,
+// else where it would go by itself (freeSlot)
+function intoHand(hand, tiles, width) {
   const h = [...hand];
+  let last = -1;
+  const row = (j) => Math.floor(j / width);
   for (const { slot, ...t } of tiles) {
-    const i = slot !== undefined && h[slot] === null ? slot : h.indexOf(null);
-    h[i === -1 ? h.length : i] = t;
+    const beside = [last + 1, last - 1].find(
+      (j) => last >= 0 && h[j] === null && row(j) === row(last),
+    );
+    let i = slot !== undefined && h[slot] === null ? slot : beside;
+    i ??= freeSlot(h, width);
+    if (i === -1) i = h.length;
+    h[i] = t;
+    last = i;
   }
   return h;
 }

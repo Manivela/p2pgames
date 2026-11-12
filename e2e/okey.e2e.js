@@ -356,8 +356,12 @@ test("D draws from the middle pile; the menu hides the keys' keycaps", async ({
     await expect(hints).toBeHidden();
     await page.getByRole("button", { name: MENU }).click();
   }
+  // and it flies there, as a tile drawn by someone else does
+  const flights = () => page.evaluate(() => window.okeyFlights ?? 0);
+  const before = await flights();
   await page.keyboard.press("d");
   await expect.poll(async () => (await handIds(page)).includes(top)).toBe(true);
+  await expect.poll(flights).toBeGreaterThan(before);
   await expect(key).toHaveCount(0);
 });
 

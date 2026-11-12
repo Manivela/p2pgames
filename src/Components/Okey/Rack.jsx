@@ -13,6 +13,7 @@ import {
   returnDiscard,
   cantCatch,
   discardWait,
+  freeSlot,
   isCaught,
   isElden,
   pointsToOpen,
@@ -356,17 +357,6 @@ function Hands({ players }) {
   );
 }
 
-// where Take puts a tile: the last free slot with nothing beside it, so it
-// joins none of the groups on the rack, else the last free one
-export function freeSlot(hand, width) {
-  const clear = (i) =>
-    !hand[i] &&
-    (i % width === 0 || !hand[i - 1]) &&
-    ((i + 1) % width === 0 || !hand[i + 1]);
-  const i = hand.findLastIndex((_, i) => clear(i));
-  return i >= 0 ? i : hand.lastIndexOf(null);
-}
-
 // A key that does what a button does, from anywhere but a text field: " "
 // Space, else a letter; `press` null while there's nothing to press. Its
 // keycap shows on the button on a computer (rack.css), unless hidden from
@@ -459,7 +449,7 @@ export function DiscardPile({ player, small }) {
     if (heldDraw || slot < 0) return null;
     if (isMyTurn()) {
       return top && lets(drawRule(okeyState, me, top, slot))
-        ? { tile: top.id, press: () => drawTile(me, top, slot) }
+        ? { tile: top.id, press: () => drawTile(me, top, slot, true) }
         : null;
     }
     return offer && lets(claimDiscard(okeyState, me, slot))

@@ -943,10 +943,29 @@ test("out of turn: earliest claimant after the current player gets the discard +
   assertAllTiles(s);
 
   const before = player(s, 3).hand.filter(Boolean).length;
+  // the discard into its ghost's slot, the last of the second row; the
+  // penalty tile right beside it, in its row, not in the first gap
+  const [won, penalty] = player(s, 3).inbox;
+  const gap = player(s, 3).hand.indexOf(null);
   s = okey.collectInbox(s, 3);
   assert.equal(player(s, 3).hand.filter(Boolean).length, before + 2);
+  assert.equal(player(s, 3).hand[25].id, won.id);
+  assert.equal(player(s, 3).hand[24].id, penalty.id);
+  assert.notEqual(gap, 24);
   assert.isEmpty(player(s, 3).inbox);
   assertAllTiles(s);
+});
+
+// someone else finishes before a claim comes through: the round's end
+// keeps no offer, so no ghost, Take or "wants" line stays behind
+test("a claim left when the round ends offers nothing", () => {
+  let s = okey.startGame(seated(4));
+  s = okey.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.claimDiscard(s, 3, 25);
+  assert.isOk(okey.upForClaim(s));
+  assert.isNull(okey.upForClaim({ ...s, gameState: "roundEnd" }));
+  assert.isNull(okey.upForClaim({ ...s, gameState: "finish" }));
 });
 
 test("a claim made before the draw lapses if the current player takes the tile", () => {
