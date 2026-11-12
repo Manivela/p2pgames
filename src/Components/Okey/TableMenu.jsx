@@ -9,6 +9,7 @@ import { TableSettings } from "./GameSettings";
 import { t } from "../../i18n";
 import { Confirm } from "../Confirm";
 import { Dialog, SavedGames, useAutoSave } from "../Saves";
+import { useKeyHints } from "../../hooks/useStore";
 
 export { Confirm, Dialog };
 
@@ -227,6 +228,7 @@ export default function TableMenu() {
     newVersion,
   } = useContext(OkeyContext);
   const { roomId } = useParams();
+  const { hints, setHints } = useKeyHints();
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState(null);
   // a game in the lobby has nothing to keep yet
@@ -278,6 +280,16 @@ export default function TableMenu() {
                 step="0.1"
                 value={volume}
                 onChange={(e) => setVolume(Number(e.target.value))}
+              />
+            </label>
+            {/* the keycaps on Take, Call! and the pile: on a computer only
+                (rack.css) */}
+            <label className="hints">
+              {t("Key hints")}
+              <input
+                type="checkbox"
+                checked={hints}
+                onChange={(e) => setHints(e.target.checked)}
               />
             </label>
           </div>

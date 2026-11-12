@@ -306,7 +306,9 @@ test("101: a discard taken before opening must be opened with that turn, or go b
     "Use the tile you took from the discard, or put it back",
   );
 
-  assert.deepEqual(s.turnMoves, [{ by: 2, move: "took", tiles: ["black9-0"] }]);
+  assert.deepEqual(s.turnMoves, [
+    { by: 2, move: "took", tiles: ["black9-0"], from: 1 },
+  ]);
   // put back: P2 draws from the pile instead
   const back = okey.returnDiscard(s, 2);
   assert.deepEqual(back.penalties, { 2: 101 });

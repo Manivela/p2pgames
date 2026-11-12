@@ -1,4 +1,4 @@
-import { cloneDeep, max, shuffle, sortBy, sum } from "lodash";
+import { cloneDeep, max, omit, shuffle, sortBy, sum } from "lodash";
 import * as game from "./game";
 import {
   colorOf,
@@ -90,7 +90,9 @@ export function startGame(state, deal, rules = AMERICANO) {
   }
   const s = game.startGame({ ...state, rules }, deal);
   if (s.gameState !== "play") return s;
-  return { ...s, round: 1, scores: {} };
+  // a new game, wrong calls forgotten (catchDiscard)
+  const players = s.players.map((p) => omit(p, "calls"));
+  return { ...s, players, round: 1, scores: {} };
 }
 
 // The round void, back to before it was dealt (its penalties too): seats can
@@ -1181,7 +1183,12 @@ export function catchWait(
   const [, tile] = latestDiscard(state);
   if (!tile || !(state.discardFits ?? fitsTable(state, tile))) return 0;
   const catcher = state.players.some(
-    (p) => p.user && !p.user.bot && p.id !== player && !cantCatch(state, p.id),
+    (p) =>
+      p.user &&
+      !p.user.bot &&
+      p.id !== player &&
+      !cantCatch(state, p.id) &&
+      !callLocked(state, p.id),
   );
   const wait = state.rules.catchWaitSeconds - (now - turnStart) / 1000;
   return catcher && wait > 0 ? wait : 0;
@@ -1212,19 +1219,62 @@ export function fitsTable(state, tile) {
   });
 }
 
+// Calling a tile that didn't fit costs no points (the user's call), but
+// everyone sees it: the first WARNINGS are warnings, each with CALL_PAUSE
+// seconds before the next call, so someone pressing Call! at everything
+// sees what's going on before it costs them; after those, each one locks
+// Call! until everyone has thrown once. Kept on the seat, `calls`:
+// { wrong: how many this game, tile: the last one, at: when, on the
+// caller's clock, lock: the discard count it's locked until }.
+const WARNINGS = 2;
+const CALL_PAUSE = 5;
+
+export const callLocked = (state, player) =>
+  (seat(state, player)?.calls?.lock ?? 0) > (state.discards ?? 0);
+
+// why `player` can't call just now, if they can't: locked, or the pause
+// after a warning
+export function callBlocked(state, player, now = Date.now()) {
+  if (callLocked(state, player)) {
+    return "Calling is locked until everyone has thrown once";
+  }
+  const calls = seat(state, player)?.calls;
+  const wait = calls ? CALL_PAUSE - (now - calls.at) / 1000 : 0;
+  if (wait > 0) return `Wait ${Math.ceil(wait)}s to call again`;
+}
+
+// what the caller is told about a wrong call, the `wrong`th this game
+export const wrongCallNote = (wrong) =>
+  wrong > WARNINGS
+    ? "That tile didn't fit: Call! is locked until everyone has thrown once"
+    : `That tile didn't fit: warning ${wrong} of ${WARNINGS}. After that, a wrong call locks Call! until everyone has thrown once`;
+
 // The latest discard, while it's still on top of its pile, can be caught by
-// anyone else if it fits a meld on the table.
-export function catchDiscard(state, player) {
-  const no = cantCatch(state, player);
+// anyone else if it fits a meld on the table; called when it doesn't, a
+// wrong call (above)
+export function catchDiscard(state, player, now = Date.now()) {
+  const no = cantCatch(state, player) || callBlocked(state, player, now);
   if (no) return no;
   const [from, tile] = latestDiscard(state);
-  // the table as it lay when the tile was thrown: melds laid since (the
-  // next player opening) don't count; a game from before kept no record
-  if (!(state.discardFits ?? fitsTable(state, tile))) return DIDNT_FIT;
   const s = cloneDeep(state);
   const me = seat(s, player);
+  // the table as it lay when the tile was thrown: melds laid since (the
+  // next player opening) don't count; a game from before kept no record
+  if (!(state.discardFits ?? fitsTable(state, tile))) {
+    // the same tile again: they know already
+    if (me.calls?.tile === tile.id) return DIDNT_FIT;
+    const wrong = (me.calls?.wrong ?? 0) + 1;
+    me.calls = { wrong, tile: tile.id, at: now };
+    if (wrong > WARNINGS) {
+      me.calls.lock = (s.discards ?? 0) + s.players.length;
+      s.message = `${me.user?.name} called wrongly: no calls until everyone has thrown`;
+    } else {
+      s.message = `${me.user?.name} called wrongly: warning ${wrong} of ${WARNINGS}`;
+    }
+    return s;
+  }
   me.caught = [...(me.caught ?? []), tile.id];
-  s.message = `${me.user?.name} caught ${from.user?.name}'s tile: +${s.rules.catchPenalty}`;
+  s.message = `${me.user?.name} called ${from.user?.name}'s tile: +${s.rules.catchPenalty}`;
   return s;
 }
 
@@ -1251,6 +1301,29 @@ function handScore(hand, { okeyTile, rules }) {
         isOkey(t, okeyTile) ? rules.okeyInHandScore : rankOf(t, okeyTile),
       ),
   );
+}
+
+// a player's total so far, in pairs their team's (both partners'): the
+// lowest wins the game
+export const totalOf = (s, player) =>
+  sum(s.scores?.[player] ?? []) +
+  (s.rules.partners
+    ? sum(s.scores?.[game.partner(s.players, player).id] ?? [])
+    : 0);
+
+// how the game went for `player`, by the totals: "won" with the lowest,
+// "drawn" sharing it with someone on another side, otherwise "lost". The
+// seats in it: taken, or a freed one's column (the score sheet's)
+export function outcome(s, player) {
+  const seats = s.players.filter((p) => p.user || s.scores?.[p.id]);
+  const low = Math.min(...seats.map((p) => totalOf(s, p.id)));
+  const mate = s.rules.partners && game.partner(s.players, player).id;
+  const rival = seats.some(
+    (p) => p.id !== player && p.id !== mate && totalOf(s, p.id) === low,
+  );
+  // a result, not a message to translate (i18n.test.js)
+  const result = totalOf(s, player) > low ? "lost" : rival ? "drawn" : "won";
+  return result;
 }
 
 // `last`: the finisher's last discard; `inOne`: they opened this turn
@@ -1317,10 +1390,7 @@ function endRound(state, finisher, last, inOne = false) {
           : `Round ${s.round}: no tiles left`,
     };
   }
-  // in pairs, a team's total is both partners'
-  const total = (p) =>
-    sum(s.scores[p.id]) +
-    (rules.partners ? sum(s.scores[game.partner(s.players, p.id).id]) : 0);
+  const total = (p) => totalOf(s, p.id);
   const winner = s.players.reduce((a, b) => (total(b) < total(a) ? b : a));
   const who = rules.partners
     ? `${name(winner.id)} & ${name(game.partner(s.players, winner.id).id)}`

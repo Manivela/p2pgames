@@ -1,0 +1,55 @@
+/* Your stats (StatsDialog.jsx), in a dialog of Saves.jsx's */
+
+.dialog.stats {
+  width: min(560px, calc(100vw - 24px));
+}
+
+.dialog.stats h4 {
+  margin: 16px 0 6px;
+}
+
+/* label and value, two to a line where they fit */
+.dialog.stats dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 2px 16px;
+  margin: 0;
+}
+
+.dialog.stats dl.wide {
+  grid-template-columns: 1fr;
+}
+
+.dialog.stats dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.dialog.stats dt {
+  font-weight: 400;
+  color: #666;
+}
+
+.dialog.stats dd {
+  font-weight: 700;
+  text-align: right;
+}
+
+.dialog.stats .io {
+  margin: 16px 0 0;
+}
+
+/* keeping every game's recording (store.js) */
+.dialog.stats label.keep {
+  display: block;
+  margin: 16px 0 0;
+  font-weight: 400;
+}
+
+.dialog.stats small.keep {
+  display: block;
+  color: #666;
+}

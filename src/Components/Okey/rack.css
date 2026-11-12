@@ -80,7 +80,7 @@ html:has(.fit) {
 }
 
 /* on its left a newer version to reload for, over the draw pile when it's
-   aside; the pile clear of Take, which rises out of the row below */
+   aside; the pile clear of Take and Call!, which rise out of the row below */
 .middle > .left {
   grid-column: 1;
   display: flex;
@@ -92,7 +92,7 @@ html:has(.fit) {
 }
 
 /* the site's menu and fullscreen buttons (index.css) go in the corner left
-   of your rack, under its pile and Catch; the score sheet, How to play and
+   of your rack, under its pile; the score sheet, How to play and
    the table menu in the right one */
 .foot > .corner-room {
   position: absolute;
@@ -1081,31 +1081,65 @@ html:has(.fit) {
   margin: 0 0.3em 0 0;
 }
 
-/* Catch (Yakala) under the pile left of your rack (Rack.jsx), in amber,
-   and Take (Al) above it: under Catch are the site's corner buttons */
+/* Take (Al) and Call! (İşlek!) over the pile left of your rack (Rack.jsx),
+   side by side: Take's right edge on the pile's and Call! past it, each
+   staying put as the other comes and goes */
 .board .discardPile :is(.catch, .take) {
   --mini-t: calc(var(--t) * 0.36);
   position: absolute;
   z-index: 5;
-  top: calc(100% + var(--t) * 0.15);
-  left: 50%;
-  translate: -50% 0;
+  bottom: calc(100% + var(--t) * 0.3);
   display: flex;
   align-items: center;
   gap: calc(var(--t) * 0.08);
   padding: 0 calc(var(--t) * 0.1);
   border-radius: calc(var(--t) * 0.12);
   font-size: calc(var(--t) * 0.27);
-}
-
-.board .discardPile .catch {
-  background: #ffb300;
-  color: #3a2600;
+  white-space: nowrap;
 }
 
 .board .discardPile .take {
-  top: auto;
-  bottom: calc(100% + var(--t) * 0.3);
+  right: 0;
+}
+
+.board .discardPile .catch {
+  left: calc(100% + var(--t) * 0.12);
+}
+
+/* locked after wrong calls (okey.catchDiscard): pressed, it says why */
+.board .discardPile .catch.locked {
+  opacity: 0.5;
+}
+
+/* the key that presses it, on a computer: a keycap on its corner, so it
+   doesn't widen Take and Call! into the melds; the table menu hides them */
+.board kbd {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board:not(.no-keys) kbd {
+    display: block;
+    position: absolute;
+    z-index: 6;
+    top: calc(var(--t) * -0.2);
+    right: calc(var(--t) * -0.04);
+    padding: 0 calc(var(--t) * 0.06);
+    border-radius: calc(var(--t) * 0.05);
+    background: #fff;
+    color: #333;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    font: inherit;
+    font-size: calc(var(--t) * 0.16);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  /* the draw pile's on the stack's corner */
+  .board .draw > kbd {
+    right: auto;
+    left: calc(var(--t) * 0.8);
+  }
 }
 
 /* the tile it catches or takes, small, as it may lie on another pile */
@@ -1322,6 +1356,28 @@ html:has(.fit) {
   border: 0;
   box-shadow: none;
   background: none;
+}
+
+/* on a computer only, where the keycaps show */
+.table-menu .hints {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .table-menu .hints {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+    padding: 2px 6px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .table-menu .hints input {
+    margin: 0;
+  }
 }
 
 /* a second tap confirms */
@@ -1567,4 +1623,53 @@ div.flights > * {
 
 .rack .slot.moving > .tile {
   visibility: hidden;
+}
+
+/* the title a player won at the game, under their name once it's over:
+   a tap on it says why (.why) */
+.scores thead .title {
+  display: block;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #6a1b9a;
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* the names level whether a title hangs under them or not */
+.scores thead th {
+  vertical-align: top;
+}
+
+/* why a title was won: a card over the screen, the browser's popover (in
+   the sheet, so it sets what it would take from there) */
+.why {
+  text-align: left;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #222;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.why:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.why b {
+  color: #6a1b9a;
 }

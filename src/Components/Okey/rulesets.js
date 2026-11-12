@@ -183,7 +183,7 @@ export const ONE_O_ONE = {
   notOpenedScore: 202,
   notOpenedCounts: true, // and the okeys held, doubled too
   okeyInHandScore: 101,
-  // işler taş, caught with the Catch button until the next discard, as in
+  // işlek taş, caught with the Call! button until the next discard, as in
   // Americano (the PDF: until the next player draws; the user's call)
   catchPenalty: 101,
   // and, caught, the next player can still take it (the user's call;

@@ -200,8 +200,8 @@ test("a crowded table fits", async ({ page }) => {
 });
 
 // the table full while another plays: their tea glass and badges stay in
-// the row along the top, clear of the melds, and Catch for the latest
-// discard is under the pile left of my rack
+// the row along the top, clear of the melds, and Call! for the latest
+// discard is over the pile left of my rack
 test("a crowded table keeps clear of what hangs under the others", async ({
   page,
 }) => {
@@ -237,8 +237,8 @@ test("a tap on the tea glass pours the next drink", async ({ page }, info) => {
 });
 
 // a discard that fit a meld gives the others time to catch it: the next
-// player's take waits meanwhile, a ghost in its slot, and Catch shows the
-// tile it catches
+// player's take waits meanwhile, a ghost in its slot, and Call! shows the
+// tile it calls
 test("a discard that fits waits the others' time to catch it, then comes", async ({
   page,
 }, info) => {
@@ -264,8 +264,8 @@ test("a discard that fits waits the others' time to catch it, then comes", async
   await expect(slot(page, free)).not.toHaveClass(/ghost/);
 });
 
-// Space catches the latest discard, as Catch does
-test("Space catches the latest discard", async ({ page }, info) => {
+// Space calls the latest discard, as Call! does, the key shown on a computer
+test("Space calls the latest discard", async ({ page }, info) => {
   anySize(info);
   await sitDown(page);
   await stages.play(page);
@@ -275,6 +275,10 @@ test("Space catches the latest discard", async ({ page }, info) => {
   );
   const top = (await state(page)).players[3].discardPile.at(-1).id;
   await expect(page.locator(".foot .catch")).toBeVisible();
+  const key = expect(page.locator(".foot .catch kbd"));
+  await (info.project.name === "desktop"
+    ? key.toBeVisible()
+    : key.toBeHidden());
   // and doesn't press the button last tapped as well
   const elAc = page.locator("button[aria-pressed]");
   await elAc.focus();
@@ -282,6 +286,79 @@ test("Space catches the latest discard", async ({ page }, info) => {
   await expect(page.locator(".foot .catch")).toHaveCount(0);
   expect((await state(page)).players[0].caught).toEqual([top]);
   await expect(elAc).toHaveAttribute("aria-pressed", "false");
+});
+
+// a wrong call costs no points: everyone reads it beside the round, the
+// caller's warned where it leads, and after two warnings it locks Call!
+// until everyone has thrown, which a press says
+test("wrong calls are warned, twice, then lock Call!", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "toMyTurn", false);
+  await page.evaluate(() =>
+    window.okey.set({ ...window.okey.get(), discardFits: false }),
+  );
+  const call = page.locator(".foot .catch");
+  await call.click();
+  await expect(page.locator(".side .round")).toContainText(
+    /Ayşe (called wrongly: warning 1 of 2|yanlış işlek dedi: uyarı 1\/2)/,
+  );
+  await expect(page.locator("[role=status]")).toContainText(
+    /warning 1 of 2|uyarı 1\/2/,
+  );
+  expect((await state(page)).players[0].calls.wrong).toBe(1);
+  expect((await state(page)).penalties).toEqual({});
+  // two warnings in, past the pause after the last: the next locks it
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    const calls = { wrong: 2, tile: "none", at: 0 };
+    const players = s.players.map((p) => (p.id === 1 ? { ...p, calls } : p));
+    window.okey.set({ ...s, players });
+  });
+  await call.click();
+  await expect(call).toHaveClass(/locked/);
+  await page.keyboard.press("Space");
+  await expect(
+    page.locator("[role=status]", {
+      hasText:
+        /^(Calling is locked until everyone has thrown once|Herkes bir taş atana dek işlek diyemezsin)$/,
+    }),
+  ).toBeVisible();
+  expect((await state(page)).players[0].calls.wrong).toBe(3);
+});
+
+// D draws from the middle pile, as dragging its top to the rack does; the
+// keys' keycaps show on a computer, and the table menu hides them
+test("D draws from the middle pile; the menu hides the keys' keycaps", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "toMyTurn", false);
+  const top = (await state(page)).drawPile.at(-1).id;
+  const key = page.locator(".draw kbd");
+  const hints = page.locator(".table-menu .hints input");
+  if (info.project.name === "desktop") {
+    await expect(key).toBeVisible();
+    await page.getByRole("button", { name: MENU }).click();
+    await hints.uncheck();
+    await expect(key).toBeHidden();
+    await hints.check();
+    await expect(key).toBeVisible();
+    await page.getByRole("button", { name: MENU }).click();
+  } else {
+    await expect(key).toBeHidden();
+    await page.getByRole("button", { name: MENU }).click();
+    await expect(hints).toBeHidden();
+    await page.getByRole("button", { name: MENU }).click();
+  }
+  await page.keyboard.press("d");
+  await expect.poll(async () => (await handIds(page)).includes(top)).toBe(true);
+  await expect(key).toHaveCount(0);
 });
 
 // ? beside ⋯, as at every table, opens How to play for the game played
@@ -312,14 +389,14 @@ test("Take on my turn waits out the time to catch it, Cancel meanwhile", async (
   const top = (await state(page)).players[3].discardPile.at(-1).id;
   const take = page.locator(".foot .take");
   await take.click();
-  await expect(take).toHaveText(/^(Cancel|Vazgeç)$/);
+  await expect(take).toHaveText(/^(Cancel|Vazgeç)T$/);
   await expect(page.locator(".rack .ghost")).toHaveCount(1);
   await take.click();
-  await expect(take).toHaveText(/(Take|Al)$/);
+  await expect(take).toHaveText(/(Take|Al)T$/);
   await expect(page.locator(".rack .ghost")).toHaveCount(0);
   expect((await state(page)).drawn).toBeFalsy();
   await take.click();
-  await expect(take).toHaveText(/^(Cancel|Vazgeç)$/);
+  await expect(take).toHaveText(/^(Cancel|Vazgeç)T$/);
   // the wait over, it comes
   await page.evaluate(() => {
     const s = window.okey.get();
@@ -330,7 +407,7 @@ test("Take on my turn waits out the time to catch it, Cancel meanwhile", async (
 });
 
 // out of turn it claims the discard on offer, a ghost on my rack, and
-// Cancel takes the claim back; Space doesn't press it again
+// Cancel takes the claim back; Space doesn't press it again, T does
 test("Take claims the discard out of turn, Cancel takes it back", async ({
   page,
 }, info) => {
@@ -340,14 +417,20 @@ test("Take claims the discard out of turn, Cancel takes it back", async ({
   await table(page, "play", 2); // me, then Bora: Bora's discard is up
   const take = page.locator(".foot .take");
   await take.click();
-  await expect(take).toHaveText(/^(Cancel|Vazgeç)$/);
+  await expect(take).toHaveText(/^(Cancel|Vazgeç)T$/);
   await expect(page.locator(".rack .ghost")).toHaveCount(1);
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
   await page.keyboard.press("Space");
   expect((await state(page)).players[0].claim).toBeTruthy();
   await take.click();
-  await expect(take).toHaveText(/(Take|Al)$/);
+  await expect(take).toHaveText(/(Take|Al)T$/);
   await expect(page.locator(".rack .ghost")).toHaveCount(0);
+  expect((await state(page)).players[0].claim).toBeFalsy();
+  await page.keyboard.press("t");
+  await expect(take).toHaveText(/^(Cancel|Vazgeç)T$/);
+  expect((await state(page)).players[0].claim).toBeTruthy();
+  await page.keyboard.press("t");
+  await expect(take).toHaveText(/(Take|Al)T$/);
   expect((await state(page)).players[0].claim).toBeFalsy();
 });
 
@@ -1136,12 +1219,17 @@ test("the last tile is thrown to the middle to finish", async ({
   await expect(
     page.locator(`.draw .thrown[data-tile-id="${last.id}"]`),
   ).toBeVisible();
-  // the table stays as it ended: my turn's moves, opening and finishing,
-  // marked on their tiles and listed; the hands left on the rack (mine is
-  // empty)
-  await expect(page.locator(".moves li")).toHaveCount(2);
+  // the table stays as it ended: my turn's moves listed, the draw from the
+  // pile with the tile drawn, then opening and finishing, each marked on
+  // the tiles it put there (the tile drawn was the one thrown to finish);
+  // the hands left on the rack (mine is empty)
+  await expect(page.locator(".moves li .said")).toHaveText([
+    /^(Ayşe drew from the pile|Ayşe ortadan çekti)$/,
+    /^(Ayşe opened|Ayşe açtı)$/,
+    /^(Ayşe finished|Ayşe bitirdi)$/,
+  ]);
   await expect(page.locator(".melds .tile.marked")).toHaveCount(3);
-  await expect(page.locator(".draw .thrown")).toHaveAttribute("data-mark", "2");
+  await expect(page.locator(".draw .thrown")).toHaveAttribute("data-mark", "3");
   await expect(page.locator(".rack .hands [data-hand]")).toHaveCount(3);
   // applauded once; not by a page that comes to the round over
   expect(await page.evaluate(() => window.okeyApplause)).toEqual(["round"]);
@@ -1150,6 +1238,45 @@ test("the last tile is thrown to the middle to finish", async ({
     .poll(async () => (await state(other)).gameState, NET)
     .toBe("roundEnd");
   expect(await other.evaluate(() => window.okeyApplause)).toBeUndefined();
+});
+
+// a discard taken to finish: the round's end says whose
+test("the round's end says whose discard was taken", async ({ page }, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn", false);
+  const last = await page.evaluate(async () => {
+    const okey = await import("/src/Components/Okey/okey.js");
+    let s = window.okey.get();
+    // Deniz's, the seat before mine
+    const thrown = s.players.find((p) => p.id === 4).discardPile.at(-1);
+    s = okey.drawTile(s, 1, thrown, s.players[0].hand.indexOf(null));
+    s = okey.openHand(s, 1, [["red7-0", "blue7-0", "black7-0"]]);
+    // the last tile left another than the one taken (a taken discard
+    // dragged goes back on its pile)
+    const hand = s.players[0].hand;
+    const tile = hand.findLast((t) => t && t.id !== thrown.id);
+    window.okey.set({
+      ...s,
+      justOpened: null,
+      players: s.players.map((p) =>
+        p.id === 1
+          ? { ...p, hand: hand.map((t) => (t === tile ? t : null)) }
+          : p,
+      ),
+    });
+    return hand.indexOf(tile);
+  });
+  await drag(
+    page,
+    slot(page, last).locator(".tile"),
+    page.locator(".draw .stack"),
+  );
+  await expect.poll(async () => (await state(page)).gameState).toBe("roundEnd");
+  await expect(page.locator(".moves li .said").first()).toHaveText(
+    /^(Ayşe took Deniz's discard|Ayşe yandan aldı: Deniz)$/,
+  );
 });
 
 test("the last round finished ends the game: the long applause only", async ({
@@ -1184,6 +1311,62 @@ test("the last round finished ends the game: the long applause only", async ({
   );
   await expect.poll(async () => (await state(page)).gameState).toBe("finish");
   expect(await page.evaluate(() => window.okeyApplause)).toEqual(["game"]);
+  // the score sheet stays a tap away, clear of New Game; no titles under
+  // its names, as nobody stood out at a game of one round (she opened
+  // first and finished, once)
+  await expect(page.locator(".scores")).not.toHaveAttribute("open");
+  await expect(page.locator(".scores thead .title")).toHaveCount(0);
+});
+
+// a title won at the game: earned by standing out (three tiles caught,
+// nobody else catching any), and a tap on it says why, with the numbers
+test("a title won says why when it's tapped", async ({ page }, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  const last = await page.evaluate(() => {
+    const s = window.okey.get();
+    const thrown = s.players.slice(1).flatMap((p) => p.discardPile);
+    const hand = s.players[0].hand;
+    const tile = hand.findLast(Boolean);
+    window.okey.set({
+      ...s,
+      justOpened: null,
+      rules: { ...s.rules, rounds: s.rules.rounds.slice(0, 1) },
+      players: s.players.map((p) =>
+        p.id === 1
+          ? {
+              ...p,
+              caught: thrown.slice(0, 3).map((t) => t.id),
+              hand: hand.map((t) => (t === tile ? t : null)),
+            }
+          : p,
+      ),
+    });
+    return hand.indexOf(tile);
+  });
+  await drag(
+    page,
+    slot(page, last).locator(".tile"),
+    page.locator(".draw .stack"),
+  );
+  await expect.poll(async () => (await state(page)).gameState).toBe("finish");
+  await page.locator(".scores > summary").click();
+  const title = page.locator(".scores thead .title");
+  await expect(title).toHaveText([/^(Hawk-eye|Şahin Göz)$/]);
+  await title.click();
+  const why = page.locator(".why:popover-open");
+  await expect(why).toContainText(
+    /Caught a thrown tile 3 times|3 kez atılan taşı yakaladı/,
+  );
+  await expect(why).toContainText(
+    /(The others|Diğerleri): Bora 0, Can 0, Deniz 0/,
+  );
+  // a tap anywhere else closes it
+  await page.mouse.click(5, 5);
+  await expect(why).toHaveCount(0);
 });
 
 test("picked tiles move together", async ({ page }, info) => {

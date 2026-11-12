@@ -9,6 +9,7 @@ import { Confirm } from "../Confirm";
 import { usePlaying } from "../HowToPlay";
 import { PLAYS } from "../Menu";
 import { SavedGames, useAutoSave } from "../Saves";
+import { useRecord } from "../Stats/store";
 import { decodeSave } from "../saveCode";
 import { t } from "../../i18n";
 import tok from "./assets/tok.mp3";
@@ -128,6 +129,22 @@ export function useTable(name, newGame, sides, first, bot) {
     [game, seats[0], seats[1], mode], // eslint-disable-line react-hooks/exhaustive-deps
   );
   useAutoSave(name, game?.last.kind !== "new" && kept, game?.id);
+  // every game played here recorded on the device, for the stats, with
+  // who sits in each seat as it goes
+  useRecord(
+    game?.id,
+    game && {
+      ...game,
+      seats: seats.map((u) => u && { id: u.id, name: u.name, bot: !!u.bot }),
+    },
+    {
+      kind: name,
+      mode: game?.mode ?? mode,
+      me: currentUser.id,
+      seated,
+      over: !!game && (!!game.winner || game.turn === null),
+    },
+  );
   const play = (s) =>
     PLAYS.find((p) => p.game === name && p.mode === s.mode) ??
     PLAYS.find((p) => p.game === name);

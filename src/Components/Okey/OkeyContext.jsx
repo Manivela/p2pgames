@@ -16,6 +16,7 @@ import won from "./assets/won.mp3";
 import { signalingServers, peerOpts } from "../../constants";
 import { BUILD, useSiteBuild } from "../../version";
 import { panOf, playKnock } from "./knock";
+import { useRecord } from "../Stats/store";
 
 export const OkeyContext = createContext({});
 const NONE_SPUN = {};
@@ -247,6 +248,20 @@ export function OkeyProvider({ children }) {
     }
   }, [okeyState.gameState, finishTile, over, playFinished, playWon]);
 
+  // every game played at this seat recorded on the device, for the stats
+  // and the titles on the score sheet once it's over (Stats/store.js)
+  useRecord(
+    okeyState.gameState === "start" ? null : okeyState.gameId,
+    okeyState,
+    {
+      kind: "okey",
+      mode: okeyState.rules?.id ?? okeyState.rules?.name,
+      me: currentUser?.id,
+      seated: me !== undefined,
+      over: okeyState.gameState === "finish",
+    },
+  );
+
   const isMyTurn = useCallback(
     () => okeyState.currentPlayer === me,
     [okeyState.currentPlayer, me],
@@ -282,6 +297,17 @@ export function OkeyProvider({ children }) {
   );
   // when the turn last reached this device: the others' time to take the
   // discard runs from then (okey.drawTile), as the turn timer does
+  // my own wrong call (okey.catchDiscard), told where it leads; not one
+  // found on sitting down
+  const wrong = okeyState.players.find((p) => p.id === me)?.calls?.wrong ?? 0;
+  const wrongSeen = React.useRef([me, wrong]);
+  React.useEffect(() => {
+    const [seenMe, seen] = wrongSeen.current;
+    if (me === seenMe && wrong > seen) {
+      toast(t(okey.wrongCallNote(wrong)), { duration: 6000 });
+    }
+    wrongSeen.current = [me, wrong];
+  }, [me, wrong]);
   const turnStart = React.useRef(Infinity);
   React.useEffect(() => {
     if (okeyState.currentPlayer === me) turnStart.current = Date.now();

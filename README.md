@@ -28,12 +28,16 @@ demo: <https://p2p.yunusgulcu.com/>
   - the back of the case is a checkerboard: American checkers or Turkish dama, picked on the board between games, against each other or a bot
 - play Okey made by [me](https://github.com/Manivela)
   - 2 to 4 players
+  - on a computer, D draws from the middle, T takes the discard and Space calls a tile that fits the table; a wrong call costs no points, but after two warnings each one locks calling until everyone has thrown
   - check [wikipedia](https://en.wikipedia.org/wiki/Okey) for the rules
 - play Go made by [me](https://github.com/Manivela), on a 9×9, 13×13 or 19×19 board, picked beside your bowl
   - tap Sit on a name plate to take black or white; a tap on your bowl passes
   - counted as the [Tromp-Taylor rules](https://tromp.github.io/go.html) count: two passes in a row end the game and count it, every stone on the board alive (capture dead stones first: it costs nothing), white 7.5 more for moving second; no suicide, and plain ko
   - after a pass the board shows whose each empty point would count for
   - check [wikipedia](https://en.wikipedia.org/wiki/Rules_of_Go) for the rules
+- your stats, from the bar chart in ☰: every game you sit at is recorded move by move on your device (IndexedDB) and the stats worked out from the record, so a stat added later counts the games already played: wins, streaks, time played, your nemesis, who takes the discard and who feeds the table at Okey, doubles and hits at backgammon, and more; Export and Import take the record to another device
+  - an Okey game over puts a title on the score sheet under anyone who stood out at that game (The Feeder, Hawk-eye…): at least 3 of a thing, and well beyond an even share of the table's; a tap on one says why
+  - someone who stands up and sits back down on another device under the same name is one player, in that game and every game either device played
 - every game's rules, in brief, are a tap away: ? in the corner, or ⋯ → How to play at the Okey table
 - in every two-player game, 🤖 on an empty seat puts a bot in it (in either seat, or both to watch them play), ⋯ lets one device play both sides, and Face to face turns each player's words to them when they sit across the screen
 

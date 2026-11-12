@@ -52,9 +52,10 @@ export function lastTurn(state) {
   return moves;
 }
 
-// the number of the move that moved the tile, or null
+// the number of the move that put the tile where it lies (drawn, then
+// thrown to finish: the finish), or null
 export const markOf = (moves, id) =>
-  (id && moves.findIndex((m) => m.tiles.includes(id)) + 1) || null;
+  (id && moves.findLastIndex((m) => m.tiles.includes(id)) + 1) || null;
 
 // onDragOff: the tile is a pending draw's ghost (Rack.jsx), which only a
 // slot of the rack takes; let go anywhere else, it calls this

@@ -313,11 +313,17 @@ export const dealsIn = (state) =>
   state.drawPile.length >= state.rules.handSize;
 
 // What the player whose turn it is has done this turn, so the round's end
-// can show how it finished: [{ by, move, tiles: [ids] }], move one of
-// took (the discard), opened, laid, added, swapped (for a table okey),
-// finished. The turn passing empties it; drawing from the pile isn't shown.
-export function logMove(s, by, move, tiles) {
-  const entry = { by, move, tiles: tiles.map((t) => t.id) };
+// can show how it finished: [{ by, move, tiles: [ids], from }], move one of
+// drew (from the pile), took (the discard, `from` the seat that threw it),
+// opened, laid, added, swapped (for a table okey), finished. The turn
+// passing empties it.
+export function logMove(s, by, move, tiles, from) {
+  const entry = {
+    by,
+    move,
+    tiles: tiles.map((t) => t.id),
+    ...(from !== undefined && { from }),
+  };
   s.turnMoves = [...(s.turnMoves ?? []), entry];
 }
 
@@ -352,7 +358,16 @@ export function dealRound(state, drawPile, deal, starter = 0) {
       2 * rowOf(state, p.id),
     );
     hand.forEach((t) => t && taken.add(t.id));
-    return { ...p, hand, discardPile: [], inbox: [], claim: null, caught: [] };
+    return {
+      ...p,
+      hand,
+      discardPile: [],
+      inbox: [],
+      claim: null,
+      caught: [],
+      // a lock on calling lasts the round at most (okey.catchDiscard)
+      ...(p.calls && { calls: _.omit(p.calls, "lock") }),
+    };
   });
 
   // every hand starts here, whatever deals it: nothing laid, opened,
@@ -440,8 +455,10 @@ export function drawTile(state, player, tile, toIndex) {
     toIndex,
   );
   newState.drawn = true;
-  if (tile.source.startsWith("discard"))
-    logMove(newState, player, "took", [tile]);
+  if (tile.source.startsWith("discard")) {
+    const from = Number(tile.source.split("-")[1]);
+    logMove(newState, player, "took", [tile], from);
+  } else logMove(newState, player, "drew", [tile]);
 
   if (tile.source === "draw-pile") {
     newState.drawPile = newState.drawPile.filter((t) => t.id !== tile.id);

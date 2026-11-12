@@ -41,6 +41,14 @@ export const useVolume = create(
   }),
 );
 
+// the keys' keycaps on Okey's buttons, on a computer (its ⋯ menu)
+export const useKeyHints = create(
+  persist((set) => ({ hints: true, setHints: (hints) => set({ hints }) }), {
+    name: "key-hints",
+    storage: createJSONStorage(() => localStorage),
+  }),
+);
+
 // backgammon's home on the left on this device, as some play it (its ⋯ menu)
 export const useLeftHome = create(
   persist((set) => ({ left: false, setLeft: (left) => set({ left }) }), {

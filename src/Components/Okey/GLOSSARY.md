@@ -74,8 +74,11 @@ Throwing your last tile to the middle, which ends the hand.
 
 ## Taking tiles
 
-**Işler taş** (catch):
-A discard that fit a meld on the table when thrown; anyone else may catch it, and the thrower pays.
+**İşlek taş** (call; `catch` in the code):
+A discard that fit a meld on the table when thrown; anyone else may call it (Call!, İşlek! at the table), and the thrower pays.
+
+**Wrong call** (yanlış işlek):
+Calling a discard that didn't fit: no points, but the table sees it; the first two in a game are warnings, then each locks calling until everyone has thrown once.
 
 **Claim**:
 Taking the latest discard out of turn, where the ruleset allows it.

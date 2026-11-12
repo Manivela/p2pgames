@@ -1,7 +1,7 @@
 import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
-import Rack, { DiscardPile, Seat } from "./Rack";
+import Rack, { DiscardPile, Seat, freeSlot, useKey } from "./Rack";
 import Slot from "./Slot";
 import Tile, { SLOP } from "./Tile";
 import { LastTurn, Melds, RoundInfo, Scores } from "./AmericanoTable";
@@ -12,6 +12,7 @@ import { Lobby } from "./GameSettings";
 import { useMoves } from "./moves";
 import * as okey from "./okey";
 import { ended, isElden, pileOut, rowOf, tableSeats } from "./okey";
+import { useKeyHints } from "../../hooks/useStore";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -105,7 +106,32 @@ function usePileAside(deal) {
 
 // the draw pile as a stack, its count, and the indicator beside it
 function DrawPile() {
-  const { okeyState, nextDrawTile, finishGame } = useContext(OkeyContext);
+  const {
+    okeyState,
+    me,
+    nextDrawTile,
+    finishGame,
+    isMyTurn,
+    drawTile,
+    heldDraw,
+    unhold,
+    myHand,
+  } = useContext(OkeyContext);
+  // D draws, as dragging the top tile to your rack does, to the slot Take
+  // uses; while that draw waits out the others' time to call, D takes it
+  // back, as T does a take
+  const slot = me ? freeSlot(myHand(me), rowOf(okeyState, me)) : -1;
+  const draw =
+    heldDraw?.tile.source === "draw-pile"
+      ? unhold
+      : me &&
+        !heldDraw &&
+        nextDrawTile &&
+        slot >= 0 &&
+        isMyTurn() &&
+        !okeyState.drawn &&
+        (() => drawTile(me, nextDrawTile, slot));
+  useKey("d", draw);
   return (
     <div className="draw">
       <Slot
@@ -115,6 +141,7 @@ function DrawPile() {
         type="DRAW"
         onDrop={finishGame}
       />
+      {draw && <kbd>D</kbd>}
       <span className="count">{okeyState.drawPile.length}</span>
       {okeyState.okeyTile && (
         <Tile className="indicator" tile={okeyState.okeyTile} disabled />
@@ -349,6 +376,7 @@ function Board() {
   useMoves();
   const onKnock = useKnock();
   const [lasso, pick] = useTablePick();
+  const { hints } = useKeyHints();
   return (
     <div
       className="fit"
@@ -364,7 +392,8 @@ function Board() {
       }
     >
       <div
-        className="board"
+        // the keys' keycaps hidden from the table menu
+        className={hints ? "board" : "board no-keys"}
         {...pick}
         onPointerDown={(e) => {
           onKnock(e);

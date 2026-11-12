@@ -17,6 +17,8 @@ import { colorOf, isOkey, okeyStandsFor, rankOf } from "./melds";
 import { colorMap, seatColors, symbols } from "./constants";
 import Tile, { TileFace, lastTurn, markOf } from "./Tile";
 import { t } from "../../i18n";
+import { useSummary } from "../Stats/store";
+import { TITLES } from "../Stats/history";
 
 // What a tile held over a meld would do there, by the rules: where it would
 // go (`at`: "before", "after", or the index of the okey it would replace)
@@ -228,6 +230,7 @@ export function RoundInfo() {
 }
 
 const SAID = {
+  drew: "drew from the pile",
   took: "took the discard",
   opened: "opened",
   laid: "laid down",
@@ -250,7 +253,13 @@ export function LastTurn() {
       {moves.map((m, i) => (
         <li key={i}>
           <b>{i + 1}</b>
-          <span className="said">{t(`${name(m.by)} ${SAID[m.move]}`)}</span>
+          <span className="said">
+            {t(
+              m.move === "took" && m.from !== undefined
+                ? `${name(m.by)} took ${name(m.from)}'s discard`
+                : `${name(m.by)} ${SAID[m.move]}`,
+            )}
+          </span>
           <TileFace id={m.tiles[0]} />
         </li>
       ))}
@@ -337,12 +346,58 @@ export function Melds({ underPile }) {
   );
 }
 
+// what each title is for, as its count says it (Stats/history.js)
+const WHY = {
+  took: (n) => `Took the discard from the side ${n} times`,
+  fed: (n) => `Had their discards taken ${n} times`,
+  claimed: (n) => `Claimed a discard out of turn ${n} times`,
+  caught: (n) => `Caught a thrown tile ${n} times`,
+  dropped: (n) => `Had a thrown tile caught ${n} times`,
+  finished: (n) => `Finished ${n} rounds`,
+  first: (n) => `Opened first in ${n} rounds`,
+  wrong: (n) => `Called a tile that didn't fit ${n} times`,
+};
+
+// A title won at the game, under its winner's name: a tap (or click) on it
+// says why, their count and everyone else's at the table, in a card over
+// the screen (the browser's own popover: a tap anywhere else closes it)
+function Title({ won, all }) {
+  const k = won.title;
+  const card = `why-${won.seat}`;
+  const others = all
+    .filter((p) => p.id !== won.id)
+    .map((p) => `${p.name} ${Math.max(p[k] ?? 0, 0)}`)
+    .join(", ");
+  return (
+    <>
+      <button className="title" popoverTarget={card}>
+        {t(TITLES[k])}
+      </button>
+      <div popover="auto" id={card} className="why">
+        <b>
+          {won.name}: {t(TITLES[k])}
+        </b>
+        <span>{t(WHY[k](won[k]))}</span>
+        <span>{t(`The others: ${others}`)}</span>
+      </div>
+    </>
+  );
+}
+
 // the score sheet, from its button at the table's top right: a column a
 // player, or a pair's when four play in pairs; the hand being played shows
-// what's owed so far (a caught tile, an okey thrown…), scored at its end
+// what's owed so far (a caught tile, an okey thrown…), scored at its end.
+// Once the game's over, a title under anyone who stood out at it
+// (Stats/history.js), as this device recorded the game.
 export function Scores() {
   const { okeyState } = useContext(OkeyContext);
   const { scores, rules, round, gameState } = okeyState;
+  const over = gameState === "finish";
+  const summary = useSummary(over ? okeyState.gameId : null);
+  // whoever has the seat at the end, in the game's summary (one who left
+  // has no result there), and their title, if they won one
+  const at = (p) => summary?.players.find((x) => x.seat === p.id && x.result);
+  const titleOf = (p) => at(p)?.title;
   // a freed seat keeps its column: whoever sits there next carries it on
   const players = allSeats(okeyState.players).filter(
     (p) => p.user || scores?.[p.id],
@@ -402,6 +457,9 @@ export function Scores() {
                       <i aria-hidden="true" />
                       {name(p)}
                     </span>
+                  ))}
+                  {team.filter(titleOf).map((p) => (
+                    <Title key={p.id} won={at(p)} all={summary.players} />
                   ))}
                 </th>
               ))}

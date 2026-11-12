@@ -6,6 +6,7 @@ import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
 import {
   canPeek as peekable,
+  callLocked,
   catchDiscard,
   claimDiscard,
   drawTile as drawRule,
@@ -357,13 +358,39 @@ function Hands({ players }) {
 
 // where Take puts a tile: the last free slot with nothing beside it, so it
 // joins none of the groups on the rack, else the last free one
-function freeSlot(hand, width) {
+export function freeSlot(hand, width) {
   const clear = (i) =>
     !hand[i] &&
     (i % width === 0 || !hand[i - 1]) &&
     ((i + 1) % width === 0 || !hand[i + 1]);
   const i = hand.findLastIndex((_, i) => clear(i));
   return i >= 0 ? i : hand.lastIndexOf(null);
+}
+
+// A key that does what a button does, from anywhere but a text field: " "
+// Space, else a letter; `press` null while there's nothing to press. Its
+// keycap shows on the button on a computer (rack.css), unless hidden from
+// the table menu.
+export function useKey(key, press) {
+  const latest = useRef();
+  latest.current = press;
+  useEffect(() => {
+    const onKey = (e) => {
+      const go = latest.current;
+      const hit =
+        key === " " ? e.code === "Space" : e.key?.toLowerCase() === key;
+      if (!go || !hit || e.repeat || e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+      if (e.target.closest?.("input, textarea, select, [contenteditable]")) {
+        return;
+      }
+      e.preventDefault(); // nor scrolls, nor presses a focused button
+      go();
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [key]);
 }
 
 // A player's discard pile, between them and the next player, who may take
@@ -404,26 +431,16 @@ export function DiscardPile({ player, small }) {
   const caught = isCaught(okeyState, top?.id);
   // my discard, waiting for the others' time to take the last one to end
   const ghost = held && player === me && myHand(me).find((t) => t?.id === held);
-  // Catch for the latest discard, whoever threw it, always under the pile
-  // left of your rack, a thumb away: along the top it would lie on the melds
-  // or on the tile you'd drag. Its pile glows (latest). Whether it fits a
-  // meld is for them to see.
+  // Call! for the latest discard, whoever threw it, always over the pile
+  // left of your rack, beside Take: two answers to the same tile, a thumb
+  // away (along the top it would lie on the melds or on the tile you'd
+  // drag). Its pile glows (latest). Whether it fits a meld is for them to
+  // see.
   const latest = okeyState.lastDiscard;
   const canCatch = !small && player !== me && me && !cantCatch(okeyState, me);
-  // Space presses it, from anywhere but a text field
-  useEffect(() => {
-    if (!canCatch) return;
-    const onKey = (e) => {
-      if (e.code !== "Space" || e.repeat) return;
-      if (e.target.closest?.("input, textarea, select, [contenteditable]"))
-        return;
-      e.preventDefault(); // nor scrolls, nor presses a focused button
-      act(catchDiscard, me);
-    };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [canCatch, act, me]);
-  // Take, under it: the discard onto your rack, as dragging it there does
+  // wrong calls lock it a while (okey.catchDiscard): pressed, it says so
+  const locked = canCatch && callLocked(okeyState, me);
+  // Take: the discard onto your rack, as dragging it there does
   // (Rack's onDrop), for whom a drag is hard. On your turn the previous
   // discard, waiting out the others' time to catch it; out of turn the one
   // on offer, claimed (outOfTurnTakes). Only when the rule would let it.
@@ -450,6 +467,12 @@ export function DiscardPile({ player, small }) {
       : null;
   }
   const take = takeButton();
+  const press = {
+    catch: canCatch && (() => act(catchDiscard, me)),
+    take: take && (take.cancel ?? take.press),
+  };
+  useKey(" ", press.catch);
+  useKey("t", press.take);
   return (
     <div
       ref={pileRef}
@@ -481,20 +504,13 @@ export function DiscardPile({ player, small }) {
         tile={ghost || top}
         canDiscard={() => isMyTurn(player)}
       />
-      {canCatch && (
-        <button className="catch" onClick={() => act(catchDiscard, me)}>
-          {/* which tile: it may lie on another pile */}
-          <TileFace id={latest} />
-          {t("Catch")}
-        </button>
-      )}
       {take && (
         <button
           className="take"
           onClick={(e) => {
-            // or Space, meant to catch, would press it again
+            // or Space, meant to call, would press it again
             e.currentTarget.blur();
-            (take.cancel ?? take.press)();
+            press.take();
           }}
         >
           {take.cancel ? (
@@ -505,6 +521,18 @@ export function DiscardPile({ player, small }) {
               {t("Take")}
             </>
           )}
+          <kbd>T</kbd>
+        </button>
+      )}
+      {canCatch && (
+        <button
+          className={locked ? "catch locked" : "catch"}
+          onClick={press.catch}
+        >
+          {/* which tile: it may lie on another pile */}
+          <TileFace id={latest} />
+          {t("Call!")}
+          <kbd>{t("Space")}</kbd>
         </button>
       )}
     </div>

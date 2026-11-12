@@ -1149,9 +1149,10 @@ test("a catch counts what could go on the table as it lies", () => {
     // that kept no record of it at the throw
     const thrown = { ...s, players, lastDiscard: id, discardFits: undefined };
     const next = okey.catchDiscard(thrown, 2);
-    return typeof next === "string" ? next : player(next, 2).caught;
+    // a wrong call is kept on the caller, not caught
+    return player(next, 2).calls ? no : player(next, 2).caught;
   };
-  const no = "That tile didn't fit a meld when it was thrown";
+  const no = "a wrong call";
   const sixTo9 = ["black6-1", "black7-1", "black8-1", "blue1-1"];
   // the 4 fits only with the okey moved from the 9 to the 5
   assert.equal(catchOf(sixTo9, "black4-1"), no);
@@ -1169,6 +1170,65 @@ test("a catch counts what could go on the table as it lies", () => {
   assert.deepEqual(catchOf(["black2-1", "black3-1", "black4-1"], "black1-1"), [
     "black1-1",
   ]);
+});
+
+// a wrong call costs no points: two warnings, a pause after each, then each
+// one locks calling until everyone has thrown once, for the round at most;
+// a new game forgets them
+test("wrong calls warn twice, then lock calling until everyone has thrown", () => {
+  const throws = (s, id) => ({
+    ...s,
+    players: s.players.map((p) =>
+      p.id === 1
+        ? { ...p, discardPile: [...p.discardPile, lying(id, "discard-1")] }
+        : p,
+    ),
+    lastDiscard: id,
+    discardFits: false,
+  });
+  const no = "That tile didn't fit a meld when it was thrown";
+  const locked = "Calling is locked until everyone has thrown once";
+  let now = 1000;
+  let s = throws(seriOnTable(["black6-1", "black7-1", "black8-1"]), "red2-1");
+  s = okey.catchDiscard(s, 2, now);
+  assert.deepEqual(player(s, 2).calls, { wrong: 1, tile: "red2-1", at: now });
+  assert.deepEqual(player(s, 2).caught, []);
+  assert.equal(s.message, "P2 called wrongly: warning 1 of 2");
+  assert.isUndefined(s.penalties[1]);
+  // the same tile again isn't another
+  assert.equal(okey.catchDiscard(s, 2, now + 60000), no);
+  s = throws(s, "red3-1");
+  assert.equal(okey.catchDiscard(s, 2, now + 1000), "Wait 4s to call again");
+  s = okey.catchDiscard(s, 2, (now += 5000));
+  assert.equal(s.message, "P2 called wrongly: warning 2 of 2");
+  s = throws(s, "red4-1");
+  s = okey.catchDiscard(s, 2, (now += 5000));
+  assert.equal(
+    s.message,
+    "P2 called wrongly: no calls until everyone has thrown",
+  );
+  s = throws(s, "red5-1");
+  assert.equal(okey.catchDiscard(s, 2, now + 60000), locked);
+  assert.isTrue(okey.callLocked(s, 2));
+  // a discard short of everyone having thrown, still locked; then not
+  const thrown = s.discards;
+  s = { ...s, discards: thrown + s.players.length - 1 };
+  assert.equal(okey.catchDiscard(s, 2, now + 60000), locked);
+  s = { ...s, discards: thrown + s.players.length };
+  assert.equal(player(okey.catchDiscard(s, 2, now + 60000), 2).calls.wrong, 4);
+  // a fitting tile is caught as ever, warned or not
+  const fits = { ...s, discardFits: true };
+  assert.deepEqual(player(okey.catchDiscard(fits, 2, now + 60000), 2).caught, [
+    "red5-1",
+  ]);
+
+  // the next round lifts a lock, keeping the count; a new game forgets them
+  s = okey.catchDiscard(s, 2, now + 60000);
+  const next = game.dealRound(s, game.shuffledPile(game.setsOf(s)));
+  assert.isFalse(okey.callLocked(next, 2));
+  assert.equal(player(next, 2).calls.wrong, 4);
+  assert.isUndefined(player(okey.startGame(s), 2).calls);
+  assert.equal(okey.wrongCallNote(2).split(":")[0], "That tile didn't fit");
 });
 
 test("Americano runs stop at 13: no 12-13-1, to open or to add", () => {
@@ -1301,7 +1361,8 @@ test("two okeys taken before opening both go back before the discard", () => {
   );
   s = okey.playOnMeld(s, 2, "blue1-0", 0);
   assert.deepEqual(ids(s.melds[0].tiles), seri);
-  assert.deepEqual(turn(s), []);
+  // the swaps taken back: the turn's draw is all it's done
+  assert.deepEqual(turn(s), [[2, "drew", "black10-1"]]);
   s = okey.discardTile(s, 2, tileIn(s, 2, "black7-0"));
   assert.equal(s.currentPlayer, 1);
   assertAllTiles(s);
@@ -1345,10 +1406,10 @@ test("a discard that fits a table meld can be caught: +20, and nobody takes it",
   assert.isNull(s.offer);
 
   s = okey.discardTile(s, 2, tileIn(s, 2, "red11-0"));
-  assert.equal(
-    okey.catchDiscard(s, 3),
-    "That tile didn't fit a meld when it was thrown",
-  );
+  // doesn't fit: a wrong call, nothing caught
+  const wrong = okey.catchDiscard(s, 3);
+  assert.equal(player(wrong, 3).calls.wrong, 1);
+  assert.deepEqual(player(wrong, 3).caught, ["red10-0"]);
 
   while (s.gameState === "play") {
     const p = s.currentPlayer;
@@ -1524,10 +1585,9 @@ test("a discard that fits only melds laid after it can't be caught", () => {
   s = okey.discardTile(s, 1, tileIn(s, 1, "yellow7-1"));
   s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
   s = okey.openHand(s, 2, [kut7]); // yellow 7 fits it now
-  assert.equal(
-    okey.catchDiscard(s, 3),
-    "That tile didn't fit a meld when it was thrown",
-  );
+  const wrong = okey.catchDiscard(s, 3);
+  assert.equal(player(wrong, 3).calls.wrong, 1);
+  assert.deepEqual(player(wrong, 3).caught, []);
 });
 
 test("catching the tile on offer drops the claims on it", () => {
@@ -1539,4 +1599,21 @@ test("catching the tile on offer drops the claims on it", () => {
   assert.lengthOf(okey.claimants(s), 1);
   s = okey.catchDiscard(s, 2);
   assert.isEmpty(okey.claimants(s));
+});
+
+test("the lowest total wins: a pair's both partners, a tie with a rival draws", () => {
+  const players = [1, 2, 3, 4].map((id) => ({ id, user: { id: `u${id}` } }));
+  const scores = { 1: [10], 2: [5], 3: [5], 4: [20] };
+  const alone = { players, scores, rules: { partners: false } };
+  assert.deepEqual(
+    players.map((p) => okey.outcome(alone, p.id)),
+    ["lost", "drawn", "drawn", "lost"],
+  );
+  // 1 and 3 against 2 and 4: 15 to 25
+  const pairs = { ...alone, rules: { partners: true } };
+  assert.deepEqual(
+    players.map((p) => okey.outcome(pairs, p.id)),
+    ["won", "lost", "won", "lost"],
+  );
+  assert.equal(okey.totalOf(pairs, 3), 15);
 });

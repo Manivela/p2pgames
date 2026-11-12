@@ -94,7 +94,7 @@ export const RULES = {
         ...OKEY,
         "13 hands, each opened with the melds it names; the last is finished from the hand in one go, nothing laid before.",
         "Once open, lay more melds and add to anyone's; finish by throwing your last tile.",
-        "A discard can be claimed out of turn, with a tile from the middle as a penalty; a tile thrown that fits a meld on the table can be caught, and its thrower pays 20.",
+        "A discard can be claimed out of turn, with a tile from the middle as a penalty; a tile thrown that fits a meld on the table can be called (Call!), and its thrower pays 20. A wrong call costs nothing, but after two warnings each one locks Call! until everyone has thrown.",
         "Finishing scores −20, not opening 100, the rest their tiles (an okey 25); the okey thrown last doubles them. The lowest total after 13 hands wins.",
       ],
     },

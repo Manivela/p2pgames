@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import {
   NET,
@@ -262,3 +263,226 @@ test("a game kept on this device comes back to the table", async ({
   expect((await game(page)).cells).toEqual(before.cells);
   await expect(page.locator(".tt-ink")).toHaveCount(2);
 });
+
+// your stats, from the site's menu (☰): a line's value, by its label (the
+// first: overall, above each game's own)
+const STATS = /^(Your stats|İstatistiklerin)$/;
+async function stats(page) {
+  await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
+  await page.getByRole("button", { name: STATS }).click();
+  return (label) =>
+    page
+      .locator(".dialog.stats dl > div")
+      .filter({ has: page.locator("dt", { hasText: label }) })
+      .first()
+      .locator("dd");
+}
+
+test("the stats count a game once, and one lost while its page was closed", async ({
+  browser,
+}, info) => {
+  const { x, o } = await twoPlayers(browser, info);
+  for (const [page, i] of [
+    [x, 0],
+    [o, 3],
+    [x, 1],
+    [o, 4],
+  ]) {
+    await cell(page, i).click();
+    const other = page === x ? o : x;
+    await expect
+      .poll(async () => (await game(other)).cells[i], NET)
+      .not.toBe(null);
+  }
+  // O's page closed, X wins
+  const away = o.context();
+  await o.close();
+  await cell(x, 2).click();
+  await expect(x.locator(".tt-margin p")).toHaveText(WINS("Ayşe"));
+  let stat = await stats(x);
+  await expect(stat(/^(Won|Kazanılan)$/)).toHaveText("1");
+  await expect(stat(/^(Lost|Kaybedilen)$/)).toHaveText("0");
+  // the score reset after the game's end: a step after its packed ones,
+  // worked out with them (the summary written again, ending later), the
+  // game still the one, still won
+  const ended = async (page) =>
+    page.evaluate(
+      (id) =>
+        new Promise((resolve) => {
+          const req = indexedDB.open("stats");
+          req.onsuccess = () => {
+            const kept = req.result
+              .transaction("summaries")
+              .objectStore("summaries")
+              .get(id);
+            kept.onsuccess = () => resolve(kept.result?.end ?? null);
+          };
+        }),
+      (await game(page)).id,
+    );
+  const won = await ended(x);
+  expect(won).toBeTruthy();
+  await x.keyboard.press("Escape");
+  await x.evaluate(() =>
+    window.tictactoe.set({ ...window.tictactoe.get(), score: [0, 0] }),
+  );
+  await expect.poll(() => ended(x)).toBeGreaterThan(won);
+  stat = await stats(x);
+  await expect(stat(/^(Games|Oyun)$/)).toHaveText("1");
+  await expect(stat(/^(Won|Kazanılan)$/)).toHaveText("1");
+  // O back at the table: the game it lost while away, counted
+  const back = await away.newPage();
+  await back.goto(x.url());
+  await expect.poll(async () => (await game(back))?.winner, NET).toBeTruthy();
+  stat = await stats(back);
+  await expect(stat(/^(Lost|Kaybedilen)$/)).toHaveText("1");
+  await expect(stat(/^(Most played with|En çok birlikte oynanan)$/)).toHaveText(
+    "Ayşe (1)",
+  );
+  // the game seen again on a reload (the game kept by O's page): still one
+  await x.reload();
+  await expect.poll(async () => (await game(x))?.winner, NET).toBeTruthy();
+  stat = await stats(x);
+  await expect(stat(/^(Games|Oyun)$/)).toHaveText("1");
+  // the next game started, O's first mark made: a game in play, which
+  // Export leaves out (its marks no one's to read in the file), and every
+  // step it takes deflated, as save codes are
+  await x.keyboard.press("Escape");
+  await x.getByRole("button", { name: NEXT }).click();
+  await expect.poll(async () => (await game(back))?.turn, NET).toBe(1);
+  await back.keyboard.press("Escape");
+  await cell(back, 4).click();
+  await expect.poll(async () => (await game(x)).cells[4], NET).toBe(1);
+  await stats(back);
+  // O's record taken to another browser as a file, and brought in there
+  // twice: the game once
+  const saved = back.waitForEvent("download");
+  await back.getByRole("button", { name: /^(Export|Dışa aktar)$/ }).click();
+  const file = await (await saved).path();
+  const data = JSON.parse(readFileSync(file, "utf8"));
+  expect(data.games.map((g) => g.id)).not.toContain((await game(back)).id);
+  expect(data.games.every((g) => g.over)).toBe(true);
+  // the game's steps packed into one once it's over
+  expect(data.games.every((g) => typeof g.packed === "string")).toBe(true);
+  expect(data.steps).toEqual([]);
+  expect(JSON.stringify(data)).not.toContain("cells");
+  const there = await enter(
+    browser,
+    info,
+    new URL(x.url()).pathname.slice(1),
+    "tictactoe",
+    "Can",
+  );
+  stat = await stats(there);
+  const input = there.locator('.dialog.stats input[type="file"]');
+  await input.setInputFiles(file);
+  await expect(
+    there.getByText(/^(Games added: 1|Eklenen oyun: 1)$/),
+  ).toBeVisible();
+  await expect(stat(/^(Lost|Kaybedilen)$/)).toHaveText("1");
+  await input.setInputFiles(file);
+  await expect(
+    there.getByText(/^(Games added: 0|Eklenen oyun: 0)$/),
+  ).toBeVisible();
+  await expect(stat(/^(Games|Oyun)$/)).toHaveText("1");
+});
+
+// O's page hidden (a phone locked) while X marks: what it sees on waking
+// is kept as a gap, the whole game afresh, not as a move it saw made
+test("a page that was hidden keeps what it missed as a gap", async ({
+  browser,
+}, info) => {
+  const { x, o } = await twoPlayers(browser, info);
+  const hidden = (page, value) =>
+    page.evaluate((value) => {
+      Object.defineProperty(document, "hidden", {
+        value,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }, value);
+  // whether each step O's page kept of the game in play starts it afresh
+  const afresh = async () =>
+    o.evaluate(
+      (id) =>
+        new Promise((resolve) => {
+          const req = indexedDB.open("stats");
+          req.onsuccess = () => {
+            const all = req.result
+              .transaction("steps")
+              .objectStore("steps")
+              .getAll();
+            all.onsuccess = () =>
+              resolve(
+                all.result
+                  .filter((s) => s.game === id)
+                  .map((s) => s.from === null),
+              );
+          };
+        }),
+      (await game(o)).id,
+    );
+  await expect.poll(afresh, NET).toEqual([true]);
+  await hidden(o, true);
+  await cell(x, 0).click();
+  await expect.poll(async () => (await game(o)).cells[0], NET).toBe(0);
+  await hidden(o, false);
+  await cell(o, 4).click();
+  await expect.poll(afresh, NET).toEqual([true, true, false]);
+});
+
+// a browser that keeps this site from storing anything: reading IndexedDB
+// throws in some, opening it in others (Chrome, site data blocked); the
+// game plays to its end all the same, and the stats say why there are none
+for (const [how, refuse] of [
+  [
+    "reading it throws",
+    () =>
+      Object.defineProperty(window, "indexedDB", {
+        get() {
+          throw new DOMException("denied", "SecurityError");
+        },
+      }),
+  ],
+  [
+    "opening it throws",
+    () => {
+      IDBFactory.prototype.open = () => {
+        throw new DOMException("denied", "SecurityError");
+      };
+    },
+  ],
+]) {
+  test(`storage refused (${how}): the game plays on, the stats say why there are none`, async ({
+    browser,
+  }, info) => {
+    const { viewport, hasTouch, locale } = info.project.use;
+    const context = await browser.newContext({ viewport, hasTouch, locale });
+    await context.addInitScript(refuse);
+    const page = await context.newPage();
+    const at = room("ttt");
+    await page.goto(`/${at}`);
+    await page.evaluate((r) => sessionStorage.setItem("alone", r), at);
+    await page.getByRole("textbox").fill("Ayşe");
+    await page.getByRole("button", { name: /^(Go|Gir)$/ }).click();
+    await pick(page, CLASSIC);
+    await page
+      .locator(".tb-plate")
+      .getByRole("button", { name: SIT })
+      .nth(1)
+      .click();
+    await bothSides(page, false);
+    await expect.poll(() => game(page), NET).toBeTruthy();
+    for (const i of [0, 3, 1, 4, 2]) await cell(page, i).click();
+    await expect(page.locator(".tt-margin p")).toHaveText(WINS("X"));
+    await stats(page);
+    await expect(
+      page.getByText(
+        /^(This browser isn't keeping data for this site|Bu tarayıcı bu site için veri saklamıyor)/,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^(Export|Dışa aktar)$/ }),
+    ).toHaveCount(0);
+  });
+}

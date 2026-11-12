@@ -154,7 +154,7 @@
 
 /* the room's code and a copy icon, its invite copied on a tap; a long
    code (a room named in the address) cut short */
-.site-menu button.invite {
+.site-menu button:is(.invite, .stats) {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -169,7 +169,7 @@
   letter-spacing: 0.05em;
 }
 
-.site-menu button.invite:is(:hover, :focus-visible) {
+.site-menu button:is(.invite, .stats):is(:hover, :focus-visible) {
   box-shadow: inset 0 0 0 1px #ddd;
 }
 
@@ -183,6 +183,15 @@
   flex: none;
   width: 17px;
   height: 17px;
+  opacity: 0.6;
+}
+
+/* your stats (Stats/StatsDialog.jsx): the score sheet's bars */
+.site-menu button.stats svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
   opacity: 0.6;
 }
 

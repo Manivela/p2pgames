@@ -13,6 +13,85 @@ const exact = (text) =>
   new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
 
 const TR = [
+  // the stats (Stats/), above any pattern that might take a line
+  // ("Rounds finished" above "(.+) finished")
+  [/^Your stats$/, "İstatistiklerin"],
+  [
+    /^No games yet: a game is counted here once it's played to the end\.$/,
+    "Henüz oyun yok: bir oyun sonuna kadar oynanınca burada sayılır.",
+  ],
+  [/^Overall$/, "Genel"],
+  [/^Games$/, "Oyun"],
+  [/^Won$/, "Kazanılan"],
+  [/^Lost$/, "Kaybedilen"],
+  [/^Drawn$/, "Berabere"],
+  [/^Win rate$/, "Kazanma oranı"],
+  [/^Best streak$/, "En uzun seri"],
+  [/^Current streak$/, "Şimdiki seri"],
+  [/^Time played$/, "Oyun süresi"],
+  [/^Favourite game$/, "En çok oynanan"],
+  [/^Usually at$/, "Genelde saat"],
+  [/^Playing since$/, "İlk oyun"],
+  [/^Most played with$/, "En çok birlikte oynanan"],
+  [/^Nemesis$/, "Baş belası"],
+  [/^Favourite victim$/, "Favori kurban"],
+  [/^Against bots$/, "Botlara karşı"],
+  [/^At the Okey table$/, "Okey masasında"],
+  [/^Takes the discard most$/, "En çok yandan alan"],
+  [/^Feeds the table most$/, "En çok yediren"],
+  [/^Claims the most discards$/, "En çok taş kapan"],
+  [/^Catches the most tiles$/, "En çok yakalayan"],
+  [/^Gets caught most$/, "En çok yakalanan"],
+  [/^Calls wrongly most$/, "En çok yanlış işlek diyen"],
+  [/^Finishes the most rounds$/, "En çok el bitiren"],
+  [/^Opens first most$/, "En çok ilk açan"],
+  [/^(.+), ([\d.,]+) a game$/, "$1, oyun başına $2"],
+  [/^Rounds finished$/, "Bitirilen el"],
+  [/^Titles won$/, "Kazanılan unvanlar"],
+  [/^Doubles$/, "Çift zar"],
+  [/^Hits$/, "Kırılan taş"],
+  [/^Mars wins$/, "Mars"],
+  [/^Stones taken$/, "Alınan taş"],
+  [/^Export$/, "Dışa aktar"],
+  [/^Import$/, "İçe aktar"],
+  [/^Games added: (\d+)$/, "Eklenen oyun: $1"],
+  [/^That's not a stats file$/, "Bu bir istatistik dosyası değil"],
+  [
+    /^This browser isn't keeping data for this site, so no stats are kept\.$/,
+    "Bu tarayıcı bu site için veri saklamıyor, bu yüzden istatistik tutulmuyor.",
+  ],
+  [
+    /^Keep every game's recording on this device$/,
+    "Her oyunun kaydını bu cihazda sakla",
+  ],
+  [
+    /^Other devices get the last 100 games' recordings, and every game's stats$/,
+    "Diğer cihazlara son 100 oyunun kaydı ve her oyunun istatistikleri gider",
+  ],
+  [/^(\d+) h (\d+) min$/, "$1 sa $2 dk"],
+  [/^(\d+) min$/, "$1 dk"],
+  // the titles won at a game of Okey (Stats/history.js)
+  [/^The Scavenger$/, "Yandan Ustası"],
+  [/^The Feeder$/, "Hayırsever"],
+  [/^The Snatcher$/, "Kapkaççı"],
+  [/^Hawk-eye$/, "Şahin Göz"],
+  [/^Butterfingers$/, "Sakar"],
+  [/^The Closer$/, "Bitirici"],
+  [/^Early Bird$/, "Erkenci"],
+  [/^Cries Wolf$/, "Yalancı Çoban"],
+  // why a title was won (Okey's score sheet)
+  [/^Took the discard from the side (\d+) times$/, "$1 kez yandan aldı"],
+  [/^Had their discards taken (\d+) times$/, "Attığı taş $1 kez alındı"],
+  [
+    /^Claimed a discard out of turn (\d+) times$/,
+    "$1 kez sırası gelmeden taş kaptı",
+  ],
+  [/^Caught a thrown tile (\d+) times$/, "$1 kez atılan taşı yakaladı"],
+  [/^Had a thrown tile caught (\d+) times$/, "Attığı taş $1 kez yakalandı"],
+  [/^Called a tile that didn't fit (\d+) times$/, "$1 kez yanlış işlek dedi"],
+  [/^Finished (\d+) rounds$/, "$1 el bitirdi"],
+  [/^Opened first in (\d+) rounds$/, "$1 elde ilk açan oldu"],
+  [/^The others: (.*)$/, "Diğerleri: $1"],
   // How to play (HowToPlay.jsx), above any pattern that might take a line
   ...[
     ["How to play", "Nasıl oynanır"],
@@ -149,8 +228,8 @@ const TR = [
       "Açtıktan sonra yeni perler aç, herkesin perine işle; son taşını atarak bit.",
     ],
     [
-      "A discard can be claimed out of turn, with a tile from the middle as a penalty; a tile thrown that fits a meld on the table can be caught, and its thrower pays 20.",
-      "Atılan taş sırası gelmeden istenebilir, ceza olarak ortadan bir taşla; yerdeki bir pere işleyen atılan taş yakalanabilir, atan 20 öder.",
+      "A discard can be claimed out of turn, with a tile from the middle as a penalty; a tile thrown that fits a meld on the table can be called (Call!), and its thrower pays 20. A wrong call costs nothing, but after two warnings each one locks Call! until everyone has thrown.",
+      "Atılan taş sırası gelmeden istenebilir, ceza olarak ortadan bir taşla; yerdeki bir pere işleyen atılan taşa işlek denebilir (İşlek!), atan 20 öder. Yanlış işlek bir şeye mal olmaz, ama iki uyarıdan sonra her biri İşlek!'i herkes bir taş atana dek kilitler.",
     ],
     [
       "Finishing scores −20, not opening 100, the rest their tiles (an okey 25); the okey thrown last doubles them. The lowest total after 13 hands wins.",
@@ -430,7 +509,29 @@ const TR = [
     /^That tile didn't fit a meld when it was thrown$/,
     "Bu taş atıldığında yerdekilere işlemiyordu",
   ],
-  [/^(.+) caught (.+)'s tile: \+(\d+)$/, "$1 yakaladı: $2 +$3"],
+  [/^(.+) called (.+)'s tile: \+(\d+)$/, "$1 işlek yakaladı: $2 +$3"],
+  [
+    /^(.+) called wrongly: warning (\d+) of (\d+)$/,
+    "$1 yanlış işlek dedi: uyarı $2/$3",
+  ],
+  [
+    /^(.+) called wrongly: no calls until everyone has thrown$/,
+    "$1 yanlış işlek dedi: herkes taş atana dek işlek diyemez",
+  ],
+  [
+    /^That tile didn't fit: warning (\d+) of (\d+)\. After that, a wrong call locks Call! until everyone has thrown once$/,
+    "Bu taş işlemiyordu: uyarı $1/$2. Bundan sonra yanlış işlek, herkes bir taş atana dek İşlek!'i kilitler",
+  ],
+  [
+    /^That tile didn't fit: Call! is locked until everyone has thrown once$/,
+    "Bu taş işlemiyordu: herkes bir taş atana dek İşlek! kilitli",
+  ],
+  [
+    /^Calling is locked until everyone has thrown once$/,
+    "Herkes bir taş atana dek işlek diyemezsin",
+  ],
+  [/^Wait (\d+)s to call again$/, "Yeniden işlek demek için $1 sn bekle"],
+  [/^Wrong call!$/, "Yanlış işlek!"],
   [
     /^Lay down your tiles, then throw the last one to the middle$/,
     "Taşlarını yere aç, sonra sonuncuyu ortaya at",
@@ -455,6 +556,8 @@ const TR = [
   [/^(.+) left$/, "$1 ayrıldı"],
   [/^(.+) changed the rules$/, "$1 kuralları değiştirdi"],
   // how the round finished (LastTurn)
+  [/^(.+) drew from the pile$/, "$1 ortadan çekti"],
+  [/^(.+) took (.+)'s discard$/, "$1 yandan aldı: $2"],
   [/^(.+) took the discard$/, "$1 yandan aldı"],
   [/^taken (\d+)\/(\d+)$/, "yandan $1/$2"],
   [/^just opened$/, "yeni açtı"], // before "(.+) opened"
@@ -554,8 +657,9 @@ const TR = [
   [/^Deal from here$/, "Buradan dağıt"],
   [/^Drag here to open$/, "Açmak için buraya sürükle"],
   [/^Drag here to lay down$/, "İşlemek için buraya sürükle"],
-  [/^Catch$/, "Yakala"],
-  [/^Catch!$/, "Yakala!"],
+  [/^Call!$/, "İşlek!"],
+  [/^Key hints$/, "Tuş ipuçları"],
+  [/^Space$/, "Boşluk"],
   [/^Take$/, "Al"],
   [/^(.+)'s turn$/, "sıra: $1"],
   [/^Round (\d+)\/(\d+)$/, "El $1/$2"],

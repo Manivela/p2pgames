@@ -272,6 +272,7 @@ export function useMoves() {
       caught: next.players.flatMap((p) =>
         (p.caught ?? []).map((id) => [p.id, id]),
       ),
+      wrong: next.players.map((p) => [p.id, p.calls?.wrong ?? 0]),
     };
     const oldGlass = glass.current;
     glass.current = q(".glass")?.getBoundingClientRect() ?? null;
@@ -378,13 +379,20 @@ export function useMoves() {
         duration: 320,
         easing: EASE,
       });
-      pop(p === me ? q(".rack > .playerName") : seatEl(p), t("Catch!"));
+      pop(p === me ? q(".rack > .playerName") : seatEl(p), t("Call!"));
       if (from)
         drift(
           tile,
           from.id === me ? q(".rack > .playerName") : seatEl(from.id),
           `+${next.rules?.catchPenalty}`,
         );
+    }
+
+    // a wrong call (okey.catchDiscard), over whoever made it
+    const before = new Map(prev.wrong);
+    for (const [p, wrong] of last.current.wrong) {
+      if (wrong <= (before.get(p) ?? wrong)) continue;
+      pop(p === me ? q(".rack > .playerName") : seatEl(p), t("Wrong call!"));
     }
 
     // round over: the finisher's tiles wave, the others' scores count up

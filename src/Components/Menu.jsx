@@ -6,6 +6,7 @@ import { useAwareness, useDoc, useMap, useWebRtc } from "../vendor/y-react";
 import { useAuthStore } from "../hooks/useStore";
 import { signalingServers, peerOpts } from "../constants";
 import Credits from "./Credits";
+import StatsDialog from "./Stats/StatsDialog";
 import { usePlaying } from "./HowToPlay";
 import coffee from "../assets/coffee.svg";
 import { t } from "../i18n";
@@ -290,6 +291,7 @@ function Here() {
 export default function Menu({ onClose }) {
   const { roomId } = useParams();
   const [q, setQ] = useState("");
+  const [stats, setStats] = useState(false);
   const plays = PLAYS.filter((p) =>
     `${p.name} ${p.kind ?? ""}`
       .toLocaleLowerCase()
@@ -366,6 +368,16 @@ export default function Menu({ onClose }) {
               <path d="M15 5H6a1 1 0 0 0-1 1v9" />
             </svg>
           </button>
+          <button
+            className="stats"
+            onClick={() => setStats(true)}
+            aria-label={t("Your stats")}
+            title={t("Your stats")}
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M1 8h4.4v6H1zM5.8 3h4.4v11H5.8zM10.6 10H15v4h-4.4z" />
+            </svg>
+          </button>
         </div>
         <nav className="games" ref={list}>
           {plays.map((p) => (
@@ -398,6 +410,7 @@ export default function Menu({ onClose }) {
           </footer>
         </aside>
       </div>
+      {stats && <StatsDialog plays={PLAYS} onClose={() => setStats(false)} />}
     </>
   );
 }
