@@ -2197,6 +2197,53 @@ test("bots fill the table and play their turns", async ({ page }) => {
   expect((await state(page)).discards).toBe(4);
 });
 
+// the browser asked to keep this site's storage (Firefox asks the player):
+// not as a game is played and recorded, only once the player asks to keep
+// something, here every game's recording (store.js)
+test("keeping the site's storage is asked for only when the player keeps something", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await page.addInitScript(() => {
+    window.persistAsked = 0;
+    if (navigator.storage)
+      navigator.storage.persist = async () => !!++window.persistAsked;
+  });
+  await sitDown(page);
+  await page.getByRole("button", { name: BOT }).first().click();
+  await page.getByRole("button", { name: START }).click();
+  // the game recorded on this device: its steps kept
+  const steps = () =>
+    page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const req = indexedDB.open("stats");
+          req.onupgradeneeded = () => req.transaction.abort();
+          req.onerror = () => resolve(0);
+          req.onsuccess = () => {
+            const n = req.result
+              .transaction("steps")
+              .objectStore("steps")
+              .count();
+            n.onsuccess = () => resolve(n.result);
+          };
+        }),
+    );
+  await expect.poll(steps).toBeGreaterThan(0);
+  const asked = () => page.evaluate(() => window.persistAsked);
+  expect(await asked()).toBe(0);
+  await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
+  await page
+    .getByRole("button", { name: /^(Your stats|İstatistiklerin)$/ })
+    .click();
+  await page
+    .getByRole("checkbox", {
+      name: /^(Keep every game's recording on this device|Her oyunun kaydını bu cihazda sakla)$/,
+    })
+    .check();
+  await expect.poll(asked).toBe(1);
+});
+
 test("a bot plays for someone gone, and makes way when they're back", async ({
   page,
   browser,

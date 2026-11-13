@@ -18,12 +18,29 @@ import { snapshot, step, summarize, VERSION } from "./history";
 // then stay on it.
 const KEPT = 100;
 
+// the browser asked, once, to keep this site's storage when it's short of
+// room (Firefox asks the player; Safari still clears it after 7 days
+// without a visit): only once the player asks to keep something, an import
+// or every game's steps, never as a page first plays
+let persisted;
+const keepForGood = () =>
+  (persisted ??= navigator.storage?.persist?.().catch(() => {}));
+
 // keep every game's steps on this device (the stats' toggle)
 export const useKeepAll = create(
-  persist((set) => ({ all: false, setAll: (all) => set({ all }) }), {
-    name: "stats-keep-all",
-    storage: createJSONStorage(() => localStorage),
-  }),
+  persist(
+    (set) => ({
+      all: false,
+      setAll: (all) => {
+        if (all) keepForGood();
+        set({ all });
+      },
+    }),
+    {
+      name: "stats-keep-all",
+      storage: createJSONStorage(() => localStorage),
+    },
+  ),
 );
 
 // none where the browser keeps this site from storing anything (site data
@@ -179,7 +196,6 @@ async function prune() {
 
 // one write at a time, in the order the steps were seen
 let queue = Promise.resolve();
-let persisted;
 
 async function keep(meta, s) {
   // a page come back to a game it has already summarized at its end
@@ -198,9 +214,6 @@ async function keep(meta, s) {
     games.put({ ...e.target.result, ...meta });
   tx.objectStore("steps").add({ game: meta.id, ...s, ops });
   await committed(tx);
-  // the browser asked, once, to keep this site's storage when it's short
-  // of room (Safari still clears it after 7 days without a visit)
-  persisted ??= navigator.storage?.persist?.().catch(() => {});
   if (meta.over && (await summarizeGame(meta.id))) {
     await compact(meta.id);
     await prune();
@@ -326,6 +339,7 @@ const isSummary = (s) =>
 
 export async function importAll(file) {
   if (file?.stats !== 1 || !Array.isArray(file.games)) return null;
+  keepForGood();
   const have = new Set((await getAll("games")).map((g) => g.id));
   const games = file.games.filter(
     (g) => isGame(g) && g.over && !have.has(g.id),
