@@ -62,3 +62,7 @@ demo: <https://p2p.yunusgulcu.com/>
 
 - `npm install`
 - `npm run dev`
+
+## License
+
+© Yunus Gülcü. All rights reserved; [ask me](https://github.com/Manivela) if you'd like to use it. Parts made by others keep their own terms: `src/vendor/y-react` (MIT) and the sounds credited in each game.
