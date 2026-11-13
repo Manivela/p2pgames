@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test";
 
 // Labels in English (desktop) or Turkish (phones)
 const GO = /^(Go|Gir)$/;

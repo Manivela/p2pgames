@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test";
 import {
   NET,
   BOT,
@@ -310,6 +310,10 @@ test("the stats count a game once, and one lost while its page was closed", asyn
       (id) =>
         new Promise((resolve) => {
           const req = indexedDB.open("stats");
+          // not there yet: left for the page to make (made here, it would
+          // be bare, the page's own open finding no stores to make)
+          req.onupgradeneeded = () => req.transaction.abort();
+          req.onerror = () => resolve(null);
           req.onsuccess = () => {
             const kept = req.result
               .transaction("summaries")
@@ -407,6 +411,10 @@ test("a page that was hidden keeps what it missed as a gap", async ({
       (id) =>
         new Promise((resolve) => {
           const req = indexedDB.open("stats");
+          // not there yet: left for the page to make (made here, it would
+          // be bare, the page's own open finding no stores to make)
+          req.onupgradeneeded = () => req.transaction.abort();
+          req.onerror = () => resolve(null);
           req.onsuccess = () => {
             const all = req.result
               .transaction("steps")

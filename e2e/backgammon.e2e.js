@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test";
 
 // Two players at the backgammon board, each in a browser of their own:
 // labels in English (desktop) or Turkish (phones). Positions and dice are
