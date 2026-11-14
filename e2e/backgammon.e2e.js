@@ -195,6 +195,28 @@ test("one device plays both sides, taking turns", async ({ browser }, info) => {
   expect(g.turn).toBe(0);
 });
 
+// Space throws the dice, as a tap on them does; once it's won, N deals
+// the next game
+test("keys: Space throws the dice, N deals the next game", async ({
+  browser,
+}, info) => {
+  const { white, black } = await twoPlayers(browser, info);
+  await setUp(white, { 13: 1, 6: 14 }, { 13: 1, 6: 14 }, [3, 2]);
+  await point(white, 13).click();
+  await point(white, 8).click();
+  await expect.poll(async () => (await game(black)).turn, NET).toBe(1);
+  await black.keyboard.press("Space");
+  await expect.poll(async () => (await game(white)).by, NET).toBe(1);
+  await setUp(white, { 1: 1, 0: 14 }, { 19: 15 }, [1, 2]);
+  await point(white, 1).click();
+  await point(white, 0).click();
+  await expect.poll(async () => (await game(black)).winner, NET).toBeTruthy();
+  await black.keyboard.press("Space");
+  expect((await game(black)).winner).toBeTruthy();
+  await black.keyboard.press("n");
+  await expect.poll(async () => (await game(white)).winner, NET).toBe(null);
+});
+
 test("a bot rolls and plays its turns", async ({ browser }, info) => {
   const page = await againstBot(browser, info, room("bg"), "backgammon");
   // whoever the opening roll picks, it comes round to white

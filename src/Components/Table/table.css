@@ -188,8 +188,8 @@ html:has(.tb-fit) {
   color: #c62828;
 }
 
-/* this device's sound level, and how its players sit */
-.tb-menu :is(.volume, .facing) {
+/* this device's sound level, the keycaps, and how its players sit */
+.tb-menu :is(.volume, .hints, .facing) {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -310,6 +310,47 @@ html:has(.tb-fit) {
 .tb-undo svg {
   width: 55%;
   height: 55%;
+}
+
+/* where the game puts it, its keycap on it */
+:where(.tb-undo) {
+  position: relative;
+}
+
+/* the key that presses it: a keycap on its corner, as at the Okey table
+   (rack.css); the table menu hides them (useKeyHints) */
+.tb-fit.no-keys kbd {
+  display: none;
+}
+
+.tb-fit kbd {
+  display: block;
+  position: absolute;
+  z-index: 1;
+  top: -6px;
+  right: -6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #fff;
+  color: #333;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* the next game's tap is the whole board: inside its corner */
+.tb-fit :is(.ck-next, .go-next, .tt-next) kbd {
+  top: 8px;
+  right: 8px;
+}
+
+/* a round bowl's on its rim */
+.tb-fit .go-bowl kbd {
+  top: 8%;
+  right: 8%;
 }
 
 /* a glow that calls the one whose move it is: on what to tap */

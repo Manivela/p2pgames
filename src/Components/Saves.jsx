@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import { t } from "../i18n";
 import { Confirm } from "./Confirm";
 import { encodeSave } from "./saveCode";
+import { useEscape } from "../hooks/useKey";
 import "./saves.css";
 
 // Every device keeps the latest two games of each kind it saw (`name`:
@@ -47,6 +48,7 @@ export function useAutoSave(name, state, id) {
 }
 
 export function Dialog({ title, className = "", onClose, children }) {
+  useEscape(onClose);
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <div

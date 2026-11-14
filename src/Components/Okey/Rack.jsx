@@ -4,6 +4,7 @@ import Tile, { TileFace } from "./Tile";
 import "./rack.css";
 import { OkeyContext } from "./OkeyContext";
 import { t } from "../../i18n";
+import { useKey } from "../../hooks/useKey";
 import {
   canPeek as peekable,
   callLocked,
@@ -355,32 +356,6 @@ function Hands({ players }) {
       })}
     </div>
   );
-}
-
-// A key that does what a button does, from anywhere but a text field: " "
-// Space, else a letter; `press` null while there's nothing to press. Its
-// keycap shows on the button on a computer (rack.css), unless hidden from
-// the table menu.
-export function useKey(key, press) {
-  const latest = useRef();
-  latest.current = press;
-  useEffect(() => {
-    const onKey = (e) => {
-      const go = latest.current;
-      const hit =
-        key === " " ? e.code === "Space" : e.key?.toLowerCase() === key;
-      if (!go || !hit || e.repeat || e.ctrlKey || e.metaKey || e.altKey) {
-        return;
-      }
-      if (e.target.closest?.("input, textarea, select, [contenteditable]")) {
-        return;
-      }
-      e.preventDefault(); // nor scrolls, nor presses a focused button
-      go();
-    };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [key]);
 }
 
 // A player's discard pile, between them and the next player, who may take

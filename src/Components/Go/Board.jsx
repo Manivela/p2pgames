@@ -1,5 +1,6 @@
 import { Undo, tell, useChangedAt } from "../Table";
 import { t } from "../../i18n";
+import { useKey } from "../../hooks/useKey";
 import { count, pass, play, sizeOf, undo, whyNot } from "./rules";
 
 // The board on the table, each player's bowl of stones at their side of it
@@ -26,10 +27,11 @@ const LETTERS = "ABCDEFGHJKLMNOPQRST";
 const COLOR = ["black", "white"];
 
 // A side of the table: a word for its player, Undo when they can take
-// their last move back, and their bowl, a tap on it a pass (`onPass`) when
-// it's theirs to move
+// their last move back, and their bowl, a tap on it a pass (`onPass`), or
+// P, when it's theirs to move
 function Side({ seat, far, over, said, onUndo, onPass }) {
   const Bowl = onPass ? "button" : "div";
+  useKey("p", onPass);
   return (
     <div className={`go-side${far ? " far" : ""}${over ? " over" : ""}`}>
       {said && <p className="go-said">{said}</p>}
@@ -37,12 +39,14 @@ function Side({ seat, far, over, said, onUndo, onPass }) {
       <Bowl
         className={`go-bowl ${COLOR[seat]}`}
         title={onPass && t("Pass")}
+        aria-label={onPass && t("Pass")}
         onClick={onPass}
       >
         <i />
         <i />
         <i />
         {onPass && <span>{t("Pass")}</span>}
+        {onPass && <kbd>P</kbd>}
       </Bowl>
     </div>
   );
@@ -94,6 +98,7 @@ export default function Board({ state, table }) {
       t(`Waiting for ${names[state.turn]}`)
     ) : null);
   const next = over && deal;
+  useKey("n", next);
   // a side's: words to both face to face, Undo and Pass to whoever's it is
   const side = (seat, isFar) => (
     <Side
@@ -173,7 +178,9 @@ export default function Board({ state, table }) {
             aria-label={t("Next game")}
             title={t("Next game")}
             onClick={deal}
-          />
+          >
+            <kbd>N</kbd>
+          </button>
         )}
       </div>
       {side(near, false)}

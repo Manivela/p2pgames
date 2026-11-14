@@ -332,7 +332,7 @@ test("wrong calls are warned, twice, then lock Call!", async ({
 
 // D draws from the middle pile, as dragging its top to the rack does; the
 // keys' keycaps show on a computer, and the table menu hides them
-test("D draws from the middle pile; the menu hides the keys' keycaps", async ({
+test("D draws from the middle pile; the menu hides the keys' keycaps, off at first on a phone", async ({
   page,
 }, info) => {
   anySize(info);
@@ -351,9 +351,11 @@ test("D draws from the middle pile; the menu hides the keys' keycaps", async ({
     await expect(key).toBeVisible();
     await page.getByRole("button", { name: MENU }).click();
   } else {
+    // a touch screen, or one taken for it, turns them on in ⋯
     await expect(key).toBeHidden();
     await page.getByRole("button", { name: MENU }).click();
-    await expect(hints).toBeHidden();
+    await hints.check();
+    await expect(key).toBeVisible();
     await page.getByRole("button", { name: MENU }).click();
   }
   // and it flies there, as a tile drawn by someone else does
@@ -363,6 +365,41 @@ test("D draws from the middle pile; the menu hides the keys' keycaps", async ({
   await expect.poll(async () => (await handIds(page)).includes(top)).toBe(true);
   await expect.poll(flights).toBeGreaterThan(before);
   await expect(key).toHaveCount(0);
+});
+
+// Escape closes what opened last: ⋯, El aç's picking, the stats before
+// the site menu they opened from; Tab held shows the scores, as in many
+// games
+test("Escape closes what's open, the last first; Tab held shows the scores", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  await page.getByRole("button", { name: MENU }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".table-menu .menu")).toHaveCount(0);
+  const elAc = page.locator("button[aria-pressed]");
+  await elAc.click();
+  await expect(elAc).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(elAc).toHaveAttribute("aria-pressed", "false");
+  // from a button pressed too, not moving the focus
+  const scores = page.locator(".scores");
+  await page.keyboard.down("Tab");
+  await expect(scores).toHaveAttribute("open", "");
+  await page.keyboard.up("Tab");
+  await expect(scores).not.toHaveAttribute("open");
+  await expect(elAc).toBeFocused();
+  await page.getByRole("button", { name: SITE_MENU }).click();
+  await page
+    .getByRole("button", { name: /^(Your stats|İstatistiklerin)$/ })
+    .click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".dialog.stats")).toHaveCount(0);
+  await expect(page.locator(".site-menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".site-menu")).toHaveCount(0);
 });
 
 // ? beside ⋯, as at every table, opens How to play for the game played

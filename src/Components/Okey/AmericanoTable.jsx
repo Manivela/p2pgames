@@ -1,4 +1,11 @@
-import { useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useDrop } from "react-dnd";
 import { findKey, sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
@@ -434,15 +441,44 @@ export function Scores() {
   // the lowest total leads (okey.js's winner), unless all are level
   const totals = columns.map(total).filter((v) => v !== null);
   const lead = totals.some((v) => v !== totals[0]) && Math.min(...totals);
+  // Tab held opens the sheet till it's let go, as in many games; Shift+Tab
+  // still moves the focus, and Tab does in a field, a dialog or a menu
+  const sheet = useRef();
+  useEffect(() => {
+    let held = false;
+    const down = (e) => {
+      if (e.key !== "Tab" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey)
+        return;
+      const skip =
+        "input, textarea, select, [contenteditable], .dialog, .menu, .site-menu";
+      if (e.target.closest?.(skip)) return;
+      e.preventDefault();
+      if (held || sheet.current.open) return;
+      sheet.current.open = held = true;
+    };
+    const up = (e) => {
+      if (e.type === "keyup" && e.key !== "Tab") return;
+      if (held) sheet.current.open = held = false;
+    };
+    addEventListener("keydown", down);
+    addEventListener("keyup", up);
+    addEventListener("blur", up); // let go in another window
+    return () => {
+      removeEventListener("keydown", down);
+      removeEventListener("keyup", up);
+      removeEventListener("blur", up);
+    };
+  }, []);
   return (
     // a tap away: a round's end shows its scores with the hands, the end
     // of the game who won, and an open sheet would cover the next step
-    <details className="scores">
+    <details className="scores" ref={sheet}>
       {/* an icon: under your pile, where it sits, there's room for little */}
       <summary aria-label={t("Scores")} title={t("Scores")}>
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path d="M1 8h4.4v6H1zM5.8 3h4.4v11H5.8zM10.6 10H15v4h-4.4z" />
         </svg>
+        <kbd>Tab</kbd>
       </summary>
       <div className="sheet">
         <table>

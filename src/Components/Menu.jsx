@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import { uniqBy } from "lodash";
 import { useAwareness, useDoc, useMap, useWebRtc } from "../vendor/y-react";
 import { useAuthStore } from "../hooks/useStore";
+import { useEscape } from "../hooks/useKey";
 import { signalingServers, peerOpts } from "../constants";
 import Credits from "./Credits";
 import StatsDialog from "./Stats/StatsDialog";
@@ -331,11 +332,7 @@ export default function Menu({ onClose }) {
     seen.observe(card.current.querySelector(".here"));
     return () => seen.disconnect();
   }, []);
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscape(onClose);
   return (
     <>
       <div className="site-menu-backdrop" onClick={onClose} />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Undo, tell, useChangedAt } from "../Table";
 import { t } from "../../i18n";
+import { useKey } from "../../hooks/useKey";
 import { colOf, hop, movable, rowOf, targets, undo, whyNot } from "./rules";
 import "./checkers.css";
 
@@ -86,6 +87,7 @@ export default function Board({ state, table }) {
       : note;
   const back = state.back?.seat;
   const canUndo = mine.includes(back) && state.turn !== null;
+  useKey("n", over && deal);
   const side = (seat, isFar) => (
     <Side
       far={isFar}
@@ -151,7 +153,9 @@ export default function Board({ state, table }) {
             aria-label={t("Next game")}
             title={t("Next game")}
             onClick={deal}
-          />
+          >
+            <kbd>N</kbd>
+          </button>
         )}
       </div>
       {side(near, false)}

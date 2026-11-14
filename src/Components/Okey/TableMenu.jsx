@@ -10,6 +10,7 @@ import { t } from "../../i18n";
 import { Confirm } from "../Confirm";
 import { Dialog, SavedGames, useAutoSave } from "../Saves";
 import { useKeyHints } from "../../hooks/useStore";
+import { useEscape } from "../../hooks/useKey";
 
 export { Confirm, Dialog };
 
@@ -248,6 +249,7 @@ export default function TableMenu() {
     setOpen(false);
     action();
   };
+  useEscape(open && (() => setOpen(false)));
   return (
     <div className="table-menu">
       {/* a newer version out (OkeyContext): a dot on ⋯, easy to leave be */}
@@ -282,8 +284,8 @@ export default function TableMenu() {
                 onChange={(e) => setVolume(Number(e.target.value))}
               />
             </label>
-            {/* the keycaps on Take, Call! and the pile: on a computer only
-                (rack.css) */}
+            {/* the keycaps on Take, Call! and the pile: on at first on a
+                computer (useKeyHints) */}
             <label className="hints">
               {t("Key hints")}
               <input

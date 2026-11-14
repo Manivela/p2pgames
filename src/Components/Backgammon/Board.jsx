@@ -13,6 +13,7 @@ import {
   whyNot,
 } from "./rules";
 import { t } from "../../i18n";
+import { useKey } from "../../hooks/useKey";
 import { Undo, tell as told, useChangedAt, useHeard, useTok } from "../Table";
 import diceSound from "./assets/dice.mp3";
 
@@ -276,8 +277,8 @@ function Die({ n, used, toss, x, y, yaw, ready }) {
 // hits the felt (`onLand`), then they stay where they came to rest till
 // the next roll (keyed by it, Board). The next to roll picks them up
 // where they lie, and so does whoever starts the next game: a tap on
-// them, `onThrow` (`label`), lit till then.
-function Dice({ state, viewer, still, onLand, onThrow, label }) {
+// them, `onThrow` (`label`, its key `cap`), lit till then.
+function Dice({ state, viewer, still, onLand, onThrow, label, cap }) {
   const { dice, left } = state;
   const all = dice[0] === dice[1] ? [...dice, ...dice] : dice;
   const [spots] = useState(() => landing(all.length));
@@ -328,7 +329,9 @@ function Dice({ state, viewer, still, onLand, onThrow, label }) {
           aria-label={label}
           title={label}
           onClick={onThrow}
-        />
+        >
+          <kbd>{cap}</kbd>
+        </button>
       )}
     </>
   );
@@ -592,6 +595,11 @@ export default function Board({
     state.last.kind === "roll" && state.turn !== state.by && rolled;
   const name = (seat) => names[seat];
   const won = state.winner;
+  // the dice: Space throws them, N, once it's won, starts the next game
+  const onThrow =
+    rolled && (canRoll ? () => act(rollFor(state, me)) : won ? deal : null);
+  useKey(" ", !won && onThrow);
+  useKey("n", won && onThrow);
   // who won: the half's width, to be read at a glance
   const statusW = won || across ? 5.6 : 3.3;
 
@@ -677,10 +685,9 @@ export default function Board({
             viewer={viewer}
             still={Date.now() - rolledAt > SLIDE_MS}
             onLand={thrown}
-            onThrow={
-              canRoll ? () => act(rollFor(state, me)) : won ? deal : null
-            }
+            onThrow={onThrow}
             label={t(won ? "Next game" : "Roll")}
+            cap={won ? "N" : t("Space")}
           />
         )}
       </div>

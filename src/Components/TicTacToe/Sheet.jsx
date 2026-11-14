@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Undo, tell, useChangedAt } from "../Table";
 import { t } from "../../i18n";
+import { useKey } from "../../hooks/useKey";
 import { mark, undo, whyNot } from "./rules";
 
 // A sheet of squared paper on the table, the grid drawn by hand in pencil,
@@ -196,6 +197,7 @@ export default function Sheet({ state, table }) {
   const back = state.back?.seat;
   const canUndo = state.back && mine.includes(back);
   const next = over && deal;
+  useKey("n", next);
 
   return (
     <div
@@ -297,7 +299,9 @@ export default function Sheet({ state, table }) {
           aria-label={t("Next game")}
           title={t("Next game")}
           onClick={deal}
-        />
+        >
+          <kbd>N</kbd>
+        </button>
       )}
     </div>
   );

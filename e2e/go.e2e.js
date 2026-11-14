@@ -80,6 +80,22 @@ test("a capture, a ko refused, two passes: counted on both pages", async ({
   await expect.poll(() => stones(black), NET).toBe(0);
 });
 
+// P passes, on your turn only; N deals the next game once it's over
+test("keys: P passes on your turn, N deals the next game", async ({
+  browser,
+}, info) => {
+  const { black, white } = await twoPlayers(browser, info);
+  await white.keyboard.press("p");
+  expect((await game(white)).passes).toBeFalsy();
+  await black.keyboard.press("p");
+  await expect.poll(async () => (await game(white)).passes, NET).toBe(1);
+  await white.keyboard.press("p");
+  await expect.poll(async () => (await game(black)).winner, NET).toBeTruthy();
+  const { id } = await game(black);
+  await black.keyboard.press("n");
+  await expect.poll(async () => (await game(white)).id, NET).not.toBe(id);
+});
+
 test("a reload shows the board as it is: no stone coming down", async ({
   browser,
 }, info) => {

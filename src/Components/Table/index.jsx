@@ -3,7 +3,13 @@ import { useParams } from "react-router-dom";
 import useSound from "use-sound";
 import { toast } from "react-hot-toast";
 import { useAwareness, useDoc, useMap, useWebRtc } from "../../vendor/y-react";
-import { useAuthStore, useFacing, useVolume } from "../../hooks/useStore";
+import {
+  useAuthStore,
+  useFacing,
+  useKeyHints,
+  useVolume,
+} from "../../hooks/useStore";
+import { MOD, useEscape, useKey } from "../../hooks/useKey";
 import { signalingServers, peerOpts } from "../../constants";
 import { Confirm } from "../Confirm";
 import { usePlaying } from "../HowToPlay";
@@ -338,6 +344,8 @@ function Menu({
     setOpen(false);
     action();
   };
+  useEscape(open && (() => setOpen(false)));
+  const { hints, setHints } = useKeyHints();
   return (
     <div className="tb-menu">
       <button
@@ -365,6 +373,16 @@ function Menu({
                 />
               </label>
               {options}
+              {/* the keycaps on Undo, the dice, the bowl and the next
+                  game's tap, as at the Okey table (useKeyHints) */}
+              <label className="hints">
+                {t("Key hints")}
+                <input
+                  type="checkbox"
+                  checked={hints}
+                  onChange={(e) => setHints(e.target.checked)}
+                />
+              </label>
               {setFacing && (
                 <label className="facing">
                   {t("Face to face")}
@@ -429,6 +447,7 @@ function Menu({
 export function Table({ table, mark, info, options, children }) {
   const { seats, game, mine, seated, both, full, near, far, across } = table;
   const { volume, setVolume } = useVolume();
+  const { hints } = useKeyHints();
   const score = game?.score ?? [0, 0];
   const plate = (s) => (
     <Plate
@@ -449,7 +468,7 @@ export function Table({ table, mark, info, options, children }) {
     />
   );
   return (
-    <div className="tb-fit">
+    <div className={hints ? "tb-fit" : "tb-fit no-keys"}>
       <div className="tb-head">
         {plate(far)}
         {plate(near)}
@@ -542,8 +561,9 @@ export function useTok() {
 }
 
 // takes back the last move: a round button, an arrow turning back, placed
-// and sized by the game (`className`, `style`)
+// and sized by the game (`className`, `style`); or ⌘Z, Ctrl+Z
 export function Undo({ className, style, onClick }) {
+  useKey("mod+z", onClick);
   return (
     <button
       className={`tb-undo ${className}`}
@@ -563,6 +583,7 @@ export function Undo({ className, style, onClick }) {
         <path d="M9 14 4 9l5-5" />
         <path d="M4 9h11a5 5 0 0 1 0 10h-3" />
       </svg>
+      <kbd>{MOD}Z</kbd>
     </button>
   );
 }

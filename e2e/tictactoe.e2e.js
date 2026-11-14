@@ -110,6 +110,44 @@ test("one device, face to face: a word to each, O's Undo turned to O", async ({
   await expect(page.locator(".tb-plate.turn")).toHaveCount(1);
 });
 
+// a computer's keys: ⌘Z or Ctrl+Z takes back (with ⇧, redo, it doesn't),
+// N deals the next game once one's over; their keycaps, off at first on a
+// phone, in ⋯, which Escape closes
+test("keys: ⌘Z takes back, N deals the next game, Escape closes ⋯", async ({
+  browser,
+}, info) => {
+  const page = await sitDown(
+    browser,
+    info,
+    room("ttt"),
+    "tictactoe",
+    "Ayşe",
+    0,
+  );
+  await bothSides(page);
+  await expect.poll(() => game(page), NET).toBeTruthy();
+  await cell(page, 4).click();
+  const desktop = info.project.name === "desktop";
+  const key = page.locator(".tb-undo kbd");
+  await expect(key).toBeVisible({ visible: desktop });
+  await page.getByRole("button", { name: MENU }).click();
+  await page.locator(".tb-menu .hints input").setChecked(!desktop);
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".tb-menu .menu")).toHaveCount(0);
+  await expect(key).toBeVisible({ visible: !desktop });
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  expect((await game(page)).cells[4]).toBe(0);
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect.poll(async () => (await game(page)).cells[4]).toBe(null);
+  const { id } = await game(page);
+  await page.keyboard.press("n");
+  for (const i of [0, 3, 1, 4, 2]) await cell(page, i).click();
+  await expect.poll(async () => (await game(page)).winner).toBeTruthy();
+  expect((await game(page)).id).toBe(id);
+  await page.keyboard.press("n");
+  await expect.poll(async () => (await game(page)).id).not.toBe(id);
+});
+
 test("Super, picked in the menu: sent to a board, a board taken", async ({
   browser,
 }, info) => {
@@ -326,6 +364,8 @@ test("the stats count a game once, and one lost while its page was closed", asyn
     );
   const won = await ended(x);
   expect(won).toBeTruthy();
+  // Escape closes the stats, then the menu they opened from
+  await x.keyboard.press("Escape");
   await x.keyboard.press("Escape");
   await x.evaluate(() =>
     window.tictactoe.set({ ...window.tictactoe.get(), score: [0, 0] }),
@@ -352,8 +392,10 @@ test("the stats count a game once, and one lost while its page was closed", asyn
   // Export leaves out (its marks no one's to read in the file), and every
   // step it takes deflated, as save codes are
   await x.keyboard.press("Escape");
+  await x.keyboard.press("Escape");
   await x.getByRole("button", { name: NEXT }).click();
   await expect.poll(async () => (await game(back))?.turn, NET).toBe(1);
+  await back.keyboard.press("Escape");
   await back.keyboard.press("Escape");
   await cell(back, 4).click();
   await expect.poll(async () => (await game(x)).cells[4], NET).toBe(1);

@@ -1,7 +1,7 @@
 import { Fragment, useContext, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
-import Rack, { DiscardPile, Seat, useKey } from "./Rack";
+import Rack, { DiscardPile, Seat } from "./Rack";
 import Slot from "./Slot";
 import Tile, { SLOP } from "./Tile";
 import { LastTurn, Melds, RoundInfo, Scores } from "./AmericanoTable";
@@ -13,6 +13,7 @@ import { useMoves } from "./moves";
 import * as okey from "./okey";
 import { ended, freeSlot, isElden, pileOut, rowOf, tableSeats } from "./okey";
 import { useKeyHints } from "../../hooks/useStore";
+import { useEscape, useKey } from "../../hooks/useKey";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -170,7 +171,10 @@ function NextStep() {
     openHand,
     openAll,
     layMelds,
+    unselectAll,
   } = useContext(OkeyContext);
+  // Escape lets El aç go, as a tap on the felt does
+  useEscape(picking && unselectAll);
   switch (okeyState.gameState) {
     case "start":
       return <Lobby />;

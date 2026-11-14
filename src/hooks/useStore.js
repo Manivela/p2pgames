@@ -41,12 +41,19 @@ export const useVolume = create(
   }),
 );
 
-// the keys' keycaps on Okey's buttons, on a computer (its ⋯ menu)
+// the keys' keycaps on the tables' buttons (their ⋯ menus): on at first on
+// a computer, off on a touch screen, which can still turn them on
+const computer = globalThis.matchMedia?.(
+  "(hover: hover) and (pointer: fine)",
+).matches;
 export const useKeyHints = create(
-  persist((set) => ({ hints: true, setHints: (hints) => set({ hints }) }), {
-    name: "key-hints",
-    storage: createJSONStorage(() => localStorage),
-  }),
+  persist(
+    (set) => ({ hints: !!computer, setHints: (hints) => set({ hints }) }),
+    {
+      name: "key-hints",
+      storage: createJSONStorage(() => localStorage),
+    },
+  ),
 );
 
 // backgammon's home on the left on this device, as some play it (its ⋯ menu)

@@ -1111,35 +1111,38 @@ html:has(.fit) {
   opacity: 0.5;
 }
 
-/* the key that presses it, on a computer: a keycap on its corner, so it
-   doesn't widen Take and Call! into the melds; the table menu hides them */
-.board kbd {
+/* the key that presses it: a keycap on its corner, so it doesn't widen
+   Take and Call! into the melds; the table menu hides them (useKeyHints) */
+.board.no-keys kbd {
   display: none;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .board:not(.no-keys) kbd {
-    display: block;
-    position: absolute;
-    z-index: 6;
-    top: calc(var(--t) * -0.2);
-    right: calc(var(--t) * -0.04);
-    padding: 0 calc(var(--t) * 0.06);
-    border-radius: calc(var(--t) * 0.05);
-    background: #fff;
-    color: #333;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-    font: inherit;
-    font-size: calc(var(--t) * 0.16);
-    font-weight: 600;
-    line-height: 1.35;
-  }
+.board kbd {
+  display: block;
+  position: absolute;
+  z-index: 6;
+  top: calc(var(--t) * -0.2);
+  right: calc(var(--t) * -0.04);
+  padding: 0 calc(var(--t) * 0.06);
+  border-radius: calc(var(--t) * 0.05);
+  background: #fff;
+  color: #333;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  font: inherit;
+  font-size: calc(var(--t) * 0.16);
+  font-weight: 600;
+  line-height: 1.35;
+}
 
-  /* the draw pile's on the stack's corner */
-  .board .draw > kbd {
-    right: auto;
-    left: calc(var(--t) * 0.8);
-  }
+/* the draw pile's on the stack's corner */
+.board .draw > kbd {
+  right: auto;
+  left: calc(var(--t) * 0.8);
+}
+
+/* the scores', at the screen's edge, inside it: not peeking past ⋯ */
+.board .scores kbd {
+  right: 0;
 }
 
 /* the tile it catches or takes, small, as it may lie on another pile */
@@ -1358,26 +1361,19 @@ html:has(.fit) {
   background: none;
 }
 
-/* on a computer only, where the keycaps show */
 .table-menu .hints {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .table-menu .hints {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin: 0;
-    padding: 2px 6px;
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  .table-menu .hints input {
-    margin: 0;
-  }
+.table-menu .hints input {
+  margin: 0;
 }
 
 /* a second tap confirms */
