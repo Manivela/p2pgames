@@ -252,6 +252,17 @@ test("101: El aç's first press picks what it would lay: the opening, then the s
   assert.deepEqual(okey.meldsToLay(s, 2), []);
 });
 
+test("101: El aç keeps back an okey the opening stands without", () => {
+  // red 10-11-12 and the okey as its 13: 116 with it, 103 without
+  const run = ["red10-0", "red11-0", "red12-1"];
+  const rack = [...run, "blue1-0", null, ...kut, null, ...yellow, null];
+  const s = holding(start(), 1, [...rack, ...p1Rest.slice(1)]);
+  assert.sameMembers(okey.meldsToLay(s, 1), [...run, ...kut, ...yellow]);
+  assert.isOk(tileIn(okey.openAll(s, 1), 1, "blue1-0"));
+  // short of 101 without it, it's laid (the 12 of red 10-11-okey)
+  assert.include(okey.meldsToLay(start(), 1), "blue1-0");
+});
+
 test("101: open with 5 pairs; then only pairs, or adding to sets and runs", () => {
   let s = okey.openHand(start(), 1, [opening]);
   // laying more right after opening is allowed (this just isn't a meld)

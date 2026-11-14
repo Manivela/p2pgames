@@ -12,7 +12,7 @@ How each part works is in its code comments; this file holds the conventions, de
 
 ## Table
 
-- Show what everyone at a real table sees and leave the thinking to the player: no hints about what to lay, no auto-sort. Make hands faster, not smarter. The one exception, asked for: El aç's first press picks what the rules would lay down (the opening they find, the highest tiles first as they'd count against you left on the rack, then the sets and runs as they lie on the rack; never pairs, those are picked on purpose), for the player to change or lay.
+- Show what everyone at a real table sees and leave the thinking to the player: no hints about what to lay, no auto-sort. Make hands faster, not smarter. The one exception, asked for: El aç's first press picks what the rules would lay down (the opening they find, the highest tiles first as they'd count against you left on the rack, then the sets and runs as they lie on the rack; an okey only where a meld or the opening needs it, kept back otherwise as it's still wild; never pairs, those are picked on purpose), for the player to change or lay.
 - One layout for every screen, sized in tile widths `--t` (`useTileSize`); only the size changes. Anything that comes and goes (badges, Sit, the tea glass, Take and Call!) is placed absolutely, so its row never shifts; along the top it stays inside the row, as a full table's melds come right up to it, and a seat has room for one line of badges.
 - A new place a tile can be gets the `data-*` attribute animations find it by (`moves.js`), and a place code in `okeyView` (`Stats/history.js`), which records where every tile is for the stats: a tile it doesn't know drops out of the record.
 

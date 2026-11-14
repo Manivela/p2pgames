@@ -561,7 +561,8 @@ export function openHand(state, player, groups, withPairs = true) {
 // El aç pressed twice with nothing picked: the sets and runs the whole
 // rack opens with, the highest tiles tried first (left on the rack they
 // count against you) and the okeys last, so a meld without one goes
-// first; then laid as they lie on the rack, an okey where it stands
+// first; then laid as they lie on the rack, an okey where it stands,
+// kept back (still wild) when the opening lays all the rest without it
 export function openAll(state, player) {
   const tiles = seat(state, player).hand.filter(Boolean);
   const okey = (t) => isOkey(t, state.okeyTile);
@@ -570,20 +571,37 @@ export function openAll(state, player) {
   const s = openHand(state, player, [ids], false);
   if (!s || typeof s === "string") return s;
   const kept = seat(s, player).hand.map((t) => t?.id);
-  const laid = tiles.filter((t) => !kept.includes(t.id));
-  return openHand(state, player, [laid.map((t) => t.id)], false);
+  let laid = tiles.filter((t) => !kept.includes(t.id)).map((t) => t.id);
+  const left = (r) => seat(r, player).hand.filter(Boolean).length;
+  for (const t of tiles.filter(okey)) {
+    const without = laid.filter((id) => id !== t.id);
+    const r = openHand(state, player, [without], false);
+    if (r && typeof r !== "string" && left(r) === tiles.length - without.length)
+      laid = without;
+  }
+  return openHand(state, player, [laid], false);
 }
 
 // What El aç picks on its first press, to be seen before it's laid: the
 // opening openAll would make (on your turn or not), or once opened the
-// sets and runs as they lie on the rack. Pairs are picked by hand only.
+// sets and runs as they lie on the rack, an okey only where its meld
+// needs it (not a küt's fourth, nor past a seri's end): kept, it's still
+// wild. Pairs are picked by hand only.
 export function meldsToLay(state, player) {
   const hand = seat(state, player)?.hand ?? [];
+  const ind = state.okeyTile;
   if (state.gameState !== "play" || state.openedWithPairs?.[player]) return [];
   if (state.opened[player]) {
+    const needed = ({ type, tiles }) =>
+      tiles.reduce((kept, t) => {
+        const without = kept.filter((k) => k !== t);
+        return isOkey(t, ind) && meldOrder(without, type, ind, wrap(state))
+          ? without
+          : kept;
+      }, tiles);
     return groupsOf(hand, game.rowOf(state, player))
-      .flatMap((g) => asLaid(g, state.okeyTile, wrap(state)).melds)
-      .flatMap((m) => m.tiles.map((t) => t.id));
+      .flatMap((g) => asLaid(g, ind, wrap(state)).melds)
+      .flatMap((m) => needed(m).map((t) => t.id));
   }
   const s = openAll({ ...state, currentPlayer: player, drawn: true }, player);
   if (!s || typeof s === "string") return [];

@@ -1494,6 +1494,27 @@ test("El aç's first press picks the round's melds it finds, the highest first",
   );
 });
 
+test("El aç once opened picks an okey only where a meld needs it", () => {
+  const ones = ["red1-0", "black1-0", "yellow1-1"]; // blue1 is the okey
+  const run = ["black7-0", "black8-0", "black9-0"];
+  const pick = (hand) => {
+    const s = okey.startGame(seated(2), {
+      okeyTile: "blue13-1",
+      hands: [hand, p2Hand],
+    });
+    return okey.meldsToLay({ ...s, opened: { 1: true } }, 1);
+  };
+  // a küt of three, the okey beside it as a fourth, either side
+  assert.sameMembers(pick([...ones, "blue1-0", "yellow11-0"]), ones);
+  assert.sameMembers(pick(["blue1-0", ...ones, "yellow11-0"]), ones);
+  // at a seri's end it's spare; in its gap, or making it three, needed
+  assert.sameMembers(pick([...run, "blue1-0", "yellow11-0"]), run);
+  const gap = ["black7-0", "blue1-0", "black9-0", "black10-0"];
+  assert.sameMembers(pick([...gap, "yellow11-0"]), gap);
+  const two = ["black7-0", "black8-0", "blue1-0"];
+  assert.sameMembers(pick([...two, "yellow11-0"]), two);
+});
+
 test("4 çift: open with four pairs, then lay pairs, sets and runs", () => {
   const round = AMERICANO.rounds.findIndex((r) => r.name === "4 çift") + 1;
   assert.equal(round, AMERICANO.rounds.length - 1); // just before Elden
