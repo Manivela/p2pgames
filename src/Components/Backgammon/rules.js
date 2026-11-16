@@ -145,7 +145,8 @@ export function sources(state) {
 // Where the checker on `from` can go this turn, each with the steps that
 // take it there: one die, or several in a row (3-2 also reaches 5) when the
 // points between are open. A checker passing over a blot hits it; of two
-// ways to the same point, the one that hits more.
+// ways to the same point, the one that hits more, then the one with fewer
+// dice, leaving the others to play (2-5 on 3 and 1 bears both off)
 export function targets(state, from) {
   const found = new Map();
   for (const seq of plays(state)) {
@@ -154,7 +155,9 @@ export function targets(state, from) {
       at = seq[i].to;
       const steps = seq.slice(0, i + 1);
       const hits = (s) => s.filter((x) => x.hit).length;
-      if (!found.has(at) || hits(steps) > hits(found.get(at))) {
+      const was = found.get(at);
+      const more = was && hits(steps) - hits(was);
+      if (!was || more > 0 || (more === 0 && steps.length < was.length)) {
         found.set(at, steps);
       }
       if (at === OFF) break;

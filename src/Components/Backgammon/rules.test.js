@@ -96,6 +96,15 @@ test("bearing off: exactly, or the furthest checker with a bigger die", () => {
   assert.deepEqual(reach(out, 7), { 4: 1, 6: 1, 3: 2 });
 });
 
+test("of two ways to the same spot, the one with fewer dice", () => {
+  // 2-5 (rolled in that order) on 3 and 1: the 5 bears off the 3, not 2 then 5
+  const s = position({ 3: 1, 1: 1, [OFF]: 13 }, { 1: 15 }, [2, 5]);
+  assert.deepEqual(reach(s, 3), { [OFF]: 1, 1: 1 });
+  const after = move(s, 0, 3, OFF);
+  assert.equal(after.checkers[0][1], 1, "the 1 stays, for the 2");
+  assert.deepEqual(after.left, [2]);
+});
+
 test("both dice must be played when they can", () => {
   // black holds white's 6 and 3: 13 -1-> 12 leaves the 6 unplayable, so
   // the 1 is played from 9 or after the 6
