@@ -45,4 +45,32 @@
 
 ## New games
 
+Two-player board games can sit at the shared table (`Table/`), as Backgammon, Checkers, Go and Tic-tac-toe do.
+
+- **Chess.** On Checkers' 8×8 board.
+- **Mangala.** Two rows of six pits and a store each, sown round the board, captured by evens and by landing in an empty pit of your own.
+- **Five in a row (Gomoku).** On the Go board, with a win check like Tic-tac-toe's.
+- **Four in a row.** Discs dropped into columns. Its own name, not Connect Four's (a trademark).
+- **Dots and boxes.** On Tic-tac-toe's paper, with its pen sound.
+- **Kızma Birader (Ludo).** Two to four race their pieces round the board, sending each other home. Rolls Backgammon's dice.
+- **Yılan merdiven (Snakes and ladders).** Pure luck, for kids; rolls Backgammon's dice.
+- **Tombala.** Numbers drawn from a bag, marked on everyone's cards; any number of players.
+- **İsim Şehir Hayvan.** A letter drawn, everyone writes a name, a city, an animal… starting with it; a word someone else wrote too scores less. To settle: who judges a word.
+- **Amiral Battı (Battleship).** Each fleet hidden from the other, as Okey's hands are.
+- **Adam asmaca (Hangman).** On Tic-tac-toe's paper, with its pen.
+- **Mahjong.** Four players and tiles, Okey's cousin. A big one: many tiles, and scoring with many rules.
+- **Crazy Eights.** Cards matched by suit or number, an eight changes the suit (Uno's game, without its name, a trademark).
+- **Poker (Texas hold'em).** Chips, not money. Hands hidden as Okey's are.
+- **SOS.** S or O written on a grid in turns; an "SOS" in a line scores and plays again. On Tic-tac-toe's paper, with its pen.
+- **Papaz kaçtı (Old Maid).** Cards drawn from each other's hands, pairs laid down; whoever is left with the odd king loses. For kids.
+- **21 (Blackjack).** Against a dealer: a bot, or a player who deals. Chips, not money, as Poker's.
+- **Bilardo (pool) and Carrom.** Aim, then a shot's strength, the balls or pieces rolling where it sends them. To settle: whether every page runs the same physics from the shot, or the shooter's page sends where everything stopped.
+- **Puzzles solved together: Sudoku, Minesweeper.** Both players on the same board at once, not in turns.
+- **Jigsaw puzzles together.** Everyone dragging pieces onto one picture. Freely licensed pictures, or a player's own, sent to the others' pages as the game is.
+- **Memory (Hafıza).** Cards face down, two turned a turn, a pair kept and played again; most pairs wins.
+- **Kelime avı (word search) together.** Everyone finding the hidden words in one grid at once. The grid is made from the word list Word tiles and Draw and guess use.
+- **Draw and guess.** One player draws a word, the others guess it. On Tic-tac-toe's paper, with its pen. To settle: the word lists, in English and Turkish.
+- **Card games: Pişti, Batak, King.** Hands hidden as Okey's are. To settle: which first, and what they share (a deck, dealing, tricks).
+- **Yacht.** Five dice, rolled up to three times a turn, scored in a card of categories. Its own name, not Yahtzee's (a trademark). It can roll Backgammon's dice.
+- **Dominoes.** Tiles laid end to end, matching numbers, for two to four players. To settle: which game (block, draw, or one scored by the ends, like All Fives), partners at four as in Okey's eşli, and what it takes from the Okey table (tiles in a rack, the seats round a table).
 - **Word tiles.** A crossword game: letter tiles laid on a grid to make words, scored by letter and square. To settle: its own board and letter values (not a trademarked game's), which word list checks a word in English and in Turkish, and whether a word is checked when it's played or only when another player challenges it.
