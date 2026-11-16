@@ -3,9 +3,11 @@
 ## Every table
 
 - **Knocking at every table.** Two quick taps on the felt knock on the table, heard by everyone where it landed, only in Okey today (`useKnock` in `Okey/Board.jsx`, `Okey/knock.js`, sent round as presence in `OkeyContext.jsx`). The other games' boards can knock too, from code they share.
+- **The other players' hands on the table.** Where each one points, hovers or holds a piece, as their hand reaching over the board. `Awareness.jsx` already sends pointers, in window pixels, and turns them off for Okey and Backgammon: their boards turn for each viewer and differ in size between screens, so the pixels landed in the wrong places. Sent in the board's own terms instead (the piece or spot, or a place across the board as a knock is, from -1 to 1), turned for each viewer.
 - **Okey's win sounds at every table.** Okey plays applause when someone finishes a round (`finish.mp3`) and a longer one when the game is over (`won.mp3`), in `OkeyContext.jsx`; the other tables (`Table/index.jsx`) play neither (Tic-tac-toe draws its winning line with a pen sound). Their round and game are one thing until a match length (below) sets when the game ends.
 - **Best of X, or first to X.** Before the first game, the players choose how long the match is: best of X games, or first to X points (a mars in Backgammon is two), so the table knows when it's over. Today a score just carries on while the same two sit (`newGame` in each game's `rules.js`), until someone resets it from the ⋯ menu. Okey's best-of-three (under Known) is the same idea. To settle: who chooses it, and whether it can change mid-match.
 - **Stats and titles for every game.** Only Okey gives titles. Backgammon's recordings already count rolls, doubles and checkers sent to the bar (`backgammonCounts` in `Stats/history.js`), with no titles from them; Checkers, Go and Tic-tac-toe count nothing. Titles for Backgammon could be the luckiest roller, the one who sends the most checkers to the bar, and the one who always comes in from the bar on the first try (not counted yet).
+- **Missed moves at every table,** as Okey's missed finishes (under Okey): a count and a title wherever a game has a clear miss. In Backgammon a hit or a bear-off passed up, in Tic-tac-toe a win or a block. To settle: which games have one (Checkers' captures may be forced already; Go's misses aren't clear-cut).
 - **The name plates are too narrow.** At the two-player tables, a six-letter name shows as three letters and "…" on desktop, with plenty of room beside it. The column the plates sit in is a fixed 190px (`.tb-head` in `Table/table.css`).
 
 ## Okey
@@ -33,6 +35,11 @@
 ## Backgammon
 
 - **"It's a game" before the end.** When the outcome is clear, a player can offer to end the game early instead of playing out the rest, offered only when the game isn't close. To settle: what counts as not close (no contact left and a big lead in pips?), whether the other player has to accept, and whether it scores a mars when the loser hasn't borne any checkers off. Like any move that ends a game, it lives in the ⋯ menu behind a second tap.
+- **The other player's last move shown.** Their checkers slide into place, then nothing marks where they came from or went. A mark on both until the next roll, as Okey's latest discard (under Okey).
+- **Forced moves play themselves.** When the dice can be played only one way, or the order of bearing off can't change anything, the game plays them after the roll. To settle: whether the checkers slide as if played, and whether a player can turn it off.
+- **A double tap on a checker moves it,** with no spot to pick. To settle: by which die, or both; the game picking the better way (below) decides.
+- **Cocked dice, rarely.** Once in a long while a die lands on a checker or leans against the frame and is thrown again, as at a real table. Rare enough to be funny.
+- **The game picks the die.** When a tap or a drag can be played more than one way, the game plays the better one, so the player never chooses a die. Today `targets` (`rules.js`) prefers the way that hits more, then the one with fewer dice; the bot's `value` (`bot.js`) could rank the rest.
 
 - A point with more than five checkers shows how many on its top one (`Board.jsx`), though the stack already closes up to fit the point and every checker can be seen. The number can go.
 
