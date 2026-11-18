@@ -2,8 +2,9 @@ import { SUITS, rankName, red, suitOf } from "./cards";
 import "./cards.css";
 
 // A card face up, its rank in the corner and its suit large; a button when
-// it can be played (`onClick`). Sized by the table: --cw, its width.
-export function Card({ card, className = "", ...props }) {
+// it can be played (`onClick`), `children` on it (a keycap). Sized by the
+// table: --cw, its width.
+export function Card({ card, className = "", children, ...props }) {
   const Tag = props.onClick ? "button" : "span";
   return (
     <Tag
@@ -15,6 +16,7 @@ export function Card({ card, className = "", ...props }) {
     >
       <b>{rankName(card)}</b>
       <i>{SUITS[suitOf(card)]}</i>
+      {children}
     </Tag>
   );
 }

@@ -37,8 +37,10 @@
   top: calc(var(--cw) * 0.08);
 }
 
+/* in the card's colour: the site greys every <i> */
 .cd-card i {
   top: calc(var(--cw) * 0.44);
+  color: inherit;
 }
 
 .cd-card::after {
@@ -51,4 +53,25 @@
 
 .cd-suit {
   font-style: normal;
+  color: inherit;
+}
+
+/* a card face down, as one dealt to someone else flies to them (deal.js) */
+.cd-card.back {
+  border: calc(var(--cw, 60px) * 0.05) solid #fffdf8;
+  background: repeating-linear-gradient(45deg, #8e1f2c 0 4px, #a92c3b 4px 8px);
+}
+
+/* the cards dealt fly over the page, in screen pixels (deal.js) */
+.cd-flights {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.cd-flights .cd-card {
+  position: absolute;
+  left: 0;
+  top: 0;
 }

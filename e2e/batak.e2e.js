@@ -32,6 +32,7 @@ test("a deal with three bots: bid, trumps, every card legal, the score", async (
   const page = await withBots(browser, info);
   // 13 cards in your hand, none of the others'
   await expect(page.locator(".bk-hand .cd-card")).toHaveCount(13);
+  let keyed = null;
   for (let i = 0; i < 200; i++) {
     const s = await game(page);
     if (s.phase === "over") break;
@@ -55,7 +56,15 @@ test("a deal with three bots: bid, trumps, every card legal, the score", async (
           await expect(page.getByRole("status")).toBeVisible();
           expect((await game(page)).last.n).toBe(played);
         }
-        await page.locator(".bk-hand [data-legal]").first().click();
+        // a card by its key once, 1 the first you can play; tapped after
+        const first = page.locator(".bk-hand [data-legal]").first();
+        if (!keyed) {
+          keyed = Number(await first.getAttribute("data-card"));
+          await page.keyboard.press("1");
+          await expect
+            .poll(async () => (await game(page)).last.card)
+            .toBe(keyed);
+        } else await first.click();
         await expect
           .poll(async () => (await game(page)).last.n)
           .not.toBe(played);
@@ -66,6 +75,18 @@ test("a deal with three bots: bid, trumps, every card legal, the score", async (
   const end = await game(page);
   expect(end.phase).toBe("over");
   expect(end.taken.reduce((a, b) => a + b)).toBe(13);
+  // the last trick lies a moment, the card that took it lit, then slides
+  // to its taker and is gone
+  const gathered = page.locator(".bk-trick .cd-card.gather");
+  await expect(gathered).toHaveCount(4);
+  await expect(page.locator(".bk-trick .took")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      gathered.evaluateAll((els) =>
+        els.map((el) => getComputedStyle(el).opacity),
+      ),
+    )
+    .toEqual(["0", "0", "0", "0"], NET);
   // each plate's points, the deal's on it by the name
   await expect(page.locator(".tb-points")).toHaveText(end.score.map(String));
   await expect(page.locator(".bk-hand .cd-card")).toHaveCount(0);
@@ -79,8 +100,9 @@ test("a deal with three bots: bid, trumps, every card legal, the score", async (
   await page.getByRole("button", { name: SAVED }).click();
   await expect(page.locator(".saves > li").first()).toContainText("Ayşe");
   await page.keyboard.press("Escape");
-  // and in the stats, under Batak
+  // and in the stats, under Batak; the cards' sounds credited
   await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
+  await expect(page.locator(".site-menu footer")).toContainText("Kenney");
   await page.getByRole("button", { name: STATS }).click();
   await expect(
     page.locator(".dialog.stats h4", { hasText: /^Batak$/ }),

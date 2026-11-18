@@ -22,6 +22,15 @@ function Credits({ game }) {
       </div>
     );
   }
+  // the cards: put down, slid, shuffled
+  if (game === "batak") {
+    return (
+      <div style={{ flexDirection: "column" }}>
+        {t("Sound Effects from")}{" "}
+        <a href="https://kenney.nl/assets/casino-audio">Kenney</a>
+      </div>
+    );
+  }
   if (game === "okey") {
     return (
       <div style={{ flexDirection: "column" }}>

@@ -34,6 +34,22 @@
   max-width: 200px;
 }
 
+/* the bidder's trumps by their name: the suit on white, as on a card, big
+   enough to read across the table, black suits as well as red */
+.bk-seat .tb-mark:has(.cd-suit) {
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fffdf8;
+  color: #1c1c1c;
+}
+
+.bk-seat .tb-mark .cd-suit {
+  font-size: 20px;
+  line-height: 1;
+}
+
 .bk-seat.top {
   grid-area: top;
 }
@@ -108,29 +124,88 @@
   position: absolute;
 }
 
+/* each card by the seat that played it, coming from that seat (--from)
+   as it's played */
 .bk-trick .at-me {
   left: calc(var(--cw) * 1.1);
   bottom: 0;
+  --from: 0 calc(var(--cw) * 3);
 }
 
 .bk-trick .at-top {
   left: calc(var(--cw) * 1.1);
   top: 0;
+  --from: 0 calc(var(--cw) * -3);
 }
 
 .bk-trick .at-left {
   left: 0;
   top: calc(50% - var(--cw) * 0.7);
+  --from: calc(var(--cw) * -3) 0;
 }
 
 .bk-trick .at-right {
   right: 0;
   top: calc(50% - var(--cw) * 0.7);
+  --from: calc(var(--cw) * 3) 0;
+}
+
+/* toward the trick's taker (--to) */
+.bk-trick .to-me {
+  --to: 0 calc(var(--cw) * 3);
+}
+
+.bk-trick .to-top {
+  --to: 0 calc(var(--cw) * -3);
+}
+
+.bk-trick .to-left {
+  --to: calc(var(--cw) * -3) 0;
+}
+
+.bk-trick .to-right {
+  --to: calc(var(--cw) * 3) 0;
 }
 
 /* the trick just taken, the card that took it */
 .bk-trick .took {
   box-shadow: 0 0 0 3px #ffd54f;
+}
+
+/* a card played comes from its player; a trick taken lies 1 s
+   (GATHER_MS, index.jsx), then slides to its taker and is gone */
+@keyframes bk-in {
+  from {
+    translate: var(--from);
+  }
+}
+
+@keyframes bk-gather {
+  to {
+    translate: var(--to);
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+.bk-trick .in {
+  animation: bk-in 0.25s ease-out;
+}
+
+.bk-trick .gather {
+  animation: bk-gather 0.35s ease-in 1s forwards;
+}
+
+.bk-trick .in.gather {
+  animation:
+    bk-in 0.25s ease-out,
+    bk-gather 0.35s ease-in 1s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bk-trick .cd-card {
+    animation: none;
+  }
 }
 
 /* the bids open to you, or the four suits to name trumps */
@@ -184,6 +259,9 @@
   justify-content: center;
   width: 100%;
   padding-top: calc(var(--cw) * 0.2);
+  /* a card's height with none in it (before a deal, after the last card),
+     so nothing above moves */
+  min-height: calc(var(--cw) * 1.6);
 }
 
 .bk-hand .cd-card + .cd-card {
@@ -191,6 +269,16 @@
     min(var(--cw) * 0.72, (100cqw - var(--cw)) / max(var(--n) - 1, 1)) -
       var(--cw)
   );
+}
+
+/* a card's key above its corner, clear of the card laid over its right,
+   in the site's letters, not the card's (Georgia's 0 is an o) */
+.tb-fit .bk-hand .cd-card kbd {
+  top: -10px;
+  right: auto;
+  left: calc(var(--cw) * 0.06);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
 }
 
 /* your turn: the cards you can play raised, the rest dimmed */

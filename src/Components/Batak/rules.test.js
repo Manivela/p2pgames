@@ -216,3 +216,9 @@ test("the bidder down: the deal is the three's who sent them down", () => {
   assert.deepEqual(s.points, [-5, 5, 3, 2]);
   assert.deepEqual(s.winners, [1, 2, 3]);
 });
+
+test("a bot waits out the deal, then a trick's slide, before it plays", () => {
+  const s = newGame(null, IDS);
+  assert.isAbove(bot.wait(s), bot.wait({ ...s, last: { kind: "bid" } }));
+  assert.equal(bot.wait({ ...s, last: { kind: "bid" } }), 900);
+});

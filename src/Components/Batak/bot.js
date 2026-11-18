@@ -49,6 +49,13 @@ export default {
     );
     return play(state, seat, wins[0] ?? cards[0]);
   },
-  // a trick just taken stays in sight a while before the next lead
-  wait: (state) => (!state.trick.length && state.lastTrick ? 1600 : 900),
+  // a new deal once it's dealt (SHUFFLE_MS and the cards going round,
+  // index.jsx, Cards/deal.js); a trick just taken stays in sight till it's
+  // slid to its taker (GATHER_MS) before the next lead
+  wait: (state) =>
+    state.last.kind === "new"
+      ? 2800
+      : !state.trick.length && state.lastTrick
+        ? 1600
+        : 900,
 };
