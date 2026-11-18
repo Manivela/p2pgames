@@ -49,14 +49,7 @@ demo: <https://p2p.yunusgulcu.com/>
 
 ## Known bugs and improvements
 
-### Okey
-
-- Ask to redistribute the tiles or end the games when no tiles are left
-- Fix css for player names and tiles
-- Add timers and scoring
-- if there is a connection issue tile from the middle can be seen before it goes back
-- Add a way to move whole groups of tiles at once
-- Possible memory leak, animations stopped working after a while and Chrome crashed
+In [TODO.md](TODO.md).
 
 ## Running locally
 

@@ -32,7 +32,7 @@
 - Sitting down or adding a bot mid-round replaces the table, so a move someone makes in that same moment is lost (their tile snaps back). A version that loses nothing: the joining page only takes the seat, and the page whose turn it is deals them in through their inbox, as out-of-turn takes do. Worth it once players report it.
 - The titles on the score sheet at a game's end are the same on every page: each page that recorded the game posts its summary's players to the room, and every page puts them together, the most any page counted, which a page that missed 101's take put back overcounts (`useSharedSummary` in `Stats/store.js`, `together` in `Stats/history.js`). What each device keeps for its stats (the stats dialog) is still its own recording's, so a page that missed steps keeps fewer titles there; to settle with the long-term storage, when the same people don't always play together. Too few titles may be given out: the bar for one (`LEAST` 3, `Z` 1.5, the same for every count) decides how often.
 - Not yet: "devam" (×4), best-of-three matches.
-- README's "Known bugs and improvements" for Okey is out of date (reshuffling the pile, scoring and moving groups of tiles are done).
+- From the README's old list, not seen since: with a bad connection, a tile drawn from the middle shows before it goes back; animations stopped after a long session and Chrome crashed (a memory leak?).
 
 ## Backgammon
 
