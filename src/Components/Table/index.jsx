@@ -19,6 +19,7 @@ import { useRecord } from "../Stats/store";
 import { decodeSave } from "../saveCode";
 import { t } from "../../i18n";
 import tok from "./assets/tok.mp3";
+import applause from "../Okey/assets/finish.mp3";
 import "./table.css";
 
 // A table in the room, for a game played in turns (Backgammon, Go,
@@ -455,6 +456,7 @@ function Menu({
 export function Table({ table, mark, info, options, children }) {
   const { seats, game, mine, seated, both, full, near, far, across } = table;
   const { volume, setVolume } = useVolume();
+  useApplause(game);
   const { hints } = useKeyHints();
   const score = game?.score ?? seats.map(() => 0);
   const around = typeof children === "function";
@@ -553,6 +555,31 @@ export function useHeard(last, hear, sample) {
     level.current = volume;
     tryIt.current();
   }, [volume]);
+}
+
+// A game won, seen being played: the table clapping, as at the Okey table
+// when a round's finished (finish.mp3, OkeyContext.jsx); here a game and
+// its round are one thing till a match has a length (TODO.md). Dev-only
+// window.tableApplause counts them.
+function useApplause(game) {
+  const { volume } = useVolume();
+  const [play] = useSound(applause, { volume: 0.5 * volume });
+  // the game the last move heard was in: a new one (dealt, or a kept one
+  // played again, won already) isn't a win seen
+  const was = useRef(game?.id);
+  useHeard(
+    game?.last,
+    () => {
+      const same = was.current === game.id;
+      was.current = game.id;
+      if (!same || !game.winner) return;
+      play();
+      if (import.meta.env.DEV) {
+        window.tableApplause = (window.tableApplause ?? 0) + 1;
+      }
+    },
+    () => {},
+  );
 }
 
 // five checkers set down on a wooden board (Kenney's Impact Sounds, CC0):

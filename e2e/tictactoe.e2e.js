@@ -60,6 +60,10 @@ test("X wins in a row: both pages, the score, then O starts", async ({
     await expect(page.locator(".tt-margin p")).toHaveText(WINS("Ayşe"), NET);
     await expect(page.locator(".tt-strike")).toHaveCount(1);
   }
+  // both pages clap, once
+  for (const page of [x, o]) {
+    await expect.poll(() => page.evaluate(() => window.tableApplause)).toBe(1);
+  }
   // each page lists the other first, the points on each one's plate
   await expect(x.locator(".tb-points")).toHaveText(["0", "1"]);
   await expect(o.locator(".tb-points")).toHaveText(["1", "0"], NET);
