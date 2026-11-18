@@ -133,18 +133,23 @@ test("two at the table: each sees only their own hand, the other's card across",
   }
   await expect.poll(() => game(a), NET).toBeTruthy();
   await expect.poll(() => game(b), NET).toBeTruthy();
+  // one page deals as the table fills, Ayşe's, the first seat's: the deal
+  // both see first is the one that stays
+  const { id } = await game(a);
+  expect((await game(b)).id).toBe(id);
   const shown = (page) =>
     page
       .locator(".bk-hand .cd-card")
       .evaluateAll((els) => els.map((el) => Number(el.dataset.card)));
-  // the seat's hand as the game has it now: both pages deal the first hand
-  // as the table fills, and one of the two deals wins
+  // the seat's hand as the game has it now
   const own = async (page, seat) =>
     JSON.stringify(await shown(page)) ===
     JSON.stringify((await game(page)).hands[seat]);
   await expect.poll(() => own(a, 0), NET).toBe(true);
   await expect.poll(() => own(b, 2), NET).toBe(true);
   expect(await shown(a)).not.toEqual(await shown(b));
+  expect((await game(a)).id).toBe(id);
+  expect((await game(b)).id).toBe(id);
   // played on till Ayşe plays a card Bora has still to answer: it lies at
   // the top of his table, across from him
   for (let i = 0; i < 300; i++) {

@@ -84,10 +84,18 @@ export function useTable(name, newGame, sides, first, bot) {
     else if (empty && game) map.set("game", null);
   };
 
-  // the first game starts once both seats are taken, from whichever host's
-  // page sees it first (two at once: one game wins, the same for everyone)
+  // the first game starts once every seat's taken, dealt by one page, so
+  // no hand shows only to be replaced as two pages deal at once: the page
+  // of the first seated player here, or with bots in every seat, the
+  // room's first page (as plays a bot whose page is gone, below)
+  const here = new Set([...states.values()].map((s) => s?.user?.id));
+  const firstHere = seats.findIndex((u) => u && !u.bot && here.has(u.id));
+  const dealer =
+    firstHere >= 0
+      ? mine.includes(firstHere)
+      : bots && localID === Math.min(...states.keys());
   useEffect(() => {
-    if (!game && full && hosts) deal();
+    if (!game && full && hosts && dealer) deal();
   });
 
   // A bot sits in an empty seat, either or both, and plays its turns
@@ -193,7 +201,6 @@ export function useTable(name, newGame, sides, first, bot) {
   // the room goes to another game (the menu) at its players' word between
   // games, or at anyone's while none of them is here: a player gone (a
   // closed tab) keeps the seat, and the game, for their return
-  const here = new Set([...states.values()].map((s) => s?.user?.id));
   const playersHere = seats.some((u) => u && !u.bot && here.has(u.id));
   const why =
     !playersHere || (seated && idle)
