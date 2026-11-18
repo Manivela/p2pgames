@@ -1480,6 +1480,38 @@ test("a title won shows on every page, one that missed it too", async ({
   }
 });
 
+// the table's ⋯ menu and the score sheet close as everything that opens
+// does: on a tap anywhere else, and on Escape
+test("⋯ and the score sheet close on a tap outside and on Escape", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  const menu = page.locator(".table-menu .menu");
+  const sheet = page.locator(".scores");
+  for (const shut of [
+    () => page.mouse.click(5, 5),
+    () => page.keyboard.press("Escape"),
+  ]) {
+    await page.getByRole("button", { name: MENU }).click();
+    await expect(menu).toBeVisible();
+    await shut();
+    await expect(menu).toHaveCount(0);
+    await page.locator(".scores > summary").click();
+    await expect(sheet).toHaveJSProperty("open", true);
+    // its toggle event, which arms the closing, comes a frame after it opens
+    await page.evaluate(
+      () =>
+        new Promise((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(r)),
+        ),
+    );
+    await shut();
+    await expect(sheet).toHaveJSProperty("open", false);
+  }
+});
+
 test("picked tiles move together", async ({ page }, info) => {
   anySize(info);
   await sitDown(page);

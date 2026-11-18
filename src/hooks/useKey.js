@@ -49,3 +49,21 @@ export function useEscape(close) {
     return () => open.splice(open.indexOf(latest), 1);
   }, [on]);
 }
+
+// A menu or sheet closing as everything that opens does: on Escape
+// (useEscape) and on a press anywhere outside `ref`, which goes on to what
+// it pressed (there's no backdrop to take it); `close` null while it's shut
+export function useDismiss(ref, close) {
+  useEscape(close);
+  const latest = useRef(close);
+  latest.current = close;
+  const on = !!close;
+  useEffect(() => {
+    if (!on) return;
+    const down = (e) => {
+      if (!ref.current?.contains(e.target)) latest.current?.();
+    };
+    addEventListener("pointerdown", down, true);
+    return () => removeEventListener("pointerdown", down, true);
+  }, [on, ref]);
+}

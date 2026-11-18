@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { sum, uniqBy } from "lodash";
 import { toast } from "react-hot-toast";
@@ -10,7 +10,7 @@ import { t } from "../../i18n";
 import { Confirm } from "../Confirm";
 import { Dialog, SavedGames, useAutoSave } from "../Saves";
 import { useKeyHints } from "../../hooks/useStore";
-import { useEscape } from "../../hooks/useKey";
+import { useDismiss } from "../../hooks/useKey";
 
 export { Confirm, Dialog };
 
@@ -249,9 +249,10 @@ export default function TableMenu() {
     setOpen(false);
     action();
   };
-  useEscape(open && (() => setOpen(false)));
+  const menu = useRef();
+  useDismiss(menu, open && (() => setOpen(false)));
   return (
-    <div className="table-menu">
+    <div className="table-menu" ref={menu}>
       {/* a newer version out (OkeyContext): a dot on ⋯, easy to leave be */}
       <button
         className={newVersion ? "dots news" : "dots"}

@@ -26,6 +26,7 @@ import Tile, { TileFace, lastTurn, markOf } from "./Tile";
 import { t } from "../../i18n";
 import { useSharedSummary } from "../Stats/store";
 import { useAuthStore } from "../../hooks/useStore";
+import { useDismiss } from "../../hooks/useKey";
 import { TITLES } from "../Stats/history";
 
 // What a tile held over a meld would do there, by the rules: where it would
@@ -471,10 +472,17 @@ export function Scores() {
       removeEventListener("blur", up);
     };
   }, []);
+  // open, it closes as a menu does: Escape, or a press anywhere else
+  const [shown, setShown] = useState(false);
+  useDismiss(sheet, shown && (() => (sheet.current.open = false)));
   return (
     // a tap away: a round's end shows its scores with the hands, the end
     // of the game who won, and an open sheet would cover the next step
-    <details className="scores" ref={sheet}>
+    <details
+      className="scores"
+      ref={sheet}
+      onToggle={(e) => setShown(e.currentTarget.open)}
+    >
       {/* an icon: under your pile, where it sits, there's room for little */}
       <summary aria-label={t("Scores")} title={t("Scores")}>
         <svg viewBox="0 0 16 16" aria-hidden="true">
