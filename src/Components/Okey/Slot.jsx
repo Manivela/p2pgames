@@ -14,6 +14,8 @@ function Slot({
   canDiscard,
   disabled,
   onDragOff,
+  // what lies under its tile (a pile's next tile, DiscardPile)
+  under,
   ...props
 }) {
   const [{ isOver, held }, drop] = useDrop(
@@ -49,6 +51,7 @@ function Slot({
         .join(" ")}
       {...props}
     >
+      {under}
       {/* a tile of its own per tile: one that moves to another slot doesn't
           carry over the slide shown before it was dropped (rack.css) */}
       {tile && (

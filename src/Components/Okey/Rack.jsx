@@ -478,6 +478,17 @@ export function DiscardPile({ player, small }) {
         }
         onDrop={onDiscard}
         tile={ghost || top}
+        // the latest discard lies turned on the tile before it, both in sight
+        under={
+          !ghost &&
+          !caught &&
+          top?.id === okeyState.lastDiscard &&
+          pile.length > 1 && (
+            <span className="under" aria-hidden="true">
+              <TileFace id={pile.at(-2).id} />
+            </span>
+          )
+        }
         canDiscard={() => isMyTurn(player)}
       />
       {take && (

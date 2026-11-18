@@ -1003,12 +1003,24 @@ html:has(.fit) {
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* the latest discard */
-.latest .tile {
+/* the latest discard, turned a little on the tile before it (.under), so
+   what was thrown this turn stands apart from what was left on the pile */
+.latest > .tile {
+  rotate: 8deg;
   box-shadow:
     0 3px 0 #cbb68a,
     0 0 0 3px #ffd54f,
     0 0 14px 4px rgba(255, 213, 79, 0.9);
+}
+
+.discardPile .slot {
+  position: relative;
+}
+
+.discardPile .under {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 /* the table's buttons, dark see-through pills as every table's (index.css) */
