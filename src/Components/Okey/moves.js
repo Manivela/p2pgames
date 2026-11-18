@@ -28,6 +28,8 @@ const slotEl = (i) =>
   q(".rack")?.querySelectorAll(
     ":scope > .top > .slot, :scope > .bottom > .slot",
   )[i];
+// the tea glass in front of whoever's turn it is (TeaGlass.jsx)
+const GLASS = ".glass:not(.idle)";
 const seatEl = (p) =>
   q(`[data-seat="${p}"] .avatar`) ?? q(`[data-seat="${p}"]`);
 
@@ -147,6 +149,28 @@ function fly(from, to, { html, delay = 0, duration = 360, into = false }) {
     ],
     { duration, delay, easing: EASE, fill: "both" },
   ).finished.then(done, done);
+}
+
+// The element itself slides from the rect `from` to where it is, over the
+// table as a copy would fly: for the tea glass, whose copy (80 elements)
+// held up the frame of each turn
+function slide(from, el, duration) {
+  const b = el.getBoundingClientRect();
+  const s = from.width / b.width;
+  const at = { zIndex: 20, transformOrigin: "0 0" };
+  el.animate(
+    [
+      {
+        ...at,
+        transform: `translate(${from.left - b.left}px, ${from.top - b.top}px) scale(${s})`,
+      },
+      { ...at, transform: "none" },
+    ],
+    { duration, easing: EASE },
+  ).finished.then(
+    () => land(el),
+    () => {},
+  );
 }
 
 // a word or number rising off an element
@@ -285,7 +309,7 @@ export function useMoves() {
       wrong: next.players.map((p) => [p.id, p.calls?.wrong ?? 0]),
     };
     const oldGlass = glass.current;
-    glass.current = q(".glass")?.getBoundingClientRect() ?? null;
+    glass.current = q(GLASS)?.getBoundingClientRect() ?? null;
     const drop = dragged.current;
     dragged.current = null;
     const skip = !prev || reduced() || wasHidden || document.hidden;
@@ -366,14 +390,14 @@ export function useMoves() {
     }
 
     // the turn passed: the tea glass slides to the next seat
-    const newGlass = q(".glass");
+    const newGlass = q(GLASS);
     if (
       oldGlass &&
       newGlass &&
       next.gameState === "play" &&
       next.currentPlayer !== prev.currentPlayer
     ) {
-      fly(oldGlass, newGlass, { duration: 400 });
+      slide(oldGlass, newGlass, 400);
     }
 
     // a catch: the tile stays on its pile, stamped; the catcher calls it,

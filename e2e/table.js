@@ -246,8 +246,10 @@ export async function check(ignore = []) {
     const r = e.getBoundingClientRect();
     const cs = getComputedStyle(e);
     return (
-      // a copy flying from one place to the next (moves.js) isn't laid out
+      // a copy flying from one place to the next (moves.js) isn't laid out,
+      // nor the tea glass sliding to the next seat
       !e.closest(".flights") &&
+      !(e.matches(".glass") && e.getAnimations().length) &&
       r.width > 0 &&
       r.height > 0 &&
       cs.display !== "none" &&

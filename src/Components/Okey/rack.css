@@ -676,6 +676,16 @@ html:has(.fit) {
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.4));
 }
 
+/* at the seats whose turn it isn't, kept laid out for when it is */
+.glass.idle {
+  visibility: hidden;
+}
+
+/* the glasses' gradients and mask (TeaGlass.jsx), taking no room */
+.glass-defs {
+  position: absolute;
+}
+
 .seat .glass {
   bottom: calc(var(--t) * -0.08);
   left: calc(var(--t) * -0.2);

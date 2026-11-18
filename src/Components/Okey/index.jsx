@@ -90,7 +90,12 @@ function DragPreview() {
   if (!item || !offset) return null;
   const group = selected.includes(item.tile.id) ? selected.length : 1;
   return (
-    <div className="dragPreview" style={{ left: offset.x, top: offset.y }}>
+    <div
+      className="dragPreview"
+      style={{
+        transform: `translate(${offset.x}px, ${offset.y}px) translate(-50%, -80%)`,
+      }}
+    >
       <Tile tile={item.tile} disabled />
       {group > 1 && <span className="badge">×{group}</span>}
     </div>

@@ -210,7 +210,7 @@ test("a crowded table keeps clear of what hangs under the others", async ({
   await stages.play(page);
   await table(page, "crowd", 7);
   await table(page, "play", 2);
-  await expect(page.locator(".head .glass")).toBeVisible();
+  await expect(page.locator(".head .glass:not(.idle)")).toBeVisible();
   await expect(page.locator(".head .catch")).toHaveCount(0);
   await expect(page.locator(".foot .catch")).toBeVisible();
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
@@ -223,11 +223,13 @@ test("a tap on the tea glass pours the next drink", async ({ page }, info) => {
   await sitDown(page);
   await stages.play(page);
   const drink = (fill, at = ".rack") =>
-    expect(page.locator(`${at} .glass [fill="url(#tea-glass-${fill})"]`));
+    expect(
+      page.locator(`${at} .glass:not(.idle) [fill="url(#tea-glass-${fill})"]`),
+    );
   const pour = () =>
     info.project.name === "desktop"
-      ? page.locator(".glass").click()
-      : page.locator(".glass").tap();
+      ? page.locator(".glass:not(.idle)").click()
+      : page.locator(".glass:not(.idle)").tap();
   await drink("tea").toBeVisible();
   for (const next of ["bottle", "raki", "tea", "bottle"]) {
     await pour();

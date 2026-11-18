@@ -15,6 +15,7 @@ import { ended, freeSlot, isElden, pileOut, rowOf, tableSeats } from "./okey";
 import { useKeyHints } from "../../hooks/useStore";
 import { useEscape, useKey } from "../../hooks/useKey";
 import { useKnockTaps } from "../knock";
+import { GlassDefs } from "./TeaGlass";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -392,6 +393,7 @@ function Board() {
         }}
       >
         {lasso}
+        <GlassDefs />
         {/* the others only: the buttons are in the corners beside your
             rack, so many players fit along the top */}
         <div className="head">

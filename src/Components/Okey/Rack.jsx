@@ -134,7 +134,7 @@ function Name({ player, avatarSits, children }) {
         )}
         {sitHere}
       </span>
-      {playing && turn && <TeaGlass />}
+      {playing && <TeaGlass idle={!turn} />}
       {children}
     </h1>
   );

@@ -2,7 +2,7 @@
 // whoever's turn it is (Rack.jsx). Drawn in a 100 × 110 box. A tap on it
 // pours the next drink: a bottle of Perge (Antalya's beer), a glass of
 // rakı, tea again.
-import { useState } from "react";
+import { create } from "zustand";
 
 // the saucer: an ellipse seen from above, its edge in 16 lobes that meet in
 // cusps. The glass stands in the middle of the well, the rim curves up from
@@ -275,23 +275,34 @@ const DRINKS = [TEA, PERGE, RAKI_GLASS];
 // the same drink at every seat the glass passes to, tea again on reload
 // ponytail: this tab only; for everyone at the table it needs a Yjs key of
 // its own (CLAUDE.md), as anyone can tap at any time
-let poured = 0;
+const usePoured = create(() => ({ n: 0 }));
 
-export default function TeaGlass() {
-  const [n, setN] = useState(poured);
-  const pour = () => {
-    poured = (n + 1) % DRINKS.length;
-    setN(poured);
-  };
+// One at every seat while a round is on (Rack.jsx), shown at whoever's turn
+// it is: a glass made at the next seat and taken down at the last, its 80
+// elements laid out anew, held up the frame of every discard by half
+export default function TeaGlass({ idle }) {
+  const n = usePoured((s) => s.n);
+  const pour = () => usePoured.setState({ n: (n + 1) % DRINKS.length });
   return (
     <svg
-      className="glass"
+      className={idle ? "glass idle" : "glass"}
       viewBox="0 0 100 110"
       width="40"
       height="44"
       aria-hidden="true"
       onClick={pour}
     >
+      {DRINKS[n]}
+    </svg>
+  );
+}
+
+// the glasses' gradients and mask, once on the table (Board.jsx): an idle
+// glass's own would be hidden with it, and a mask whose content is hidden
+// hides what it masks in the glass that shows
+export function GlassDefs() {
+  return (
+    <svg className="glass-defs" width="0" height="0" aria-hidden="true">
       <defs>
         <linearGradient id="tea-glass-tea" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#e8475a" />
@@ -365,7 +376,6 @@ export default function TeaGlass() {
           <stop offset="1" stopColor="#b5c4cc" />
         </linearGradient>
       </defs>
-      {DRINKS[n]}
     </svg>
   );
 }

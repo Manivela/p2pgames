@@ -21,4 +21,4 @@ How each part works is in its code comments; this file holds the conventions, de
 - A discard waits out the others' claim time unless its `now` is past it: tests pass `afterWait(s)`, scripts `Infinity`.
 - End to end, positions come from `e2e/table.js`. A new table stage gets the fit check (`check()`: nothing overlaps or falls off-screen) and a reference screenshot.
 
-Driving the table in a browser or a script (Playwright, `window.okey`, bots, touch, Turkish, a second player): `DRIVING.md`.
+Driving the table in a browser or a script (Playwright, `window.okey`, bots, touch, Turkish, a second player): `DRIVING.md`. What a move costs a frame, how it was measured, what's left and what's been ruled out: `PERF.md`.

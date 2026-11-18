@@ -103,8 +103,12 @@
 /* held above the pointer, so the slot it will land in shows */
 .dragPreview {
   position: fixed;
+  left: 0;
+  top: 0;
   z-index: 300;
-  transform: translate(-50%, -80%);
+  /* moved by its transform (index.jsx) on a layer of its own, so the felt
+     under it isn't painted again each frame of a drag */
+  will-change: transform;
   pointer-events: none;
 }
 
