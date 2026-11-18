@@ -511,6 +511,25 @@ export default function Board({
     );
   }
 
+  // the other's turn, as it's played and till the next roll: the checkers
+  // that came lit, a ring where they left from (from where the turn began,
+  // the first `undo`, to the checkers shown)
+  const began = !mine.includes(state.by) && state.undo[0]?.checkers[state.by];
+  const shown = stops.checkers[state.by];
+  const was = began
+    ? shown.flatMap((n, pos) => {
+        if (n >= began[pos]) return [];
+        const { x, y } = place(view, state.by, pos, n, began[pos]);
+        return [
+          <span
+            key={`was-${pos}`}
+            className="bg-was"
+            style={{ "--x": x, "--y": y }}
+          />,
+        ];
+      })
+    : [];
+
   const pieces = [];
   stacks.forEach((seatStacks, seat) =>
     seatStacks.forEach((ids, pos) =>
@@ -518,6 +537,7 @@ export default function Board({
         const { x, y } = place(view, seat, pos, i, ids.length);
         const top = i === ids.length - 1;
         const mine = seat === me;
+        const came = began && seat === state.by ? shown[pos] - began[pos] : 0;
         const cls = [
           "bg-checker",
           seat ? "black" : "white",
@@ -525,6 +545,7 @@ export default function Board({
           mine && top && pos === sel && "picked",
           mine && top && sel === null && from.includes(pos) && "movable",
           drag && mine && top && pos === drag.pos && "lifted",
+          i >= ids.length - came && "came",
         ];
         pieces.push(
           <div
@@ -646,6 +667,7 @@ export default function Board({
           {...hit(OFF)}
         />
         {points}
+        {was}
         {pieces}
         {marks}
         {status && (

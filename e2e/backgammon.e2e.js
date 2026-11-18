@@ -137,6 +137,13 @@ test("3-2 also offers 5, played in one go, seen by the other", async ({
   // only the one who played takes it back, till the other rolls
   await expect(white.locator(".bg-undo")).toHaveCount(1);
   await expect(black.locator(".bg-undo")).toHaveCount(0);
+  // the other sees the move: the checker that came, where it left, till
+  // they roll; the one who played doesn't
+  await expect(black.locator(".bg-checker.came")).toHaveCount(1);
+  await expect(black.locator(".bg-was")).toHaveCount(1);
+  await expect(white.locator(".bg-checker.came, .bg-was")).toHaveCount(0);
+  await black.keyboard.press("Space");
+  await expect(black.locator(".bg-checker.came, .bg-was")).toHaveCount(0);
 });
 
 test("bearing off the last checker: mars, 2-0 on both pages", async ({

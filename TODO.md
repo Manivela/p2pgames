@@ -33,7 +33,6 @@
 ## Backgammon
 
 - **"It's a game" before the end.** When the outcome is clear, a player can offer to end the game early instead of playing out the rest, offered only when the game isn't close. To settle: what counts as not close (no contact left and a big lead in pips?), whether the other player has to accept, and whether it scores a mars when the loser hasn't borne any checkers off. Like any move that ends a game, it lives in the ⋯ menu behind a second tap.
-- **The other player's last move shown.** Their checkers slide into place, then nothing marks where they came from or went. A mark on both until the next roll, as Okey's latest discard (under Okey).
 - **Forced moves play themselves.** When the dice can be played only one way, or the order of bearing off can't change anything, the game plays them after the roll. To settle: whether the checkers slide as if played, and whether a player can turn it off.
 - **A double tap on a checker moves it,** with no spot to pick. To settle: by which die, or both; the game picking the better way (below) decides.
 - **Cocked dice, rarely.** Once in a long while a die lands on a checker or leans against the frame and is thrown again, as at a real table. Rare enough to be funny.
