@@ -10,7 +10,7 @@ import {
   useVolume,
 } from "../../hooks/useStore";
 import { MOD, useEscape, useKey } from "../../hooks/useKey";
-import { useTogether } from "../../hooks/useRoom";
+import { useReadyCheck, useTogether, WAIT_READY } from "../../hooks/useRoom";
 import { signalingServers, peerOpts } from "../../constants";
 import { Confirm } from "../Confirm";
 import { usePlaying } from "../HowToPlay";
@@ -139,14 +139,25 @@ export function useTable(
           .filter(([, s]) => s?.user?.id === seats[firstHere].id)
           .map(([id]) => id),
       );
+  // the players waited for, never a bot, one away holding it up
+  const need = seats.flatMap((u, i) =>
+    u && !u.bot ? [{ key: i, here: here.has(u.id) }] : [],
+  );
+  // a ready check after a break (⋯): moves, bots and the next game wait
+  const check = useReadyCheck({
+    map,
+    need,
+    mine,
+    starts: startsHere,
+    live: !!game && full,
+  });
   const together = useTogether({
     map,
     round: game && full ? `${game.id}/${game.last?.n}` : null,
-    need: seats.flatMap((u, i) =>
-      u && !u.bot ? [{ key: i, here: here.has(u.id) }] : [],
-    ),
+    need,
     mine,
     starts: startsHere,
+    hold: check.open,
     go: () => {
       const now = map.get("game");
       if (hand?.over(now))
@@ -171,7 +182,7 @@ export function useTable(
     up?.bot && (states.has(up.runner) ? up.runner : Math.min(...states.keys()));
   const plays = runner === localID;
   useEffect(() => {
-    if (!plays) return;
+    if (!plays || check.open) return;
     let pace = null;
     try {
       pace = sessionStorage.getItem("botPace");
@@ -192,7 +203,7 @@ export function useTable(
       Number(pace ?? bot.wait?.(game) ?? 900),
     );
     return () => clearTimeout(timer);
-  }, [plays, game?.id, game?.last.n, together.waits]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [plays, game?.id, game?.last.n, together.waits, check.open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // the game kept on this device once a move's been made in it, so a deal
   // nobody's played yet doesn't push out the last one kept; a kept one
@@ -335,8 +346,12 @@ export function useTable(
                 : "Waiting for a second player",
             )
           : t("Sit down to play"),
-    // a player's move (a bot's is written by the bot's driver, above)
-    act: (next) => next && map.set("game", { ...next, touched: true }),
+    // a player's move (a bot's is written by the bot's driver, above), not
+    // while a ready check holds the table
+    act: (next) =>
+      check.open
+        ? tell(WAIT_READY)
+        : next && map.set("game", { ...next, touched: true }),
     sit,
     // a bot for an empty seat
     addBot: (i) => bot && !seats[i] && (() => addBot(i)),
@@ -345,14 +360,18 @@ export function useTable(
     // ⋯ → New Game, for the hosts of a full table, at once (to waiting,
     // at a table that waits to start); Start there, one player's tap
     newGame: hosts && full && (!lobby || game) ? again : null,
-    start: lobby && hosts && full && !game ? () => deal() : null,
+    start: lobby && hosts && full && !game && !check.open ? () => deal() : null,
     // the next game, or hand, at one's end: pressed for while the room
     // waits for everyone, who's pressed (`ready`, seats) and whether this
     // page has (`pressed`)
     deal: hosts && full ? together.press : null,
     waits: together.waits,
     pressed: together.pressed,
-    ready: together.ready,
+    // the next game, or hand, without waiting for the rest (⋯)
+    force: hosts && full ? together.force : null,
+    // who's pressed: for the ready check while one's open
+    ready: check.open ? check.ready : together.ready,
+    check,
     mode,
     setMode: canMode ? setMode : null,
     saves: hosts || empty ? saves : null,
@@ -422,6 +441,8 @@ function Menu({
   newGame,
   resetScore,
   saves,
+  check,
+  force,
 }) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -470,6 +491,21 @@ function Menu({
               ))}
             </div>
             <div className="group">
+              {check.start && (
+                <button onClick={then(check.start)}>{t("Ready check")}</button>
+              )}
+              {check.cancel && (
+                <button onClick={then(check.cancel)}>
+                  {t("End the ready check")}
+                </button>
+              )}
+              {/* a player who can't press for the next game: on without */}
+              {force && (
+                <Confirm
+                  label={t("Go on without waiting")}
+                  onConfirm={then(force)}
+                />
+              )}
               {saves && (
                 <button onClick={then(() => setSaved(true))}>
                   {t("Saved games")}
@@ -612,6 +648,8 @@ export function Table({
             }))}
           newGame={table.newGame}
           saves={table.saves}
+          check={table.check}
+          force={table.force}
           resetScore={
             !sheet &&
             table.hosts &&
@@ -622,6 +660,21 @@ export function Table({
       </div>
       <div className="tb-wrap" data-felt="">
         {around ? children(plate) : children}
+        {/* a ready check (⋯): each player's Ready, over the board */}
+        {table.check.open && (
+          <div className="tb-check">
+            {table.check.press ? (
+              <button
+                aria-pressed={table.check.pressed}
+                onClick={table.check.press}
+              >
+                {t("Ready")}
+              </button>
+            ) : (
+              <span>{t("Ready check")}</span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

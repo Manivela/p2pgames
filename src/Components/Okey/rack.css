@@ -1046,6 +1046,13 @@ html:has(.fit) {
   font-size: calc(var(--t) * 0.34);
 }
 
+/* a ready check, to someone watching (Board.jsx) */
+.side .checking {
+  margin: 0;
+  font-size: calc(var(--t) * 0.34);
+  font-weight: 600;
+}
+
 /* El aç while a tap picks a whole group */
 .side button[aria-pressed="true"] {
   background: #fff;

@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import useSound from "use-sound";
 import { useParams } from "react-router-dom";
 import { useAuthStore, useRackRow, useVolume } from "../../hooks/useStore";
-import { useTogether } from "../../hooks/useRoom";
+import { useReadyCheck, useTogether, WAIT_READY } from "../../hooks/useRoom";
 import * as okey from "./okey";
 import { rowFits } from "./rulesets";
 import * as bots from "./bot";
@@ -19,6 +19,10 @@ import { signalingServers, peerOpts } from "../../constants";
 import { BUILD, useSiteBuild } from "../../version";
 import { useKnock } from "../knock";
 import { useRecord } from "../Stats/store";
+
+// what's still yours to do on your rack while a ready check holds the
+// table: arrange it, flip a tile, take in tiles won before it
+const OWN = [okey.moveTiles, okey.flipTile, okey.collectInbox];
 
 export const OkeyContext = createContext({});
 const NONE_SPUN = {};
@@ -283,19 +287,42 @@ export function OkeyProvider({ children }) {
   // the tile you last dragged has already landed: moves.js doesn't fly it
   const dragged = React.useRef(null);
 
+  // The players waited for, by the next round and a ready check: those in
+  // the game, never a bot, someone away holding it up; the next deal, and a
+  // check's end, written by the first player's page.
+  const need = okeyState.players
+    .filter((p) => (p.user && !p.user.bot) || p.away)
+    .map((p) => ({ key: p.id, here: !!p.user }));
+  const startsHere =
+    okeyState.players.find((p) => p.user && !p.user.bot)?.userKey === localID;
+  // a ready check after a break (⋯, hooks/useRoom.js): no move is made, a
+  // bot's or a held one either, till everyone's pressed Ready
+  const check = useReadyCheck({
+    map,
+    need,
+    mine: me ? [me] : [],
+    starts: startsHere,
+    live: okeyState.gameState !== "start",
+  });
+  const paused = check.open;
+
   // Racks only take drops for the local player; game.* enforces the rules.
   // Returns true when the move went through.
   const act = useCallback(
     (fn, player, ...args) => {
       const result =
-        player === me ? fn(okeyState, player, ...args) : "Not your turn";
+        player !== me
+          ? "Not your turn"
+          : paused && !OWN.includes(fn)
+            ? WAIT_READY
+            : fn(okeyState, player, ...args);
       if (typeof result === "string") toast(t(result));
       else if (result) setOkeyState(result);
       const ok = !!result && typeof result !== "string";
       if (!ok) dragged.current = null;
       return ok;
     },
-    [okeyState, me, setOkeyState],
+    [okeyState, me, setOkeyState, paused],
   );
   // when the turn last reached this device: the others' time to take the
   // discard runs from then (okey.drawTile), as the turn timer does
@@ -347,6 +374,7 @@ export function OkeyProvider({ children }) {
   // the rack (moves.js) instead of only landing
   const drawTile = useCallback(
     (player, tile, toIndex, flies = false) => {
+      if (paused) return act(okey.drawTile, player);
       dragged.current = flies ? null : tile.id;
       const [now, at] = [Date.now(), turnStart.current];
       const wait =
@@ -372,7 +400,7 @@ export function OkeyProvider({ children }) {
       setHold({ tile, toIndex: slot, flies });
       return true;
     },
-    [act, okeyState, me, myHand],
+    [act, okeyState, me, myHand, paused],
   );
 
   // Tiles picked on your own rack (local only, not shared): dragging one
@@ -451,6 +479,7 @@ export function OkeyProvider({ children }) {
 
   const discardTile = useCallback(
     (player, tile) => {
+      if (paused) return act(okey.discardTile, player, tile);
       dragged.current = tile.id;
       if (player !== me || !okey.waitBefore(okeyState, player, tile)) {
         return act(okey.discardTile, player, tile);
@@ -463,7 +492,7 @@ export function OkeyProvider({ children }) {
       setSelected((ids) => ids.filter((id) => id !== tile.id));
       return true;
     },
-    [act, okeyState, me],
+    [act, okeyState, me, paused],
   );
 
   // the held move is made once the rules allow it (asked again when the
@@ -481,6 +510,8 @@ export function OkeyProvider({ children }) {
       setHold(null);
       return;
     }
+    // made once a ready check's over
+    if (paused) return;
     let timer;
     const move = () => {
       const now = Date.now();
@@ -497,7 +528,7 @@ export function OkeyProvider({ children }) {
     };
     move();
     return () => clearTimeout(timer);
-  }, [hold, okeyState, me, act, myHand, isMyTurn]);
+  }, [hold, okeyState, me, act, myHand, isMyTurn, paused]);
 
   const finishGame = useCallback(
     (tile) => {
@@ -669,12 +700,10 @@ export function OkeyProvider({ children }) {
   const together = useTogether({
     map,
     round: ended ? `${okeyState.deal}/${okeyState.gameState}` : null,
-    need: okeyState.players
-      .filter((p) => (p.user && !p.user.bot) || p.away)
-      .map((p) => ({ key: p.id, here: !!p.user })),
+    need,
     mine: me ? [me] : [],
-    starts:
-      okeyState.players.find((p) => p.user && !p.user.bot)?.userKey === localID,
+    starts: startsHere,
+    hold: paused,
     go: okeyState.gameState === "finish" ? nextGame : nextRound,
   });
 
@@ -842,7 +871,7 @@ export function OkeyProvider({ children }) {
   // it or a catch of the tile just thrown, and tiles won into the inbox
   // onto the rack, one write a render
   React.useEffect(() => {
-    if (okeyState.gameState !== "play") return;
+    if (okeyState.gameState !== "play" || paused) return;
     for (const p of okeyState.players) {
       if (!p.user?.bot || p.userKey !== localID) continue;
       const next = p.inbox?.length
@@ -853,7 +882,7 @@ export function OkeyProvider({ children }) {
         return;
       }
     }
-  }, [okeyState, localID, setOkeyState]);
+  }, [okeyState, localID, setOkeyState, paused]);
   // its turn, on the page that plays it: a move at a pace the table can
   // follow, and a discard the rules hold back (the others' time to take
   // the one before) the moment they let it go. A little slower where that
@@ -865,7 +894,7 @@ export function OkeyProvider({ children }) {
   const botTurn = React.useRef({});
   React.useEffect(() => {
     const p = okeyState.players.find((x) => x.id === okeyState.currentPlayer);
-    if (okeyState.gameState !== "play" || !p?.user?.bot) return;
+    if (okeyState.gameState !== "play" || !p?.user?.bot || paused) return;
     if (p.userKey !== localID) return;
     // its turn's first move waits out the others' time to catch the
     // discard, from when the turn reached this page (one key a turn)
@@ -890,7 +919,17 @@ export function OkeyProvider({ children }) {
     };
     timer = setTimeout(move, Math.max(pace, wait * 1000));
     return () => clearTimeout(timer);
-  }, [okeyState, localID, pace, setOkeyState]);
+  }, [okeyState, localID, pace, setOkeyState, paused]);
+  // a ready check over: the others' time to take or catch the discard runs
+  // again from now, not from before the break
+  const pausedWas = React.useRef(paused);
+  React.useEffect(() => {
+    if (pausedWas.current && !paused) {
+      if (okeyState.currentPlayer === me) turnStart.current = Date.now();
+      botTurn.current = {};
+    }
+    pausedWas.current = paused;
+  }, [paused]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const contextValue = useMemo(
     () => ({
@@ -937,6 +976,7 @@ export function OkeyProvider({ children }) {
       playOnMeld,
       takeBack,
       together,
+      check,
       nextRound,
       redealRound,
       dragged,
@@ -988,6 +1028,7 @@ export function OkeyProvider({ children }) {
       playOnMeld,
       takeBack,
       together,
+      check,
       nextRound,
       redealRound,
       newVersion,

@@ -17,6 +17,13 @@ import {
   sitDown,
   HINTS,
   WAIT_ALL,
+  CHECK,
+  END_CHECK,
+  BACK,
+  WAITING,
+  ALL_BACK,
+  CHECK_ENDED,
+  GO_ON,
 } from "./seats";
 
 // Tic-tac-toe at the table: two browsers, or one device playing both
@@ -130,6 +137,82 @@ test("the next game waits for both players, once the room says so", async ({
   await x.goto(`/${room("ttt")}`);
   await settings(x);
   await expect(x.getByRole("checkbox", { name: WAIT_ALL })).toBeChecked();
+});
+
+// A ready check after a break (⋯, either player's): no mark till both have
+// pressed Ready, each press by its player's name, and both are told when
+// they're back; ended in ⋯ instead, play goes on too.
+test("a ready check holds the game till both players are back", async ({
+  browser,
+}, info) => {
+  const { x, o } = await twoPlayers(browser, info);
+  await x.getByRole("button", { name: MENU }).click();
+  await x.getByRole("button", { name: CHECK }).click();
+  await expect(
+    o.getByText(/^Ayşe: (ready check|hazır mısınız\?)$/),
+  ).toBeVisible(NET);
+  // X's mark waits (in a corner: Ready is over the middle)
+  const { last } = await game(x);
+  await cell(x, 0).click();
+  await expect(x.getByText(WAITING)).toBeVisible();
+  expect((await game(x)).last.n).toBe(last.n);
+  // Ayşe's Ready, by her name on Bora's table
+  const back = (page) => page.getByRole("button", { name: BACK });
+  await back(x).click();
+  await expect(back(x)).toHaveAttribute("aria-pressed", "true");
+  await expect(o.locator(".tb-plate .ready")).toHaveCount(1, NET);
+  // Bora's: both told, and X's mark goes down
+  await back(o).click();
+  for (const page of [x, o]) {
+    await expect(page.getByText(ALL_BACK)).toBeVisible(NET);
+    await expect(page.locator(".tb-check")).toHaveCount(0);
+  }
+  await cell(x, 0).click();
+  await expect.poll(async () => (await game(o)).turn, NET).toBe(1);
+  // Bora's check, ended by Ayşe: play on
+  await o.getByRole("button", { name: MENU }).click();
+  await o.getByRole("button", { name: CHECK }).click();
+  await expect(x.locator(".tb-check")).toHaveCount(1, NET);
+  await x.getByRole("button", { name: MENU }).click();
+  await x.getByRole("button", { name: END_CHECK }).click();
+  await expect(o.getByText(CHECK_ENDED)).toBeVisible(NET);
+  await expect(o.locator(".tb-check")).toHaveCount(0);
+  await cell(o, 4).click();
+  await expect.poll(async () => (await game(x)).turn, NET).toBe(0);
+});
+
+// A player who can't press for the next game (a phone gone flat): the other
+// goes on without them, from ⋯.
+test("the next game goes on without a player who can't press, from ⋯", async ({
+  browser,
+}, info) => {
+  const { x, o } = await twoPlayers(browser, info);
+  await settings(x);
+  await x.getByRole("checkbox", { name: WAIT_ALL }).check();
+  await x.keyboard.press("Escape");
+  for (const [page, i] of [
+    [x, 0],
+    [o, 3],
+    [x, 1],
+    [o, 4],
+    [x, 2],
+  ]) {
+    const seat = page === x ? 0 : 1;
+    await expect.poll(async () => (await game(page)).turn, NET).toBe(seat);
+    await cell(page, i).click();
+  }
+  await expect.poll(async () => (await game(o)).winner?.seat, NET).toBe(0);
+  const { id } = await game(o);
+  // Bora's press waits for Ayşe's, which won't come
+  await o.getByRole("button", { name: NEXT }).click();
+  await expect(o.getByRole("button", { name: NEXT })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await o.getByRole("button", { name: MENU }).click();
+  await o.getByRole("button", { name: GO_ON }).click();
+  await o.locator(".tb-menu button.armed").click();
+  await expect.poll(async () => (await game(x)).id, NET).not.toBe(id);
 });
 
 // alone in the room, a reload comes back to the game it was at, and its

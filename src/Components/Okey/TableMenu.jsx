@@ -248,6 +248,8 @@ export default function TableMenu() {
     redealRound,
     act,
     newVersion,
+    check,
+    together,
   } = useContext(OkeyContext);
   const { roomId } = useParams();
   const [open, setOpen] = useState(false);
@@ -332,6 +334,22 @@ export default function TableMenu() {
             ))}
           </div>
           <div className="group">
+            {/* back from a break: no move till everyone's pressed Ready */}
+            {check.start && (
+              <button onClick={then(check.start)}>{t("Ready check")}</button>
+            )}
+            {check.cancel && (
+              <button onClick={then(check.cancel)}>
+                {t("End the ready check")}
+              </button>
+            )}
+            {/* a player who can't press Next Round: on without them */}
+            {together.force && (
+              <Confirm
+                label={t("Go on without waiting")}
+                onConfirm={then(together.force)}
+              />
+            )}
             <button onClick={() => show("load")}>{t("Saved games")}</button>
             <button onClick={() => show("setup")}>{t("Set up a game")}</button>
             {/* the game's rules, those it reads as it's played (the lobby has ⚙) */}

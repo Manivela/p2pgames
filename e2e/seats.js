@@ -12,6 +12,17 @@ export const WAIT_ALL =
   /^(Next round waits for everyone|Sonraki el herkesi bekler)$/;
 export const READY = /^(ready|hazır)$/;
 export const HINTS = /^(Key hints|Tuş ipuçları)$/;
+// a ready check after a break (⋯, hooks/useRoom.js): its item, its end, each
+// player's Ready, a move tried meanwhile, and how it ends
+export const CHECK = /^(Ready check|Hazır mısınız\?)$/;
+export const END_CHECK = /^(End the ready check|Beklemeyi bitir)$/;
+export const BACK = /^(Ready|Hazırım)$/;
+export const WAITING =
+  /^(Waiting for everyone to be ready|Herkesin hazır olması bekleniyor)$/;
+export const ALL_BACK = /^(Everyone's ready|Herkes hazır)$/;
+export const CHECK_ENDED = /^(Ready check ended|Bekleme bitti)$/;
+// on to the next round or game without the rest's press (⋯)
+export const GO_ON = /^(Go on without waiting|Beklemeden devam et)$/;
 export const SOUND = /^(Sound|Ses)$/;
 
 // a table's ⋯ → Settings (Settings.jsx, Okey's too), closed with Escape

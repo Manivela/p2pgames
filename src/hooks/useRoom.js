@@ -77,13 +77,27 @@ export function useRoomSync() {
 // they're back or their seat's freed. Each press is its player's own key in
 // `map`, `ready-<key>`, holding the `round` it's for, so nothing carries
 // into the next. `mine`: the keys this page presses for; `starts`: whether
-// this page, the one page, calls `go` once all have pressed.
+// this page, the one page, calls `go` once all have pressed; not while
+// `hold` (a ready check open), but as soon as it's let go. `prefix`: the
+// presses' keys, `<prefix>-<key>`; `always`: waits whether the room does
+// or not (a ready check's).
 // Returns `press` (null for someone not playing, while it waits), whether
-// this page has pressed, and who has (`ready`).
-export function useTogether({ map, round, need, mine, starts, go }) {
+// this page has pressed, who has (`ready`), and `force`: any player's way on
+// without the rest (⋯), for one who can't press (a phone gone flat).
+export function useTogether({
+  map,
+  round,
+  need,
+  mine,
+  starts,
+  go,
+  hold = false,
+  prefix = "ready",
+  always = false,
+}) {
   const [on] = useWaitAll();
-  const waits = on && need.length > 0;
-  const has = (key) => round != null && map.get(`ready-${key}`) === round;
+  const waits = (always || on) && need.length > 0;
+  const has = (key) => round != null && map.get(`${prefix}-${key}`) === round;
   const ready = waits
     ? need.filter((p) => p.here && has(p.key)).map((p) => p.key)
     : [];
@@ -91,7 +105,7 @@ export function useTogether({ map, round, need, mine, starts, go }) {
   // once a round: a deal refused (too few players) isn't tried again
   const went = useRef(null);
   useEffect(() => {
-    if (!all || !starts || went.current === round) return;
+    if (!all || !starts || hold || went.current === round) return;
     went.current = round;
     go();
   });
@@ -102,9 +116,9 @@ export function useTogether({ map, round, need, mine, starts, go }) {
       map.doc.transact(() =>
         ours
           .split(",")
-          .forEach((k) => map.set(`ready-${k}`, pressed ? null : round)),
+          .forEach((k) => map.set(`${prefix}-${k}`, pressed ? null : round)),
       ),
-    [map, ours, pressed, round],
+    [map, ours, pressed, round, prefix],
   );
   // the same object till something in it changes: Okey's context holds it
   const shown = ready.join();
@@ -113,8 +127,96 @@ export function useTogether({ map, round, need, mine, starts, go }) {
       waits,
       ready: shown ? shown.split(",").map(Number) : [],
       pressed,
-      press: !waits ? go : ours ? press : null,
+      // none while held: the check's Ready is the one to press
+      press: hold ? null : !waits ? go : ours ? press : null,
+      force: !hold && waits && round != null && ours ? go : null,
     }),
-    [waits, shown, pressed, go, ours, press],
+    [waits, shown, pressed, go, ours, press, hold, round],
   );
 }
+
+// A ready check, back from a break: any player starts it (⋯, `start`, while
+// a game's on, `live`) and the table's moves wait, each table refusing them
+// while it's `open`, its bots too, till every player in it (`need`, as for
+// useTogether, someone away holding it up) has pressed Ready, or any player
+// ends it (`cancel`). The check is `check` in `map`, { id, by }, each press
+// `back-<key>`, apart from the next round's, which still counts after.
+export function useReadyCheck({ map, need, mine, starts, live }) {
+  const me = useAuthStore((s) => s.currentUser);
+  const check = map.get("check") ?? null;
+  const close = useCallback(
+    () =>
+      map.doc.transact(() => {
+        map.delete("check");
+        for (const k of [...map.keys()]) {
+          if (k.startsWith("back-")) map.delete(k);
+        }
+      }),
+    [map],
+  );
+  const together = useTogether({
+    map,
+    round: check?.id ?? null,
+    need,
+    mine,
+    starts,
+    go: close,
+    prefix: "back",
+    always: true,
+  });
+  const player = mine.some((k) => need.some((p) => p.key === k));
+  // no game to hold any more (back to waiting for its Start, a seat freed):
+  // the check's over
+  useEffect(() => {
+    if (check && !live && starts) close();
+  });
+  // said on the table: a check someone else started, and its end, everyone
+  // back or ended in ⋯; not as a page arrives
+  const was = useRef(undefined);
+  const all = need.length > 0 && together.ready.length === need.length;
+  const allWas = useRef(false);
+  useEffect(() => {
+    const id = check?.id ?? null;
+    if (was.current !== undefined && was.current !== id) {
+      if (id && check.by?.id !== me?.id) {
+        toast(t(`${check.by?.name ?? t("Someone")}: ready check`), {
+          id: "check",
+        });
+      } else if (!id) {
+        toast(t(allWas.current ? "Everyone's ready" : "Ready check ended"), {
+          id: "check",
+        });
+      }
+    }
+    was.current = id;
+  }, [check?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // after the toast's, which reads it as it was
+  useEffect(() => {
+    allWas.current = !!check && all;
+  });
+  const begin = useCallback(
+    () =>
+      map.set("check", {
+        id: Math.random().toString(36).slice(2),
+        by: me && { id: me.id, name: me.name },
+      }),
+    [map, me?.id, me?.name], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const open = !!check;
+  const canStart = !open && live && player && need.length > 1;
+  // the same object till something in it changes: Okey's context holds it
+  return useMemo(
+    () => ({
+      open,
+      ready: together.ready,
+      pressed: together.pressed,
+      press: open ? together.press : null,
+      start: canStart ? begin : null,
+      cancel: open && player ? close : null,
+    }),
+    [open, together, canStart, begin, player, close],
+  );
+}
+
+// a move tried while a ready check holds the table
+export const WAIT_READY = "Waiting for everyone to be ready";

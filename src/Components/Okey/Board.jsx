@@ -165,6 +165,7 @@ function NextStep() {
     okeyState,
     me,
     together,
+    check,
     act,
     selected,
     picking,
@@ -176,6 +177,16 @@ function NextStep() {
   } = useContext(OkeyContext);
   // Escape lets El aç go, as a tap on the felt does
   useEscape(picking && unselectAll);
+  // a ready check (⋯): each player's Ready in place of the next step
+  if (check.open && okeyState.gameState !== "start") {
+    return check.press ? (
+      <button aria-pressed={check.pressed} onClick={check.press}>
+        {t("Ready")}
+      </button>
+    ) : (
+      <p className="checking">{t("Ready check")}</p>
+    );
+  }
   switch (okeyState.gameState) {
     case "start":
       return <Lobby />;

@@ -7,6 +7,8 @@ import {
   SIT,
   START,
   WAIT_ALL,
+  CHECK,
+  BACK,
   enter,
   room,
   settings,
@@ -16,6 +18,7 @@ import {
 // a deal played through. Its state through the dev-only window.batak.
 const game = (page) => page.evaluate(() => window.batak?.get());
 const PASS = /^(Pass|Pas)$/;
+const NEW_GAME = /^(New Game|Yeni oyun)$/;
 const DEAL = /^(Deal|Dağıt)$/;
 const SAVED = /^(Saved games|Kayıtlı oyunlar)$/;
 const STATS = /^(Your stats|İstatistiklerin)$/;
@@ -226,6 +229,60 @@ test("a hand's end waits for the players' Deal, and a bot deals once it's off", 
   await page.getByRole("checkbox", { name: WAIT_ALL }).uncheck();
   await page.keyboard.press("Escape");
   await expect.poll(async () => (await game(page)).round, NET).toBe(3);
+});
+
+// A ready check after a break (⋯): a bot's turn waits too, its pace long
+// past, till both players have pressed Ready; then it plays on.
+test("a ready check holds a bot's turn till both players are back", async ({
+  browser,
+}, info) => {
+  const at = room("batak");
+  const page = await enter(browser, info, at, "batak", "Ayşe");
+  await page
+    .locator('[data-seat="0"]')
+    .getByRole("button", { name: SIT })
+    .click();
+  await page.evaluate(() => sessionStorage.setItem("botPace", "100"));
+  const bora = await enter(browser, info, at, "batak", "Bora");
+  await bora
+    .locator('[data-seat="1"]')
+    .getByRole("button", { name: SIT })
+    .click();
+  for (const seat of [2, 3]) {
+    await page
+      .locator(`[data-seat="${seat}"]`)
+      .getByRole("button", { name: BOT })
+      .click();
+  }
+  await page.getByRole("button", { name: START }).click();
+  await expect.poll(() => game(bora), NET).toBeTruthy();
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: CHECK }).click();
+  await expect(bora.locator(".tb-check")).toHaveCount(1, NET);
+  // a bot's turn: it waits
+  await page.evaluate(() =>
+    window.batak.set({ ...window.batak.get(), turn: 2 }),
+  );
+  await page.waitForTimeout(1500);
+  const { last, turn } = await game(page);
+  expect(turn).toBe(2);
+  // both back: it plays
+  for (const p of [page, bora]) {
+    await p.getByRole("button", { name: BACK }).click();
+  }
+  await expect
+    .poll(async () => (await game(page)).last.n, NET)
+    .not.toBe(last.n);
+  // a check open as ⋯ → New Game takes the table back to waiting: over,
+  // Start there to tap
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: CHECK }).click();
+  await expect(bora.locator(".tb-check")).toHaveCount(1, NET);
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: NEW_GAME }).click();
+  await page.locator(".tb-menu button.armed").click();
+  await expect(bora.locator(".tb-check")).toHaveCount(0, NET);
+  await expect(page.getByRole("button", { name: START })).toBeVisible();
 });
 
 // one move for whoever's turn it is on `page`, seated at `seat`: a pass,

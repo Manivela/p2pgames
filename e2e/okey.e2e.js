@@ -1,5 +1,15 @@
 import { expect, test } from "./test";
-import { HINTS, READY, WAIT_ALL, settings } from "./seats";
+import {
+  HINTS,
+  READY,
+  WAIT_ALL,
+  settings,
+  CHECK,
+  BACK,
+  WAITING,
+  ALL_BACK,
+  GO_ON,
+} from "./seats";
 
 // Labels in English (desktop) or Turkish (phones)
 const GO = /^(Go|Gir)$/;
@@ -153,6 +163,12 @@ const stages = {
   menu: async (page) => {
     await stages.play(page);
     await page.getByRole("button", { name: MENU }).click();
+  },
+  // a ready check (⋯): Ready in place of the next step
+  check: async (page) => {
+    await stages.play(page);
+    await page.getByRole("button", { name: MENU }).click();
+    await page.getByRole("button", { name: CHECK }).click();
   },
   roundEnd: async (page) => {
     await table(page, "start", 4);
@@ -2300,9 +2316,77 @@ test("the next round waits for every player, never a bot, once the room says so"
   await guest.getByRole("button", { name: NEXT }).click();
   await expect.poll(async () => (await state(page)).round, NET).toBe(round + 1);
   expect((await state(page)).gameState).toBe("play");
+  // Ayşe can't press the next time (a phone gone flat): Ece goes on
+  // without her, from ⋯
+  await table(page, "playToEnd");
+  await guest.getByRole("button", { name: NEXT }).click();
+  await expect(guest.getByRole("button", { name: NEXT })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await confirm(guest, GO_ON);
+  await expect.poll(async () => (await state(page)).round, NET).toBe(round + 2);
   // ⋯ → New Game mid-game: at once, as ever
   await confirm(page, NEW_GAME);
   await expect.poll(async () => (await state(page)).gameState).toBe("start");
+});
+
+// A ready check after a break (⋯): no move is made, a player's or a bot's,
+// till every player has pressed Ready; then play goes on, the bot's too.
+test("a ready check holds every move, a bot's too, till each player is back", async ({
+  page,
+  browser,
+}, info) => {
+  anySize(info);
+  const room = await sitDown(page);
+  // Ece sits down, and two bots, played by Ayşe's page a second into
+  // their turn
+  const guest = await (await browser.newContext()).newPage();
+  await sitDown(guest, { room, name: "Ece", sit: false });
+  await arrived(guest);
+  await guest.getByRole("button", { name: SIT }).first().click();
+  await page.evaluate(() => sessionStorage.setItem("botPace", "1000"));
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole("button", { name: BOT }).first().click();
+  }
+  await page.getByRole("button", { name: START }).first().click();
+  await expect
+    .poll(async () => (await state(guest))?.gameState, NET)
+    .toBe("play");
+  expect((await state(page)).currentPlayer).toBe(1);
+  // Ayşe's check, told to Ece
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: CHECK }).click();
+  await expect(
+    guest.getByText(/^Ayşe: (ready check|hazır mısınız\?)$/),
+  ).toBeVisible(NET);
+  // her discard waits, once the deal's tiles have landed
+  await page.waitForFunction(() => !document.querySelector(".flights > *"));
+  const { discards } = await state(page);
+  await drag(
+    page,
+    page.locator(".rack:not(.mini) [data-tile-id]").first(),
+    page.locator('[data-pile="1"] .slot'),
+  );
+  await expect(page.getByText(WAITING)).toBeVisible();
+  expect((await state(page)).discards ?? 0).toBe(discards ?? 0);
+  // the bot's turn comes (her move and Ece's, made for them) and it waits
+  await table(page, "play", 2);
+  await page.waitForTimeout(2500);
+  expect((await state(page)).currentPlayer).toBe(3);
+  // each Ready, Ayşe's by her name on Ece's table; then the bot plays on
+  const back = (p) => p.getByRole("button", { name: BACK });
+  await back(page).click();
+  await expect(back(page)).toHaveAttribute("aria-pressed", "true");
+  await expect(guest.locator(".badge", { hasText: READY })).toHaveCount(1, NET);
+  await back(guest).click();
+  for (const p of [page, guest]) {
+    await expect(p.getByText(ALL_BACK)).toBeVisible(NET);
+    await expect(back(p)).toHaveCount(0);
+  }
+  await expect
+    .poll(async () => (await state(page)).currentPlayer, { timeout: 10000 })
+    .not.toBe(3);
 });
 
 test("mid-round, the round is dealt again once the seats are right", async ({

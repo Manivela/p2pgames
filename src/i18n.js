@@ -591,6 +591,15 @@ const TR = [
   [/^Someone$/, "Biri"],
   [/^ready$/, "hazır"],
   [/^Waiting to start$/, "Başlatılmayı bekliyor"],
+  // a ready check after a break (⋯, hooks/useRoom.js)
+  [/^Ready check$/, "Hazır mısınız?"],
+  [/^(.+): ready check$/, "$1: hazır mısınız?"],
+  [/^Ready$/, "Hazırım"],
+  [/^End the ready check$/, "Beklemeyi bitir"],
+  [/^Waiting for everyone to be ready$/, "Herkesin hazır olması bekleniyor"],
+  [/^Everyone's ready$/, "Herkes hazır"],
+  [/^Ready check ended$/, "Bekleme bitti"],
+  [/^Go on without waiting$/, "Beklemeden devam et"],
   // how the round finished (LastTurn)
   [/^(.+) drew from the pile$/, "$1 ortadan çekti"],
   [/^(.+) took (.+)'s discard$/, "$1 yandan aldı: $2"],

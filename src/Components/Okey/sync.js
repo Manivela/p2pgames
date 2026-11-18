@@ -13,8 +13,9 @@ import { isEqual, omit } from "lodash";
 // "lobby" deal and never moves the pointer, so its empty table can't replace
 // a game in progress; once the doc arrives, the pointer wins over the lobby.
 // Outside the state, at the map's root and each its writer's: the fake okeys'
-// spin (`spun`, kept through every deal), and each player's press for the
-// next round (`ready-<seat>`, hooks/useRoom.js), gone with the deal.
+// spin (`spun`, kept through every deal), each player's press for the next
+// round (`ready-<seat>`, hooks/useRoom.js), gone with the deal, and a ready
+// check (`check`, and each press `back-<seat>`), kept till it's over.
 function parts(s) {
   return {
     seats: s.players.map((p) =>
@@ -74,11 +75,17 @@ export function readState(map) {
   );
 }
 
+const KEPT = /^(spun|check|back-.*)$/;
+
 export function replaceState(map, next) {
   const deal = Math.random().toString(36).slice(2);
   map.doc.transact(() => {
-    // the fake okeys' spin (OkeyContext) stays through every game
-    for (const key of [...map.keys()]) if (key !== "spun") map.delete(key);
+    // the fake okeys' spin (OkeyContext) stays through every game, and a
+    // ready check through a seat freed mid-round, not back to the lobby
+    const kept = next.gameState === "start" ? /^spun$/ : KEPT;
+    for (const key of [...map.keys()]) {
+      if (!kept.test(key)) map.delete(key);
+    }
     for (const [key, value] of Object.entries(parts(next))) {
       map.set(`${deal}/${key}`, value);
     }
