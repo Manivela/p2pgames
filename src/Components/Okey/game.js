@@ -497,22 +497,48 @@ export async function decodeSave(code) {
   return state?.players && state.round ? state : null;
 }
 
+// A tile waiting on the rack, not in the hand yet (`waiting`: { tile,
+// slot }, a claim's or a draw's that waits out the others' time; slot -1
+// before it's on the rack) placed with the rest as any tile is
+// (placeTiles), then left out of the hand: the others make room for it,
+// and none is dropped on it. The hand, and the waiting tile's slot now.
+export function placeAround(hand, row, tiles, toIndex, held, waiting) {
+  const h = [...hand];
+  if (waiting.slot >= 0 && !h[waiting.slot]) h[waiting.slot] = waiting.tile;
+  const placed = placeTiles(h, row, tiles, toIndex, held);
+  const slot = placed.findIndex((t) => t?.id === waiting.tile.id);
+  if (slot >= 0) placed[slot] = null;
+  return { hand: placed, slot };
+}
+
 // Moves tiles along the player's rack (placeTiles): one, or the picked
-// ones together, `held` the one under the finger.
-export function moveTiles(state, player, ids, toIndex, held) {
+// ones together, `held` the one under the finger; round the tile waiting
+// on it (placeAround), or that tile itself, its claim's slot moved too
+// (`waiting.claim`).
+export function moveTiles(state, player, ids, toIndex, held, waiting) {
   if (roundOver(state)) return roundOver(state);
   const newState = cloneDeep(state);
   const myPlayer = seat(newState, player);
   if (!myPlayer) return;
-  const tiles = myPlayer.hand.filter((t) => t && ids.includes(t.id));
+  const tiles = [...myPlayer.hand, waiting?.tile].filter(
+    (t) => t && ids.includes(t.id),
+  );
   if (!tiles.length) return;
-  myPlayer.hand = placeTiles(
+  const row = rowOf(state, player);
+  if (!waiting) {
+    myPlayer.hand = placeTiles(myPlayer.hand, row, tiles, toIndex, held);
+    return newState;
+  }
+  const { hand, slot } = placeAround(
     myPlayer.hand,
-    rowOf(state, player),
+    row,
     tiles,
     toIndex,
     held,
+    waiting,
   );
+  myPlayer.hand = hand;
+  if (waiting.claim && myPlayer.claim && slot >= 0) myPlayer.claim.slot = slot;
   return newState;
 }
 

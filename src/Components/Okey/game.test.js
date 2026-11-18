@@ -264,6 +264,40 @@ test("a full row swaps instead", () => {
   assert.equal(picture(drawn), "ANCD" + "XB__");
 });
 
+test("a tile waiting on the rack is made room for, and moves as any", () => {
+  const W = { tile: { id: "W" }, slot: 1 };
+  const around = (row, id, at) => {
+    const hand = rack(row);
+    const tiles = [...hand, W.tile].filter((t) => t?.id === id);
+    const { hand: h, slot } = game.placeAround(hand, 4, tiles, at, id, W);
+    return [picture(h), slot];
+  };
+  // W waits in slot 1 (not in the hand): X dropped there pushes it aside
+  // into the row's gap, instead of hiding it
+  assert.deepEqual(around("A__D" + "X___", "X", 1), ["AX_D" + "____", 2]);
+  // W itself dropped on A: A makes room, as for any tile
+  assert.deepEqual(around("A__D" + "____", "W", 0), ["_A_D" + "____", 0]);
+  // a claim's slot moves with it, through the rule
+  let s = game.startGame(seated(2));
+  const hand = player(s, 1).hand;
+  const free = hand.indexOf(null);
+  s = {
+    ...s,
+    players: s.players.map((p) =>
+      p.id === 1 ? { ...p, claim: { id: 1, slot: free } } : p,
+    ),
+  };
+  const first = hand.findIndex(Boolean);
+  s = game.moveTiles(s, 1, ["W"], first, "W", {
+    tile: W.tile,
+    slot: free,
+    claim: true,
+  });
+  assert.equal(player(s, 1).claim.slot, first);
+  assert.isNull(player(s, 1).hand[first]);
+  assertAllTiles(s);
+});
+
 test("picked tiles move together through the rules", () => {
   let s = game.startGame(seated(2));
   const hand = () => player(s, 1).hand;

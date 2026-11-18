@@ -70,6 +70,9 @@ function Tile({
   const { me, act, okeyState, selected, toggleSelected, spun, spin } =
     useContext(OkeyContext);
   const myTile = me && tile.source === `hand-${me}`;
+  // picked as yours: the tile waiting on your rack too (its ghost, the one
+  // with onDragOff), as any tile on it
+  const mine = myTile || !!onDragOff;
   const canSee = tile.source.includes("hand-") ? myTile : true;
   // an okey laid on the table lies face down; a thrown one stays face up
   const okeyDown =
@@ -144,7 +147,7 @@ function Tile({
     "tile",
     faceUp ? `c-${colorOf(tile)}` : "back",
     className,
-    myTile && selected.includes(tile.id) && "selected",
+    mine && selected.includes(tile.id) && "selected",
     armed && "armed",
     mark && "marked",
     faceUp && spun[tile.id] && "spun",
@@ -159,7 +162,7 @@ function Tile({
       onClick={() => {
         // a hold already flipped the tile; don't also select it
         if (held.current) held.current = false;
-        else if (myTile) toggleSelected(tile);
+        else if (mine) toggleSelected(tile);
       }}
       onContextMenu={handleClick}
       onTouchStart={startHold}

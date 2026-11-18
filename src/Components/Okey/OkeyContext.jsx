@@ -321,6 +321,26 @@ export function OkeyProvider({ children }) {
   const held = hold?.tile.source === `hand-${me}` ? hold.tile.id : null;
   const heldDraw = hold && !held ? hold : null;
   const unhold = useCallback(() => setHold(null), []);
+  // The tile waiting on my rack, not in my hand yet: my claim on the
+  // discard on offer (till the current player discards), or my draw held
+  // above. The rack shows it in its slot, and the others make room for it
+  // as for any tile (okey.placeAround); `claim`: it's my claim.
+  const waiting = React.useMemo(() => {
+    const offer = okey.upForClaim(okeyState);
+    const offered =
+      offer &&
+      !okey.isCaught(okeyState, offer.tileId) &&
+      okeyState.players.find((p) => p.id === offer.from)?.discardPile.at(-1);
+    const claim = okeyState.players.find((p) => p.id === me)?.claim;
+    if (offered && offered.id === offer.tileId && claim?.id === offer.id) {
+      return {
+        tile: { ...offered, source: `claim-${me}` },
+        slot: claim.slot,
+        claim: true,
+      };
+    }
+    return heldDraw && { tile: heldDraw.tile, slot: heldDraw.toIndex };
+  }, [okeyState, me, heldDraw]);
   // `flies`: drawn by a key or a button (Take, D), not dragged: it flies to
   // the rack (moves.js) instead of only landing
   const drawTile = useCallback(
@@ -335,10 +355,22 @@ export function OkeyProvider({ children }) {
       const next = okey.drawTile(okeyState, player, ...args);
       if (typeof next === "string") toast(t(next));
       if (!next || typeof next === "string") return false;
-      setHold({ tile, toIndex, flies });
+      // the others make room for it now, as they will once it's drawn
+      const w = { tile, slot: -1 };
+      const row = okey.rowOf(okeyState, me);
+      const { slot } = okey.placeAround(
+        myHand(me),
+        row,
+        [tile],
+        toIndex,
+        tile.id,
+        w,
+      );
+      act(okey.moveTiles, me, [tile.id], toIndex, tile.id, w);
+      setHold({ tile, toIndex: slot, flies });
       return true;
     },
-    [act, okeyState, me],
+    [act, okeyState, me, myHand],
   );
 
   // Tiles picked on your own rack (local only, not shared): dragging one
@@ -365,8 +397,9 @@ export function OkeyProvider({ children }) {
     }, 20000);
     return () => clearTimeout(timer);
   }, [picking, selected]);
-  // and a picked tile that leaves the rack (discarded, laid) is unpicked
-  const inHand = myHand(me)
+  // and a picked tile that leaves the rack (discarded, laid, a claim
+  // lost) is unpicked
+  const inHand = [...myHand(me), waiting?.tile]
     .filter(Boolean)
     .map((t) => t.id)
     .join();
@@ -385,13 +418,33 @@ export function OkeyProvider({ children }) {
       selected.length > 1 && selected.includes(tile.id) ? selected : [tile.id],
     [selected],
   );
+  // round the tile waiting on my rack, or that tile itself: a claim's slot
+  // moves in the rule, a held draw's here, as the rule moves it
   const moveTile = useCallback(
     (player, tile, toIndex) => {
       dragged.current = tile.id;
       if (tile.id === held) setHold(null);
-      return act(okey.moveTiles, player, movedWith(tile), toIndex, tile.id);
+      const ids = movedWith(tile);
+      const ok = act(okey.moveTiles, player, ids, toIndex, tile.id, waiting);
+      if (ok && heldDraw) {
+        const hand = myHand(me);
+        const tiles = [...hand, waiting.tile].filter(
+          (t) => t && ids.includes(t.id),
+        );
+        const row = okey.rowOf(okeyState, me);
+        const { slot } = okey.placeAround(
+          hand,
+          row,
+          tiles,
+          toIndex,
+          tile.id,
+          waiting,
+        );
+        if (slot >= 0) setHold((h) => h && { ...h, toIndex: slot });
+      }
+      return ok;
     },
-    [act, movedWith, held],
+    [act, movedWith, held, waiting, heldDraw, myHand, me, okeyState],
   );
 
   const discardTile = useCallback(
@@ -465,11 +518,16 @@ export function OkeyProvider({ children }) {
 
   const toggleSelected = useCallback(
     (tile) => {
+      // the rack as it shows: the tile waiting on it in its slot
+      const rack = [...myHand(me)];
+      if (waiting?.slot >= 0 && !rack[waiting.slot]) {
+        rack[waiting.slot] = waiting.tile;
+      }
       const group = picking
-        ? okey
-            .groupsOf(myHand(me), okey.rowOf(okeyState, me))
+        ? (okey
+            .groupsOf(rack, okey.rowOf(okeyState, me))
             .find((g) => g.some((t) => t.id === tile.id))
-            .map((t) => t.id)
+            ?.map((t) => t.id) ?? [tile.id])
         : [tile.id];
       setSelected((ids) =>
         ids.includes(tile.id)
@@ -477,7 +535,7 @@ export function OkeyProvider({ children }) {
           : [...ids, ...group.filter((id) => !ids.includes(id))],
       );
     },
-    [picking, myHand, me, okeyState],
+    [picking, myHand, me, okeyState, waiting],
   );
   // a tap on the felt: nothing picked, and El aç let go
   const unselectAll = useCallback(() => {
@@ -837,6 +895,7 @@ export function OkeyProvider({ children }) {
       held,
       heldDraw,
       unhold,
+      waiting,
       openHand,
       openAll,
       layMelds,
@@ -886,6 +945,7 @@ export function OkeyProvider({ children }) {
       held,
       heldDraw,
       unhold,
+      waiting,
       openHand,
       openAll,
       layMelds,

@@ -23,12 +23,17 @@ import {
   upForClaim,
   ended,
   partner,
+  penaltySlot,
   placeTiles,
   rowOf,
   seatAt,
 } from "./okey";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
+
+// a claim's penalty tile on the rack before it's drawn: face down, as no
+// one knows it yet
+const PENALTY = { id: "penalty", source: "claim", hidden: true };
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -145,48 +150,45 @@ function Rack({ player, hands }) {
     act,
     takeBack,
     held,
-    heldDraw,
     unhold,
+    waiting,
   } = useContext(OkeyContext);
   const offer = upForClaim(okeyState);
-  // moving my claim's ghost, or claiming the discard out of turn
+  // claiming the discard out of turn
   const claim = (tile) =>
-    tile.source.startsWith("claim-") ||
-    (offer?.tileId === tile.id && me !== okeyState.currentPlayer);
+    offer?.tileId === tile.id && me !== okeyState.currentPlayer;
+  // My claim on the discard, or my draw while the others have time to
+  // catch the discard, waits as a ghost in the slot I dropped it on
+  // (OkeyContext's `waiting`): moved along the rack as any tile, the others
+  // making room for it; dragged off the rack, it's withdrawn. A claim's
+  // penalty tile, unknown till it's drawn, a blank ghost where it'll land.
+  const ghost = me === player &&
+    waiting && {
+      ...waiting,
+      cancel: waiting.claim ? () => act(claimDiscard, me, null) : unhold,
+    };
+  const isGhost = (tile) => !!ghost && tile?.id === ghost.tile.id;
   function onDrop(tile, toIndex) {
-    if (claim(tile)) act(claimDiscard, me, toIndex);
-    else if (tile.source.includes("hand")) moveTile(player, tile, toIndex);
-    else if (tile.source === "table") takeBack(tile, toIndex);
+    if (isGhost(tile) || tile.source.includes("hand")) {
+      moveTile(player, tile, toIndex);
+    } else if (tile.source.startsWith("claim-") || claim(tile)) {
+      // a claim, or its ghost just won or lost: refused then, not a draw
+      act(claimDiscard, me, toIndex);
+    } else if (tile.source === "table") takeBack(tile, toIndex);
     else drawTile(player, tile, toIndex);
   }
-  const sittingPlayer = okeyState.players.find((p) => p.id === player);
-  // my claim on the discard waits as a ghost in the slot I dropped it on;
-  // dragged off the rack, it's withdrawn
-  const offered =
-    offer &&
-    !isCaught(okeyState, offer.tileId) &&
-    okeyState.players.find((p) => p.id === offer.from)?.discardPile.at(-1);
-  // and so does my draw while the others have time to catch the discard
-  const ghost =
-    me === player &&
-    ((offered &&
-      offered.id === offer.tileId &&
-      sittingPlayer.claim?.id === offer.id && {
-        slot: sittingPlayer.claim.slot,
-        tile: { ...offered, source: `claim-${me}` },
-        cancel: () => act(claimDiscard, me, null),
-      }) ||
-      (heldDraw && {
-        slot: heldDraw.toIndex,
-        tile: heldDraw.tile,
-        cancel: unhold,
-      }));
   // a row's slots (13; 101's 15), empty before a deal, on someone else's
   // rack (watched from outside the game), and once the round ends: the
   // hands are shown
   const over = ended(okeyState);
   const hand = me === player && !over ? myHand(player) : [];
   const width = rowOf(okeyState, player);
+  // the rack as it shows: the ghost in its slot with the rest
+  const shown = [...hand];
+  if (ghost && ghost.slot >= 0 && !shown[ghost.slot]) {
+    shown[ghost.slot] = ghost.tile;
+  }
+  const penalty = ghost?.claim ? penaltySlot(hand, ghost.slot, width) : -1;
 
   // A tile held over a slot shows what dropping it there would do
   // (placeTiles): the tiles in its way slide aside, the moved ones leave
@@ -208,35 +210,40 @@ function Rack({ player, hands }) {
   );
   const hover = hovers.at(-1);
   const dragging = hover && hand.length > 0 && hover.tile;
-  const moved =
-    !dragging || claim(dragging)
-      ? []
-      : dragging.source === `hand-${me}`
-        ? hand.filter((t) => t && movedWith(dragging).includes(t.id))
-        : okeyState.currentPlayer === me
-          ? [dragging]
-          : [];
+  // the same as the move will do (okey.moveTiles, placeAround): over the
+  // rack as it shows, the ghost one of its tiles
+  const moved = !dragging
+    ? []
+    : isGhost(dragging) || dragging.source === `hand-${me}`
+      ? shown.filter((t) => t && movedWith(dragging).includes(t.id))
+      : claim(dragging) || okeyState.currentPlayer === me
+        ? [dragging]
+        : [];
   const ids = moved.map((t) => t.id);
   const preview =
     moved.length > 0 &&
-    placeTiles(hand, width, moved, hover.index, dragging.id);
+    placeTiles(shown, width, moved, hover.index, dragging.id);
   function slotProps(tile, index) {
-    // a discard I made before the wait was over sits on my pile meanwhile
-    if (!tile && ghost?.slot === index) {
-      return { tile: ghost.tile, className: "ghost", onDragOff: ghost.cancel };
+    if (!tile && index === penalty && !preview) {
+      return { tile: PENALTY, className: "ghost", disabled: true };
     }
-    const props = { tile: tile?.id === held ? null : tile };
-    if (!preview) return props;
+    const ghostly = isGhost(tile);
+    const props = {
+      tile: tile?.id === held ? null : tile,
+      ...(ghostly && { onDragOff: ghost.cancel }),
+    };
+    const cls = (...c) => [ghostly && "ghost", ...c].filter(Boolean).join(" ");
+    if (!preview) return { ...props, className: cls() };
     // a moved tile may land where one of them was: its slot is marked too
     const landing = ids.includes(preview[index]?.id);
     if (tile && ids.includes(tile.id)) {
-      return { ...props, className: landing ? "moving over" : "moving" };
+      return { ...props, className: cls("moving", landing && "over") };
     }
     const to = tile ? preview.findIndex((t) => t?.id === tile.id) : index;
-    if (to === index) return { ...props, className: landing ? "over" : "" };
+    if (to === index) return { ...props, className: cls(landing && "over") };
     return {
       ...props,
-      className: landing ? "aside over" : "aside",
+      className: cls("aside", landing && "over"),
       style: {
         "--dx": (to % width) - (index % width),
         "--dy": Math.floor(to / width) - Math.floor(index / width),
@@ -244,7 +251,7 @@ function Rack({ player, hands }) {
     };
   }
   const row = (from) =>
-    Array.from({ length: width }, (_, i) => hand[from + i] ?? null).map(
+    Array.from({ length: width }, (_, i) => shown[from + i] ?? null).map(
       (tile, i) => (
         <Slot
           key={from + i}

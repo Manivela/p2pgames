@@ -22,6 +22,7 @@ export {
   moveTiles,
   partner,
   pileOut,
+  placeAround,
   placeTiles,
   previous,
   restore,
@@ -944,12 +945,20 @@ export function claimDiscard(state, player, slot = null) {
   }
   if (isCaught(state, offer.tileId)) return "That tile was caught";
   if (!state.drawPile.length) return "No tiles left for the extra draw";
-  const hand = seat(state, player).hand;
+  // the others make room for it where it's dropped, as for a draw
+  const tile = seat(state, offer.from).discardPile.at(-1);
   const s = cloneDeep(state);
-  seat(s, player).claim = {
-    id: offer.id,
-    slot: hand[slot] ? hand.indexOf(null) : slot,
-  };
+  const me = seat(s, player);
+  const placed = game.placeAround(
+    me.hand,
+    game.rowOf(state, player),
+    [tile],
+    slot,
+    tile.id,
+    { tile, slot: -1 },
+  );
+  me.hand = placed.hand;
+  me.claim = { id: offer.id, slot: placed.slot };
   return s;
 }
 
@@ -995,6 +1004,15 @@ function intoHand(hand, tiles, width) {
     last = i;
   }
   return h;
+}
+
+// where a won claim's penalty tile will land (intoHand), its claim in
+// `slot`: beside it in its row, else where it would go by itself; -1 off
+// the rack
+export function penaltySlot(hand, slot, width) {
+  const h = intoHand(hand, [{ id: "claim", slot }, { id: "penalty" }], width);
+  const i = h.findIndex((t) => t?.id === "penalty");
+  return i < hand.length ? i : -1;
 }
 
 // Who has claimed the discard on offer, first in line first: turn order

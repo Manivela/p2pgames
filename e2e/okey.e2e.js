@@ -447,8 +447,9 @@ test("Take on my turn waits out the time to catch it, Cancel meanwhile", async (
   await expect(take).toHaveCount(0);
 });
 
-// out of turn it claims the discard on offer, a ghost on my rack, and
-// Cancel takes the claim back; Space doesn't press it again, T does
+// out of turn it claims the discard on offer, a ghost on my rack (and its
+// penalty tile's, blank), and Cancel takes the claim back; Space doesn't
+// press it again, T does
 test("Take claims the discard out of turn, Cancel takes it back", async ({
   page,
 }, info) => {
@@ -459,7 +460,8 @@ test("Take claims the discard out of turn, Cancel takes it back", async ({
   const take = page.locator(".foot .take");
   await take.click();
   await expect(take).toHaveText(/^(Cancel|Vazgeç)T$/);
-  await expect(page.locator(".rack .ghost")).toHaveCount(1);
+  await expect(page.locator(".rack .ghost")).toHaveCount(2);
+  await expect(page.locator(".rack .ghost .back")).toHaveCount(1);
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
   await page.keyboard.press("Space");
   expect((await state(page)).players[0].claim).toBeTruthy();
@@ -2080,6 +2082,60 @@ test("tiles taken out of turn fly into their slots on my rack", async ({
     return tile().style.visibility;
   }, extra);
   expect(hidden).toBe("hidden");
+});
+
+// Americano: a claim waits as a ghost the rack makes room for, as for any
+// tile, its penalty tile a blank ghost beside it; won, both land where
+// their ghosts were
+test("a claim's ghost is made room for, and its tiles land where shown", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora: Bora's discard on offer
+  const offered = (await state(page)).players[1].discardPile.at(-1).id;
+  const free = (await handIds(page)).indexOf(null);
+  await drag(page, page.locator('[data-pile="2"] .slot'), slot(page, free));
+  await expect(slot(page, free)).toHaveClass(/ghost/);
+  const blank = page.locator(".rack .ghost .tile.back");
+  await expect(blank).toHaveCount(1);
+  // a tile of mine dropped on the ghost: it moves aside, still in sight
+  const mine = (await handIds(page)).findIndex(Boolean);
+  const moved = (await handIds(page))[mine];
+  await drag(page, slot(page, mine).locator(".tile"), slot(page, free));
+  await expect.poll(async () => (await handIds(page))[free]).toBe(moved);
+  const claimed = async () => (await state(page)).players[0].claim.slot;
+  let at = await claimed();
+  expect(at).not.toBe(free);
+  await expect(
+    slot(page, at).locator(`[data-tile-id="${offered}"]`),
+  ).toHaveCount(1);
+  await expect(slot(page, at)).toHaveClass(/ghost/);
+  // a tap picks it, as any tile; dragged with the tile picked beside it,
+  // it goes along
+  await slot(page, at).locator(".tile").click();
+  await expect(slot(page, at).locator(".tile")).toHaveClass(/selected/);
+  await slot(page, free).locator(".tile").click();
+  await drag(page, slot(page, free).locator(".tile"), slot(page, 20));
+  await expect.poll(async () => (await handIds(page))[20]).toBe(moved);
+  await expect.poll(claimed).not.toBe(at);
+  at = await claimed();
+  await expect(
+    slot(page, at).locator(`[data-tile-id="${offered}"]`),
+  ).toHaveCount(1);
+  // where the penalty tile will land, beside it (the slots in rack order)
+  const penalty = await page
+    .locator(".rack:not(.mini) .slot")
+    .evaluateAll((els) => els.findIndex((el) => el.querySelector(".back")));
+  const was = await handIds(page);
+  // the next player discards: the claim's won, onto my rack
+  await table(page, "play", 1);
+  await expect.poll(async () => (await handIds(page))[at]).toBe(offered);
+  const now = await handIds(page);
+  expect(was[penalty]).toBeNull();
+  expect(now[penalty]).not.toBeNull();
+  await expect(page.locator(".rack .ghost")).toHaveCount(0);
 });
 
 // Americano: a claim on the discard, dragged off the rack, is withdrawn

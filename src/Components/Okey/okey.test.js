@@ -1461,6 +1461,33 @@ test("a claim waits in the slot it was dropped on, and can be taken back", () =>
   assertAllTiles(s);
 });
 
+test("a claim dropped on a tile is made room for; its penalty tile lands beside it", () => {
+  let s = okey.startGame(seated(3));
+  s = okey.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  const offered = player(s, 1).discardPile.at(-1);
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  // onto P3's first tile: it moves aside, none is lost, the claim there
+  const hand = player(s, 3).hand;
+  const at = hand.findIndex(Boolean);
+  const first = hand[at].id;
+  s = okey.claimDiscard(s, 3, at);
+  assert.equal(player(s, 3).claim.slot, at);
+  assert.isNull(player(s, 3).hand[at]);
+  assert.include(
+    player(s, 3).hand.map((t) => t?.id),
+    first,
+  );
+  // the penalty tile beside it, as the rack shows its ghost
+  const width = okey.rowOf(s, 3);
+  const penalty = okey.penaltySlot(player(s, 3).hand, at, width);
+  s = okey.discardTile(s, 2, player(s, 2).hand.find(Boolean), afterWait(s));
+  const drawnNext = player(s, 3).inbox.at(-1).id;
+  s = okey.collectInbox(s, 3);
+  assert.equal(player(s, 3).hand[at].id, offered.id);
+  assert.equal(player(s, 3).hand[penalty].id, drawnNext);
+  assertAllTiles(s);
+});
+
 test("El aç with nothing picked: the round's melds out of the whole rack, the highest first, okeys last", () => {
   const hand = ["blue1-0", ...deal.hands[0].slice(0, -1)];
   let s = okey.startGame(seated(2), { ...deal, hands: [hand, p2Hand] });
