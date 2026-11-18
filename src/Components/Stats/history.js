@@ -275,6 +275,8 @@ const seatsIn = (kind, view) =>
 // how it went for whoever had seat `seat` at the end
 function resultOf(kind, view, seat) {
   if (kind === "okey") return outcome(view, seat);
+  // several winners: Batak's, the bidder or the three against them
+  if (view.winners) return view.winners.includes(seat) ? "won" : "lost";
   if (!view.winner) return "drawn";
   return view.winner.seat === seat ? "won" : "lost";
 }

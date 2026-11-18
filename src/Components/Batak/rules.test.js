@@ -197,5 +197,22 @@ test("the last trick scores the deal: the bidder made it, or not", () => {
   assert.isNull(s.turn);
   assert.deepEqual(s.points, [6, 4, 2, 1]);
   assert.deepEqual(s.score, [16, 4, 2, 1]);
-  assert.deepEqual(s.winner, { seat: 0 });
+  // the bidder made it: theirs alone
+  assert.deepEqual(s.winners, [0]);
+});
+
+test("the bidder down: the deal is the three's who sent them down", () => {
+  let s = inPlay(["2H", "AH", "3H", "4H"], [], { broken: true });
+  s = { ...s, taken: [3, 4, 3, 2] };
+  for (const [seat, card] of [
+    [0, "2H"],
+    [1, "AH"],
+    [2, "3H"],
+    [3, "4H"],
+  ]) {
+    s = play(s, seat, c(card));
+  }
+  // bid 5, took 3: down
+  assert.deepEqual(s.points, [-5, 5, 3, 2]);
+  assert.deepEqual(s.winners, [1, 2, 3]);
 });

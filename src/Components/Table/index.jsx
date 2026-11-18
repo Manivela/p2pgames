@@ -28,7 +28,8 @@ import "./table.css";
 // by whoever sits or stands, and `game`, the rules' state, written by the player to move, or by its hosts for a
 // new game. Only one player moves at a time, so one key holds the whole
 // game. A game's state has `turn`, the seat to move, `winner` ({ seat })
-// once one's won, and `score`, carried over by `newGame(prev, ids, mode)`
+// once one's won (or `winners`, the seats, when several win: Batak's
+// defenders), and `score`, carried over by `newGame(prev, ids, mode)`
 // while the same two sit. `sides`: what the seats are called, white and
 // black. The way it's played, `mode` in the map (`first` till one's
 // picked), is picked in the site's menu (Menu.jsx), or Go's board size in
@@ -467,7 +468,10 @@ export function Table({ table, mark, info, options, children }) {
       name={seats[s]?.bot ? seats[s].name : table.names[s]}
       user={seats[s]}
       // whose turn it is, or who's won
-      turn={game && (game.winner?.seat ?? game.turn) === s}
+      turn={
+        game &&
+        (game.winners?.includes(s) ?? (game.winner?.seat ?? game.turn) === s)
+      }
       here={seats[s]?.bot || table.here.has(seats[s]?.id)}
       // a seat nobody's in has no pips or prisoners to speak of
       info={seats[s] && info?.(s)}
@@ -572,7 +576,7 @@ function useApplause(game) {
     () => {
       const same = was.current === game.id;
       was.current = game.id;
-      if (!same || !game.winner) return;
+      if (!same || !(game.winner || game.winners?.length)) return;
       play();
       if (import.meta.env.DEV) {
         window.tableApplause = (window.tableApplause ?? 0) + 1;

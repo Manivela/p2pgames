@@ -15,7 +15,7 @@ import { deal, suitOf, takes } from "../Cards/cards";
 // - The highest trump takes a trick, or with none, the highest of the suit
 //   led; whoever takes it leads the next. `score` says what a deal's worth.
 //
-// The state, the same in every page (Table: `turn`, `winner`, `score`):
+// The state, the same in every page (Table: `turn`, `winners`, `score`):
 // - players: the seated ids, the score carried over while the same four
 //   sit; dealer: the seat that dealt
 // - hands: each seat's cards (Cards/cards.js), shown only to its player
@@ -25,8 +25,9 @@ import { deal, suitOf, takes } from "../Cards/cards";
 // - trick: [{ seat, card }…] on the table; lastTrick: { cards, by }, the
 //   one taken last, left in sight till the next lead; taken: each seat's
 //   tricks
-// - points: each seat's for the deal once it's over; winner: { seat },
-//   the most of them (none on a tie)
+// - points: each seat's for the deal once it's over; winners: the seats
+//   that won it, a deal being the bidder's against the bid: the bidder
+//   who made it, or the three who sent them down
 // - turn: who bids, names trumps or plays next, null once it's over
 // - last: { n, kind, seat… }, what happened last, for the bots and sounds
 export const MIN_BID = 5;
@@ -56,7 +57,7 @@ export function newGame(prev, ids, mode = "batak") {
     lastTrick: null,
     taken: [0, 0, 0, 0],
     points: null,
-    winner: null,
+    winners: null,
     turn: next(dealer),
     last: { n: (prev?.last?.n ?? 0) + 1, kind: "new" },
   };
@@ -188,14 +189,13 @@ export function play(state, seat, card) {
   };
   if (hands[by].length) return done;
   const points = score(state.bidder, state.contract, taken);
-  const best = Math.max(...points);
-  const top = [0, 1, 2, 3].filter((s) => points[s] === best);
+  const made = taken[state.bidder] >= state.contract;
   return {
     ...done,
     phase: "over",
     turn: null,
     points,
     score: state.score.map((p, s) => p + points[s]),
-    winner: top.length === 1 ? { seat: top[0] } : null,
+    winners: [0, 1, 2, 3].filter((s) => made === (s === state.bidder)),
   };
 }
