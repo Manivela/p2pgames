@@ -25,56 +25,95 @@ async function withBots(browser, info) {
   return page;
 }
 
-test("a deal with three bots: bid, trumps, every card legal, the score", async ({
-  browser,
-}, info) => {
-  test.setTimeout(120000);
-  const page = await withBots(browser, info);
-  // 13 cards in your hand, none of the others'
-  await expect(page.locator(".bk-hand .cd-card")).toHaveCount(13);
-  let keyed = null;
-  for (let i = 0; i < 200; i++) {
+// Ayşe's turns till the match has played `deals` deals: a pass, or the
+// least bid when it's hers to take, trumps, or a card; one she can't play
+// says why first, and one goes by its key (`keyed` holds the card)
+async function playTo(page, deals, keyed) {
+  for (let i = 0; i < 400; i++) {
     const s = await game(page);
-    if (s.phase === "over") break;
-    if (s.turn === 0) {
-      if (s.phase === "bid") {
-        const bids = page.locator(".bk-bids button");
-        await expect(bids.first()).toBeVisible();
-        // pass, or the least bid when it's yours to take
-        const pass = page.locator(".bk-bids").getByRole("button", {
-          name: PASS,
-        });
-        await ((await pass.count()) ? pass : bids.first()).click();
-      } else if (s.phase === "trump") {
-        await page.locator(".bk-bids.suits button").first().click();
-      } else {
-        const played = s.last.n;
-        // a card it can't play says why, and stays
-        const no = page.locator(".bk-hand .cd-card.no");
-        if (await no.count()) {
-          await no.first().click();
-          await expect(page.getByRole("status")).toBeVisible();
-          expect((await game(page)).last.n).toBe(played);
-        }
-        // a card by its key once, 1 the first you can play; tapped after
-        const first = page.locator(".bk-hand [data-legal]").first();
-        if (!keyed) {
-          keyed = Number(await first.getAttribute("data-card"));
-          await page.keyboard.press("1");
-          await expect
-            .poll(async () => (await game(page)).last.card)
-            .toBe(keyed);
-        } else await first.click();
-        await expect
-          .poll(async () => (await game(page)).last.n)
-          .not.toBe(played);
+    if ((s.rows?.length ?? 0) >= deals) return;
+    if (s.turn === 0 && s.phase === "bid") {
+      const bids = page.locator(".bk-bids button");
+      await expect(bids.first()).toBeVisible();
+      const pass = page.locator(".bk-bids").getByRole("button", {
+        name: PASS,
+      });
+      await ((await pass.count()) ? pass : bids.first()).click();
+    } else if (s.turn === 0 && s.phase === "trump") {
+      await page.locator(".bk-bids.suits button").first().click();
+    } else if (s.turn === 0 && s.phase === "play") {
+      const played = s.last.n;
+      // a card it can't play says why, and stays
+      const no = page.locator(".bk-hand .cd-card.no");
+      if (await no.count()) {
+        await no.first().click();
+        await expect(page.getByRole("status")).toBeVisible();
+        expect((await game(page)).last.n).toBe(played);
       }
+      // a card by its key once, 1 the first you can play; tapped after
+      const first = page.locator(".bk-hand [data-legal]").first();
+      if (!keyed.card) {
+        keyed.card = Number(await first.getAttribute("data-card"));
+        await page.keyboard.press("1");
+        await expect
+          .poll(async () => (await game(page)).last.card)
+          .toBe(keyed.card);
+      } else await first.click();
+      await expect.poll(async () => (await game(page)).last.n).not.toBe(played);
     }
     await page.waitForTimeout(100);
   }
+  throw new Error(`${deals} deals not played`);
+}
+
+test("a match with three bots: its length, every card legal, the sheet, the winner", async ({
+  browser,
+}, info) => {
+  test.setTimeout(180000);
+  const page = await withBots(browser, info);
+  // 13 cards in your hand, none of the others'
+  await expect(page.locator(".bk-hand .cd-card")).toHaveCount(13);
+  // the match's length, in ⋯ before anyone's played: dealt again
+  await page.getByRole("button", { name: MENU }).click();
+  await page.locator(".tb-menu select").selectOption("4");
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => (await game(page)).deals).toBe(4);
+  const keyed = {};
+  await playTo(page, 1, keyed);
+  // the deal's points on the sheet and by each name; then the next seat,
+  // a bot, deals the next deal by itself
+  const one = await game(page);
+  expect(one.rows[0].points).toEqual(one.score);
+  // a short clap for a bid made, none for one gone down
+  const clapped = () => page.evaluate(() => window.tableClaps ?? 0);
+  const made = (r) => (r.points[r.bidder] > 0 ? 1 : 0);
+  await expect.poll(clapped).toBe(made(one.rows[0]));
+  await expect(page.locator(".tb-points")).toHaveText(one.score.map(String));
+  // the next seat's deal: a bot's by itself, or Ayşe's tap
+  const dealer = (one.rows[0].dealer + 1) % 4;
+  if (dealer === 0) {
+    await page.getByRole("button", { name: /^(Deal|Dağıt)$/ }).click();
+  }
+  await expect
+    .poll(async () => {
+      const s = await game(page);
+      return [s.round, s.dealer];
+    }, NET)
+    .toEqual([2, dealer]);
+  await expect(page.locator(".bk-hand .cd-card")).toHaveCount(13);
+  // shortened: this deal the match's last
+  await page.evaluate(() =>
+    window.batak.set({ ...window.batak.get(), deals: 2 }),
+  );
+  await playTo(page, 2, keyed);
   const end = await game(page);
-  expect(end.phase).toBe("over");
-  expect(end.taken.reduce((a, b) => a + b)).toBe(13);
+  expect(end.turn).toBeNull();
+  const top = Math.max(...end.score);
+  expect(end.winners).toEqual([0, 1, 2, 3].filter((s) => end.score[s] === top));
+  await expect(page.locator(".bk-won")).toHaveText(/(wins!|kazandı!)$/);
+  // the match's applause, and no clap of its own for its last deal
+  await expect.poll(() => page.evaluate(() => window.tableApplause)).toBe(1);
+  expect(await clapped()).toBe(made(one.rows[0]));
   // the last trick lies a moment, the card that took it lit, then slides
   // to its taker and is gone
   const gathered = page.locator(".bk-trick .cd-card.gather");
@@ -87,14 +126,24 @@ test("a deal with three bots: bid, trumps, every card legal, the score", async (
       ),
     )
     .toEqual(["0", "0", "0", "0"], NET);
-  // each plate's points, the deal's on it by the name
-  await expect(page.locator(".tb-points")).toHaveText(end.score.map(String));
   await expect(page.locator(".bk-hand .cd-card")).toHaveCount(0);
-  // the next deal, from the next dealer
+  // the sheet: a row a deal, the totals the plates'
+  await page.locator(".tb-scores summary").click();
+  await expect(page.locator(".tb-scores tbody tr")).toHaveCount(2);
+  await expect(page.locator(".tb-scores tfoot td")).toHaveText(
+    end.score.map(String),
+  );
+  await page.keyboard.press("Escape");
+  // a new match: from nothing
   await page.getByRole("button", { name: NEXT }).click();
-  await expect.poll(async () => (await game(page)).dealer, NET).toBe(1);
+  await expect
+    .poll(async () => {
+      const s = await game(page);
+      return [s.round, s.score];
+    }, NET)
+    .toEqual([1, [0, 0, 0, 0]]);
   await expect(page.locator(".bk-hand .cd-card")).toHaveCount(13);
-  // the deal played, kept on the device (a second after): its four players
+  // the match played, kept on the device (a second after): its players
   await page.waitForTimeout(1500);
   await page.getByRole("button", { name: MENU }).click();
   await page.getByRole("button", { name: SAVED }).click();

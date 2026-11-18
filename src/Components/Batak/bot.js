@@ -1,9 +1,9 @@
 import { rankOf, suitOf, takes } from "../Cards/cards";
-import { bid, bidsOpen, legal, play, trump } from "./rules";
+import { bid, bidsOpen, dealNext, legal, play, trump } from "./rules";
 
 // A bot at the Batak table: it bids what its hand looks good for, names
 // its strongest suit trumps, and plays the lowest card that takes the
-// trick, or the lowest it has when none does.
+// trick, or the lowest it has when none does; it deals when it's its deal.
 
 // the tricks a hand looks good for with `trumps`: its aces, guarded kings
 // and queens, and the trumps past three
@@ -29,6 +29,7 @@ const cheap = (c, t) => (suitOf(c) === t ? 100 : 0) + rankOf(c);
 
 export default {
   play(state, seat) {
+    if (state.phase === "over") return dealNext(state, seat);
     const hand = state.hands[seat];
     if (state.phase === "bid") {
       const worth = Math.floor(strength(hand, bestSuit(hand)));
@@ -52,10 +53,13 @@ export default {
   // a new deal once it's dealt (SHUFFLE_MS and the cards going round,
   // index.jsx, Cards/deal.js); a trick just taken stays in sight till it's
   // slid to its taker (GATHER_MS) before the next lead
+  // and the next deal once the last one's points have been read
   wait: (state) =>
-    state.last.kind === "new"
-      ? 2800
-      : !state.trick.length && state.lastTrick
-        ? 1600
-        : 900,
+    state.phase === "over"
+      ? 3500
+      : state.last.kind === "new"
+        ? 2800
+        : !state.trick.length && state.lastTrick
+          ? 1600
+          : 900,
 };

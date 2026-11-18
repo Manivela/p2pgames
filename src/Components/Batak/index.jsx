@@ -1,12 +1,29 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useKey } from "../../hooks/useKey";
-import { Table, tell, useChangedAt, useHeard, useTable } from "../Table";
+import {
+  Table,
+  tell,
+  useChangedAt,
+  useClap,
+  useHeard,
+  useTable,
+} from "../Table";
 import { Card, Suit } from "../Cards/Card";
 import { useCardSounds } from "../Cards/sounds";
 import { dealCards } from "../Cards/deal";
 import { t } from "../../i18n";
 import bot from "./bot";
-import { bid, bidsOpen, legal, newGame, play, trump, whyNot } from "./rules";
+import {
+  DEALS,
+  bid,
+  bidsOpen,
+  dealNext,
+  legal,
+  newGame,
+  play,
+  trump,
+  whyNot,
+} from "./rules";
 import "./batak.css";
 
 // The room's Batak table (Table: its own Yjs map, the four seats, ⋯), the
@@ -48,6 +65,42 @@ function info(state, s) {
     : { value: String(taken[s]), title: t("Tricks taken") };
 }
 
+// The match's score sheet: a row a deal, each seat's points, the bidder's
+// with their trumps; the deal being played, its bidder's bid so far, and
+// those to come, blank; the most points leading
+function sheetOf(state) {
+  const { rows, deals, score, phase, bidder, contract, trump } = state;
+  const running = phase === "over" ? -1 : rows.length;
+  return {
+    rows: Array.from({ length: deals }, (_, i) => {
+      const r = rows[i];
+      const bid = (s) =>
+        i === running && s === bidder && trump !== null ? (
+          <>
+            <Suit suit={trump} /> {contract}
+          </>
+        ) : (
+          ""
+        );
+      return {
+        key: i,
+        label: i + 1,
+        className: r ? "" : i === running ? "running" : "later",
+        cells: [0, 1, 2, 3].map((s) =>
+          r ? (
+            <>
+              {s === r.bidder && <Suit suit={r.trump} />} {r.points[s]}
+            </>
+          ) : (
+            bid(s)
+          ),
+        ),
+      };
+    }),
+    lead: score.some((v) => v !== score[0]) && Math.max(...score),
+  };
+}
+
 // a new deal: the deck shuffled in the middle this long before it's dealt
 const SHUFFLE_MS = 700;
 
@@ -56,16 +109,22 @@ const SHUFFLE_MS = 700;
 const GATHER_MS = 1000;
 
 // The middle of the table: the bid buttons or trumps to name when it's
-// yours to, the trick on the table, and at the deal's end the next deal's
-// tap. A card played comes from its player; a trick taken lies 1 s,
+// yours to, the trick on the table, at a deal's end the next deal's tap
+// for its dealer, and at the match's end who won it and a new one's tap
+// for its players. A card played comes from its player; a trick taken
+// lies 1 s,
 // its taking card lit, then slides to its taker: only as this page sees it
 // happen, so a page that comes later finds the felt bare.
 function Middle({ state, table, place, dealing, from }) {
   const { phase, turn, trick, lastTrick, last } = state;
   const yours = turn !== null && table.mine.includes(turn);
   const act = (next) => table.act(next);
-  const next = phase === "over" && table.deal;
-  useKey("n", next);
+  const deal = phase === "over" && yours && (() => act(dealNext(state, turn)));
+  const next = phase === "over" && turn === null && table.deal;
+  useKey("n", deal || next);
+  const won = phase === "over" && turn === null && state.winners;
+  const nameOf = (s) =>
+    table.seats[s]?.bot ? table.seats[s].name : table.names[s];
   const seen = useChangedAt(last?.n, table.live) > 0;
   // a card you played flies from where it sat in your hand (Hand's
   // `from`), not in from below as the others' come from their seats
@@ -123,9 +182,16 @@ function Middle({ state, table, place, dealing, from }) {
             .join(" ")}
         />
       ))}
-      {next && (
-        <button className="bk-next" aria-label={t("Next game")} onClick={next}>
-          {t("Next game")}
+      {won && (
+        <p className="bk-won">{t(`${won.map(nameOf).join(" & ")} wins!`)}</p>
+      )}
+      {(deal || next) && (
+        <button
+          className="bk-next"
+          aria-label={t(deal ? "Deal" : "Next game")}
+          onClick={deal || next}
+        >
+          {t(deal ? "Deal" : "Next game")}
           <kbd>N</kbd>
         </button>
       )}
@@ -185,20 +251,26 @@ function Hand({ state, table, seat, from }) {
 }
 
 export default function Batak() {
-  const table = useTable("batak", newGame, SIDES, "batak", bot);
+  // the mode: how many deals a match is
+  const table = useTable("batak", newGame, SIDES, "8", bot);
   const state = table.game ?? EMPTY;
-  // everyone hears a card put down, a trick slid to its taker; a new
-  // sound level puts a card down
+  // everyone hears a card put down, a trick slid to its taker, and a
+  // short clap for a bid made at a deal's end (the match's own applause
+  // at its end, Table); a new sound level puts a card down
   const sounds = useCardSounds();
+  const clap = useClap();
   // the trick slid only if nothing's been played since: a lead clears it
-  const lastN = useRef(null);
-  lastN.current = table.game?.last.n;
+  const now = useRef(null);
+  now.current = table.game;
   useHeard(
     table.game?.last,
     ({ kind, n }) => {
       if (kind === "play" || kind === "trick") sounds.put();
       if (kind !== "trick") return;
-      setTimeout(() => lastN.current === n && sounds.slide(), GATHER_MS);
+      setTimeout(() => now.current?.last.n === n && sounds.slide(), GATHER_MS);
+      const g = now.current;
+      const row = g?.phase === "over" && g.turn !== null && g.rows?.at(-1);
+      if (row && row.points[row.bidder] > 0) clap();
     },
     sounds.put,
   );
@@ -210,7 +282,8 @@ export default function Batak() {
   const board = useRef(null);
   // where the card you just played was in your hand (Hand, Middle)
   const from = useRef(null);
-  const dealtAt = useChangedAt(table.game?.id, table.live);
+  const g = table.game;
+  const dealtAt = useChangedAt(g && `${g.id}/${g.round}`, table.live);
   const [dealing, setDealing] = useState(false);
   useLayoutEffect(() => {
     const g = table.game;
@@ -245,6 +318,25 @@ export default function Batak() {
         ) : null
       }
       info={(s) => info(state, s)}
+      // the match's length, before it starts (Go's board size, as well)
+      options={
+        table.setMode && (
+          <label className="facing">
+            {t("Deals")}
+            <select
+              value={DEALS.includes(Number(table.mode)) ? table.mode : "8"}
+              onChange={(e) => table.setMode(e.target.value)}
+            >
+              {DEALS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        )
+      }
+      sheet={g?.rows && sheetOf(g)}
     >
       {(plate) => (
         // the felt, bare between the cards, knocks (Table)

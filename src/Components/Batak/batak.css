@@ -203,7 +203,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bk-trick .cd-card {
+  .bk-trick .cd-card,
+  .bk-won,
+  .bk-next {
     animation: none;
   }
 }
@@ -235,6 +237,33 @@
 }
 
 /* the next deal: a tap in the middle */
+/* a deal's end: who won the match and the next deal's or match's tap,
+   once the last trick has gone to its taker (GATHER_MS, index.jsx), not
+   over it */
+@keyframes bk-show {
+  from {
+    opacity: 0;
+  }
+}
+
+.bk-won,
+.bk-next {
+  animation: bk-show 0.2s ease-out 1.35s backwards;
+}
+
+/* the match won: by whom, over the new match's tap */
+.bk-won {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% calc(-50% - 44px);
+  margin: 0;
+  white-space: nowrap;
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
 .bk-next {
   position: absolute;
   left: 50%;
@@ -264,9 +293,15 @@
   min-height: calc(var(--cw) * 1.6);
 }
 
+/* fanned as wide as the board, less the corners' buttons either side (the
+   site's, the table's ? ⋯ and the sheet above ⋯), which every table keeps
+   free */
 .bk-hand .cd-card + .cd-card {
   margin-left: calc(
-    min(var(--cw) * 0.72, (100cqw - var(--cw)) / max(var(--n) - 1, 1)) -
+    min(
+        var(--cw) * 0.72,
+        (100cqw - var(--t) * 1.8 - var(--cw)) / max(var(--n) - 1, 1)
+      ) -
       var(--cw)
   );
 }

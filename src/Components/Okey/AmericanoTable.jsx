@@ -1,11 +1,4 @@
-import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useDrop } from "react-dnd";
 import { findKey, sum } from "lodash";
 import { OkeyContext } from "./OkeyContext";
@@ -26,7 +19,7 @@ import Tile, { TileFace, lastTurn, markOf } from "./Tile";
 import { t } from "../../i18n";
 import { useSharedSummary } from "../Stats/store";
 import { useAuthStore } from "../../hooks/useStore";
-import { useDismiss } from "../../hooks/useKey";
+import { ScoreSheet } from "../ScoreSheet";
 import { TITLES } from "../Stats/history";
 
 // What a tile held over a meld would do there, by the rules: where it would
@@ -444,109 +437,40 @@ export function Scores() {
   // the lowest total leads (okey.js's winner), unless all are level
   const totals = columns.map(total).filter((v) => v !== null);
   const lead = totals.some((v) => v !== totals[0]) && Math.min(...totals);
-  // Tab held opens the sheet till it's let go, as in many games; Shift+Tab
-  // still moves the focus, and Tab does in a field, a dialog or a menu
-  const sheet = useRef();
-  useEffect(() => {
-    let held = false;
-    const down = (e) => {
-      if (e.key !== "Tab" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey)
-        return;
-      const skip =
-        "input, textarea, select, [contenteditable], .dialog, .menu, .site-menu";
-      if (e.target.closest?.(skip)) return;
-      e.preventDefault();
-      if (held || sheet.current.open) return;
-      sheet.current.open = held = true;
-    };
-    const up = (e) => {
-      if (e.type === "keyup" && e.key !== "Tab") return;
-      if (held) sheet.current.open = held = false;
-    };
-    addEventListener("keydown", down);
-    addEventListener("keyup", up);
-    addEventListener("blur", up); // let go in another window
-    return () => {
-      removeEventListener("keydown", down);
-      removeEventListener("keyup", up);
-      removeEventListener("blur", up);
-    };
-  }, []);
-  // open, it closes as a menu does: Escape, or a press anywhere else
-  const [shown, setShown] = useState(false);
-  useDismiss(sheet, shown && (() => (sheet.current.open = false)));
   return (
-    // a tap away: a round's end shows its scores with the hands, the end
-    // of the game who won, and an open sheet would cover the next step
-    <details
-      className="scores"
-      ref={sheet}
-      onToggle={(e) => setShown(e.currentTarget.open)}
-    >
-      {/* an icon: under your pile, where it sits, there's room for little */}
-      <summary aria-label={t("Scores")} title={t("Scores")}>
-        <svg viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M1 8h4.4v6H1zM5.8 3h4.4v11H5.8zM10.6 10H15v4h-4.4z" />
-        </svg>
-        <kbd>Tab</kbd>
-      </summary>
-      <div className="sheet">
-        <table>
-          <thead>
-            <tr>
-              <th />
-              {columns.map((team) => (
-                <th key={team[0].id}>
-                  {team.map((p, j) => (
-                    <span key={p.id} style={{ "--c": seatColors[p.id] }}>
-                      {j > 0 && " & "}
-                      <i aria-hidden="true" />
-                      {name(p)}
-                    </span>
-                  ))}
-                  {team.filter(titleOf).map((p) => (
-                    <Title key={p.id} won={at(p)} all={all} />
-                  ))}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rules.rounds.map((r, i) => (
-              <tr
-                // by place: 101's eleven rounds all have the same name
-                key={i}
-                // rounds still to come, dimmed
-                className={
-                  i === live
-                    ? "running"
-                    : i >= round && gameState !== "finish"
-                      ? "later"
-                      : ""
-                }
-              >
-                <th>{t(r.name)}</th>
-                {columns.map((team) => (
-                  <td key={team[0].id}>{cell(team, i)}</td>
-                ))}
-              </tr>
+    <ScoreSheet
+      columns={columns.map((team) => ({
+        key: team[0].id,
+        head: (
+          <>
+            {team.map((p, j) => (
+              <span key={p.id} style={{ "--c": seatColors[p.id] }}>
+                {j > 0 && " & "}
+                <i aria-hidden="true" />
+                {name(p)}
+              </span>
             ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>{t("Total")}</th>
-              {columns.map((team) => {
-                const value = total(team);
-                return (
-                  <td key={team[0].id} className={value === lead ? "lead" : ""}>
-                    {value}
-                  </td>
-                );
-              })}
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </details>
+            {team.filter(titleOf).map((p) => (
+              <Title key={p.id} won={at(p)} all={all} />
+            ))}
+          </>
+        ),
+      }))}
+      rows={rules.rounds.map((r, i) => ({
+        // by place: 101's eleven rounds all have the same name
+        key: i,
+        // rounds still to come, dimmed
+        className:
+          i === live
+            ? "running"
+            : i >= round && gameState !== "finish"
+              ? "later"
+              : "",
+        label: t(r.name),
+        cells: columns.map((team) => cell(team, i)),
+      }))}
+      totals={columns.map(total)}
+      lead={lead}
+    />
   );
 }

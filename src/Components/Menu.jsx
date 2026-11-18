@@ -165,8 +165,8 @@ export const PLAYS = [
     icon: tile,
   })),
   {
+    // its mode, a match's length, picked at the table (⋯), as Go's size
     game: "batak",
-    mode: "batak",
     name: "Batak",
     icon: (
       <>

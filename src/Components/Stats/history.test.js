@@ -371,9 +371,9 @@ test("backgammon: rolls and doubles by who rolled, the mars, who won", () => {
   assert.equal(summary.mars, s.winner.points === 2);
 });
 
-test("batak: a deal of four, the bidder's against the bid", () => {
+test("batak: a match of four, won by the most points", () => {
   const seats = [ayse, ...["b", "c", "d"].map((id) => ({ id, name: id }))];
-  let s = batak.newGame(null, ["a", "b", "c", "d"]);
+  let s = batak.newGame(null, ["a", "b", "c", "d"], "4");
   const states = [{ ...s, seats }];
   while (s.turn !== null)
     states.push({ ...(s = batakBot.play(s, s.turn)), seats });
@@ -382,9 +382,9 @@ test("batak: a deal of four, the bidder's against the bid", () => {
     record("batak", states),
   );
   assert.lengthOf(summary.players, 4);
-  const made = s.taken[s.bidder] >= s.contract;
+  const top = Math.max(...s.score);
   summary.players.forEach((p) =>
-    assert.equal(p.result, made === (p.seat === s.bidder) ? "won" : "lost"),
+    assert.equal(p.result, s.score[p.seat] === top ? "won" : "lost"),
   );
 });
 

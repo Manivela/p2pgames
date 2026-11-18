@@ -1,7 +1,9 @@
 import { deal, suitOf, takes } from "../Cards/cards";
 
 // İhaleli Batak, for four, each on their own: 13 cards each, a bid for the
-// most tricks names trumps, and the bidder has to take as many.
+// most tricks names trumps, and the bidder has to take as many. A game is
+// a match of `deals` deals (DEALS, the table's mode), each seat dealing in
+// turn; the most points at the end wins it.
 // - The deal passes round, each seat dealing in turn; the bidding starts
 //   at the seat after the dealer's, going round (`next`, counter-clockwise
 //   as the table seats them, Board.jsx). Each bids one more than the
@@ -16,8 +18,10 @@ import { deal, suitOf, takes } from "../Cards/cards";
 //   led; whoever takes it leads the next. `score` says what a deal's worth.
 //
 // The state, the same in every page (Table: `turn`, `winners`, `score`):
-// - players: the seated ids, the score carried over while the same four
-//   sit; dealer: the seat that dealt
+// - players: the seated ids; deals: the match's length; round: the deal
+//   being played, from 1; dealer: the seat that dealt it
+// - rows: each deal played, { dealer, bidder, contract, trump, points };
+//   score: each seat's total, the rows' sum
 // - hands: each seat's cards (Cards/cards.js), shown only to its player
 // - phase: "bid", "trump", "play", "over"; bids: each seat's, null not yet
 //   spoken, 0 passed; bidder, contract: who took it, for how many
@@ -25,26 +29,55 @@ import { deal, suitOf, takes } from "../Cards/cards";
 // - trick: [{ seat, card }…] on the table; lastTrick: { cards, by }, the
 //   one taken last, left in sight till the next lead; taken: each seat's
 //   tricks
-// - points: each seat's for the deal once it's over; winners: the seats
-//   that won it, a deal being the bidder's against the bid: the bidder
-//   who made it, or the three who sent them down
-// - turn: who bids, names trumps or plays next, null once it's over
+// - points: each seat's for the deal once it's over (phase "over"); then
+//   it's the next dealer's turn to deal (dealNext), or after the last deal
+//   no one's, the match won by `winners`, the seats with the most
+// - turn: who bids, names trumps, plays or deals next, null once the match
+//   is over
 // - last: { n, kind, seat… }, what happened last, for the bots and sounds
 export const MIN_BID = 5;
 export const next = (seat) => (seat + 1) % 4;
 
-export function newGame(prev, ids, mode = "batak") {
+// the lengths a match can be, in deals, everyone dealing as often
+export const DEALS = [4, 8, 12, 16];
+const dealsOf = (mode) => (DEALS.includes(Number(mode)) ? Number(mode) : 8);
+
+// A new match, its first deal dealt
+export function newGame(prev, ids, mode = "8") {
   const same = !!prev && ids.every((id, i) => prev.players[i] === id);
   // dealt again before anyone spoke (New Game in ⋯): the same dealer
   const dealer = !same
     ? 0
-    : prev.last.kind === "new"
+    : prev.last.kind === "new" && (prev.round ?? 1) === 1
       ? prev.dealer
       : next(prev.dealer);
-  return {
+  const match = {
     mode,
     players: ids,
-    score: same ? prev.score : [0, 0, 0, 0],
+    deals: dealsOf(mode),
+    round: 0,
+    rows: [],
+    score: [0, 0, 0, 0],
+    winners: null,
+    last: { n: prev?.last?.n ?? 0 },
+  };
+  return dealt(match, dealer);
+}
+
+// the next deal of the match, dealt by the seat whose turn it is once one
+// is over
+export function dealNext(state, seat) {
+  if (state.phase !== "over" || state.turn === null || state.turn !== seat) {
+    return;
+  }
+  return dealt(state, seat);
+}
+
+// a deal: the hands dealt by `dealer`, the bidding from the seat after
+function dealt(state, dealer) {
+  return {
+    ...state,
+    round: state.round + 1,
     dealer,
     hands: deal(4),
     phase: "bid",
@@ -57,9 +90,8 @@ export function newGame(prev, ids, mode = "batak") {
     lastTrick: null,
     taken: [0, 0, 0, 0],
     points: null,
-    winners: null,
     turn: next(dealer),
-    last: { n: (prev?.last?.n ?? 0) + 1, kind: "new" },
+    last: { n: state.last.n + 1, kind: "new" },
   };
 }
 
@@ -189,13 +221,23 @@ export function play(state, seat, card) {
   };
   if (hands[by].length) return done;
   const points = score(state.bidder, state.contract, taken);
-  const made = taken[state.bidder] >= state.contract;
+  const { dealer, bidder, contract, trump } = state;
+  // a game from before matches: one deal
+  const rows = [
+    ...(state.rows ?? []),
+    { dealer, bidder, contract, trump, points },
+  ];
+  const totals = state.score.map((p, s) => p + points[s]);
+  const end = rows.length >= (state.deals ?? 1);
+  const top = Math.max(...totals);
   return {
     ...done,
     phase: "over",
-    turn: null,
     points,
-    score: state.score.map((p, s) => p + points[s]),
-    winners: [0, 1, 2, 3].filter((s) => made === (s === state.bidder)),
+    rows,
+    score: totals,
+    // the next seat deals the next deal; after the last, the match is won
+    turn: end ? null : next(dealer),
+    winners: end ? [0, 1, 2, 3].filter((s) => totals[s] === top) : null,
   };
 }

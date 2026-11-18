@@ -395,3 +395,23 @@ html:has(.tb-fit) {
     opacity: 0.35;
   }
 }
+
+/* a match's score sheet (ScoreSheet.jsx): its button a circle above ⋯,
+   as Okey's sits, its sheet opening above it */
+.tb-scores {
+  position: fixed;
+  right: calc(var(--t) * 0.14);
+  bottom: calc(var(--t) * 0.88);
+  z-index: 40;
+}
+
+.tb-scores .scores > summary {
+  width: calc(var(--t) * 0.64);
+  height: calc(var(--t) * 0.64);
+  padding: 0;
+}
+
+/* its keycap inside the screen's edge */
+.tb-fit .tb-scores kbd {
+  right: 0;
+}

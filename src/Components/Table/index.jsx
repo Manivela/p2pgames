@@ -19,6 +19,7 @@ import { useRecord } from "../Stats/store";
 import { decodeSave } from "../saveCode";
 import { t } from "../../i18n";
 import { useKnock, useKnockTaps } from "../knock";
+import { ScoreSheet } from "../ScoreSheet";
 import tok from "./assets/tok.mp3";
 import applause from "../Okey/assets/finish.mp3";
 import "./table.css";
@@ -470,8 +471,10 @@ function Menu({
 // left fits. `mark(seat)`: the side's piece; `info(seat)`: a number by
 // its name; `options`: the game's own settings, in the menu. A board that
 // seats its players round it itself (Batak) is a function, given each
-// seat's plate: `children(plate)`.
-export function Table({ table, mark, info, options, children }) {
+// seat's plate: `children(plate)`. A game played as a match keeps a score
+// sheet (`sheet`: its rounds' `rows`, ScoreSheet.jsx), above ⋯; its
+// totals are the rows', so the score isn't reset on its own.
+export function Table({ table, mark, info, options, sheet, children }) {
   const { seats, game, mine, seated, both, full, near, far, across } = table;
   const { volume, setVolume } = useVolume();
   useApplause(game);
@@ -513,6 +516,20 @@ export function Table({ table, mark, info, options, children }) {
       <div className="tb-head" data-felt="">
         {!around && plate(far)}
         {!around && plate(near)}
+        {sheet && (
+          <div className="tb-scores">
+            <ScoreSheet
+              // a bot by its seat: "Bot" four times says nothing
+              columns={seats.map((u, i) => ({
+                key: i,
+                head: u?.bot ? t(table.sides[i]) : table.names[i],
+              }))}
+              rows={sheet.rows}
+              totals={score}
+              lead={sheet.lead}
+            />
+          </div>
+        )}
         <Menu
           volume={volume}
           setVolume={setVolume}
@@ -537,6 +554,7 @@ export function Table({ table, mark, info, options, children }) {
           newGame={table.deal}
           saves={table.saves}
           resetScore={
+            !sheet &&
             table.hosts &&
             game?.score.some(Boolean) &&
             (() => table.act({ ...game, score: score.map(() => 0) }))
@@ -588,9 +606,9 @@ export function useHeard(last, hear, sample) {
 }
 
 // A game won, seen being played: the table clapping, as at the Okey table
-// when a round's finished (finish.mp3, OkeyContext.jsx); here a game and
-// its round are one thing till a match has a length (TODO.md). Dev-only
-// window.tableApplause counts them.
+// when a round's finished (finish.mp3, OkeyContext.jsx); a match's (Batak's)
+// when it's over, its deals with a short clap of their own (useClap).
+// Dev-only window.tableApplause counts them.
 function useApplause(game) {
   const { volume } = useVolume();
   const [play] = useSound(applause, { volume: 0.5 * volume });
@@ -610,6 +628,21 @@ function useApplause(game) {
     },
     () => {},
   );
+}
+
+// A round of a match well played (Batak's bid made): a short clap, the
+// applause's first moment, at this device's sound level; play() to hear
+// it. Dev-only window.tableClaps counts them.
+export function useClap() {
+  const { volume } = useVolume();
+  const [play] = useSound(applause, {
+    volume: 0.4 * volume,
+    sprite: { clap: [0, 900] },
+  });
+  return () => {
+    play({ id: "clap" });
+    if (import.meta.env.DEV) window.tableClaps = (window.tableClaps ?? 0) + 1;
+  };
 }
 
 // five checkers set down on a wooden board (Kenney's Impact Sounds, CC0):

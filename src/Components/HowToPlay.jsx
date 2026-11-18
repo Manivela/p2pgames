@@ -88,6 +88,7 @@ export const RULES = {
         "Follow the suit led, higher than the highest of it on the table if you can. With none of it, trump, higher than a trump on the table if you can; with neither, play anything.",
         "No trump is led till one's been played. The highest trump takes the trick, or with none, the highest of the suit led; whoever takes it leads the next.",
         "Each trick is a point. A bidder short of their bid, or anyone else who takes none, goes down: they lose the bid instead.",
+        "A game is 8 deals, or 4, 12 or 16 as picked in ⋯ before it starts, each dealing in turn. The most points at the end wins.",
       ],
     },
   },

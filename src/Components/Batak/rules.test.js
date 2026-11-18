@@ -2,6 +2,7 @@ import { assert, test } from "vitest";
 import {
   bid,
   bidsOpen,
+  dealNext,
   legal,
   newGame,
   play,
@@ -32,12 +33,13 @@ const inPlay = (hands, trick = [], { trumps = 0, broken = false } = {}) => ({
   turn: trick.length ? (trick.at(-1)[0] + 1) % 4 : 0,
 });
 
-test("four bots play deals to their end: every card legal, 13 tricks", () => {
+test("four bots play matches to their end: every deal legal, dealt in turn", () => {
   let s = null;
-  for (let deal = 0; deal < 30; deal++) {
-    s = newGame(s, IDS);
-    const seen = new Set();
-    for (let i = 0; i < 100 && s.turn !== null; i++) {
+  for (const mode of ["4", "8", "12"]) {
+    s = newGame(s, IDS, mode);
+    const first = s.dealer;
+    let seen = new Set();
+    for (let i = 0; i < 2000 && s.turn !== null; i++) {
       const before = s;
       // the bot plays from the hands as they are, never changing them
       s.hands.forEach(Object.freeze);
@@ -48,17 +50,54 @@ test("four bots play deals to their end: every card legal, 13 tricks", () => {
         seen.add(s.last.card);
       } else s = bot.play(s, s.turn);
       assert.isObject(s, `${before.phase}: no move`);
+      if (s.phase === "over" && before.phase === "play") {
+        // each deal: every card played, 13 tricks, its points
+        assert.equal(seen.size, 52);
+        assert.equal(
+          s.taken.reduce((a, b) => a + b),
+          13,
+        );
+        assert.deepEqual(s.points, score(s.bidder, s.contract, s.taken));
+        seen = new Set();
+      }
     }
-    assert.equal(s.phase, "over");
-    assert.equal(seen.size, 52);
-    assert.equal(
-      s.taken.reduce((a, b) => a + b),
-      13,
+    // the match's deals, each seat dealing in turn, the totals their sum,
+    // won by the most
+    assert.isNull(s.turn);
+    assert.equal(s.rows.length, Number(mode));
+    s.rows.forEach((r, i) => assert.equal(r.dealer, (first + i) % 4));
+    const sums = [0, 1, 2, 3].map((p) =>
+      s.rows.reduce((t, r) => t + r.points[p], 0),
     );
-    assert.deepEqual(s.points, score(s.bidder, s.contract, s.taken));
+    assert.deepEqual(s.score, sums);
+    const top = Math.max(...sums);
+    assert.deepEqual(
+      s.winners,
+      [0, 1, 2, 3].filter((p) => sums[p] === top),
+    );
   }
-  // the score carried over, the deal passed on
-  assert.equal(s.dealer, 29 % 4);
+  // a new match: from nothing, the deal passed on
+  const again = newGame(s, IDS, "8");
+  assert.deepEqual(again.score, [0, 0, 0, 0]);
+  assert.deepEqual(again.rows, []);
+  assert.equal(again.round, 1);
+});
+
+test("a deal over: the next seat deals the next one, the score kept", () => {
+  let s = newGame(null, IDS, "4"); // dealer 0
+  s = { ...s, phase: "over", turn: 1, score: [3, -5, 2, 4], rows: [{}] };
+  assert.isUndefined(dealNext(s, 2), "not theirs to deal");
+  const d = dealNext(s, 1);
+  assert.equal(d.dealer, 1);
+  assert.equal(d.round, 2);
+  assert.equal(d.phase, "bid");
+  assert.equal(d.turn, 2);
+  assert.equal(d.last.kind, "new");
+  assert.deepEqual(d.score, [3, -5, 2, 4]);
+  assert.deepEqual(d.bids, [null, null, null, null]);
+  d.hands.forEach((h) => assert.lengthOf(h, 13));
+  // an unknown length: 8 deals
+  assert.equal(newGame(null, IDS, "batak").deals, 8);
 });
 
 test("bidding: one over the highest, at least 5; the last in takes it", () => {
@@ -194,14 +233,15 @@ test("the last trick scores the deal: the bidder made it, or not", () => {
     s = play(s, seat, c(card));
   }
   assert.equal(s.phase, "over");
-  assert.isNull(s.turn);
   assert.deepEqual(s.points, [6, 4, 2, 1]);
   assert.deepEqual(s.score, [16, 4, 2, 1]);
-  // the bidder made it: theirs alone
-  assert.deepEqual(s.winners, [0]);
+  assert.deepEqual(s.rows.at(-1).points, [6, 4, 2, 1]);
+  // the match goes on: the next seat's deal, no one's won it yet
+  assert.equal(s.turn, 1);
+  assert.isNull(s.winners);
 });
 
-test("the bidder down: the deal is the three's who sent them down", () => {
+test("the bidder down, less the bid; a tie for the most at the end wins it for both", () => {
   let s = inPlay(["2H", "AH", "3H", "4H"], [], { broken: true });
   s = { ...s, taken: [3, 4, 3, 2] };
   for (const [seat, card] of [
@@ -214,7 +254,20 @@ test("the bidder down: the deal is the three's who sent them down", () => {
   }
   // bid 5, took 3: down
   assert.deepEqual(s.points, [-5, 5, 3, 2]);
-  assert.deepEqual(s.winners, [1, 2, 3]);
+  // the last deal of a match: level at the top, both win
+  let t = inPlay(["AH", "2H", "3H", "4H"], [], { broken: true });
+  t = { ...t, deals: 1, taken: [5, 4, 2, 1], score: [0, 2, 0, 0] };
+  for (const [seat, card] of [
+    [0, "AH"],
+    [1, "2H"],
+    [2, "3H"],
+    [3, "4H"],
+  ]) {
+    t = play(t, seat, c(card));
+  }
+  assert.deepEqual(t.score, [6, 6, 2, 1]);
+  assert.isNull(t.turn);
+  assert.deepEqual(t.winners, [0, 1]);
 });
 
 test("a bot waits out the deal, then a trick's slide, before it plays", () => {
