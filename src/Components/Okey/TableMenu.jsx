@@ -146,11 +146,32 @@ function SetUpDialog({ onClose }) {
 
 // Report a problem: Sentry's feedback form (the deployed site only), fetched
 // on the first tap. A report carries the game's save code, to load the table
-// as it was, and the room and player as tags.
-let feedback, form, saveCode;
+// as it was, the room and player as tags, and, for players who can't see
+// each other (TODO.md), whom this page was connected to and whose presence
+// it had as the form opened (root.jsx's window.room), beside each seat's
+// presence key (`userKey`).
+let feedback, form, saveCode, connections;
 async function report(okeyState, tags) {
-  const { Sentry } = window;
+  const { Sentry, room } = window;
   saveCode = await okey.encodeSave(okeyState);
+  connections = JSON.stringify(
+    {
+      me: room?.me(),
+      peers: room?.peers(),
+      tabs: room?.tabs(),
+      presence: room?.presence(),
+      seats: okeyState.players
+        .filter((p) => p.user || p.away)
+        .map((p) => ({
+          id: p.id,
+          name: p.user?.name ?? p.awayName ?? null,
+          key: p.userKey ?? null,
+          away: !!p.away,
+        })),
+    },
+    null,
+    2,
+  );
   try {
     feedback ??= new Promise((loaded) => {
       Sentry.onLoad(loaded);
@@ -161,6 +182,7 @@ async function report(okeyState, tags) {
           hint.attachments = [
             ...(hint.attachments ?? []),
             { filename: "save-code.txt", data: saveCode },
+            { filename: "connections.json", data: connections },
           ];
         }
         return event;

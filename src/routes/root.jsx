@@ -44,6 +44,30 @@ function useKnown() {
       return false; // blocked: it waits
     }
   });
+  // whom this page is connected to and whose presence it has, for players
+  // in one room who can't see each other (TODO.md): sent with a report
+  // (Okey's ⋯ → Report a problem), and read from the console on the live
+  // site too (window.room.peers())
+  useEffect(() => {
+    globalThis.room = {
+      me: () => provider.room?.peerId,
+      peers: () =>
+        Object.fromEntries(
+          [...(provider.room?.webrtcConns ?? [])].map(([id, c]) => [
+            id,
+            c.connected ? "connected" : "connecting",
+          ]),
+        ),
+      tabs: () => [...(provider.room?.bcConns ?? [])],
+      presence: () =>
+        Object.fromEntries(
+          [...provider.awareness.getStates()].map(([id, s]) => [
+            id,
+            s?.user?.name ?? null,
+          ]),
+        ),
+    };
+  }, [provider]);
   useEffect(() => {
     if (heard || has) return;
     const done = () => setHeard(true);
