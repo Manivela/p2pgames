@@ -123,12 +123,6 @@ function Name({ player, avatarSits, children }) {
           ) : (
             <span className="badge">{t("opened")}</span>
           ))}
-        {playing &&
-          okeyState.rules?.partners &&
-          me &&
-          partner(okeyState.players, me)?.id === player && (
-            <span className="badge">{t("partner")}</span>
-          )}
         {sitHere}
       </span>
       {playing && turn && <TeaGlass />}
@@ -286,11 +280,18 @@ function Rack({ player, hands }) {
 }
 
 // Someone else at the table: a round avatar in their seat's colour with
-// how many tiles they hold, and their name. A bot's, while you watch, is
-// the Sit that takes it over: under its name, beside drew and opened, the
-// next pile would cover it.
+// how many tiles they hold, your partner's with a 🤝 on it, and their
+// name. A bot's, while you watch, is the Sit that takes it over: under its
+// name, beside drew and opened, the next pile would cover it. (The partner
+// sign was a word among the badges, and ran into the next pile beside
+// "just opened" under a short name.)
 export function Seat({ player }) {
   const { okeyState, sit, me } = useContext(OkeyContext);
+  const partnered =
+    okeyState.gameState === "play" &&
+    okeyState.rules?.partners &&
+    me &&
+    partner(okeyState.players, me)?.id === player;
   const user = seatAt(okeyState, player).user;
   const name = user?.name;
   const turn = turnOf(okeyState, player);
@@ -309,6 +310,16 @@ export function Seat({ player }) {
         {turn && <Timer okeyState={okeyState} />}
         {takeOver ? t("Sit") : name && [...name][0].toLocaleUpperCase()}
         <TilesLeft player={player} />
+        {partnered && (
+          <span
+            className="partnerMark"
+            role="img"
+            title={t("partner")}
+            aria-label={t("partner")}
+          >
+            🤝
+          </span>
+        )}
       </Avatar>
       <Name player={player} avatarSits />
     </div>

@@ -542,6 +542,22 @@ html:has(.fit) {
   bottom: -10%;
 }
 
+/* your partner's, across from the tiles left */
+.avatar .partnerMark {
+  position: absolute;
+  top: -14%;
+  left: -24%;
+  display: grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #2e7d32;
+  font-size: calc(var(--t) * 0.2);
+  line-height: 1;
+}
+
 .rack > .playerName .tilesLeft {
   top: 50%;
   right: calc(100% + var(--r) + var(--t) * 0.08);

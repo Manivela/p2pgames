@@ -902,6 +902,24 @@ test("101 starts with what's ticked, and in pairs with four at the table", async
       raiseOpening: true,
     });
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  // your partner, across: a 🤝 on their avatar, so "just opened" under a
+  // short name (Can) stays clear of the next pile
+  const partner = await page.evaluate(async () => {
+    const g = await import("/src/Components/Okey/game.js");
+    const s = window.okey.get();
+    const p = g.partner(s.players, 1).id;
+    window.okey.set({
+      ...s,
+      opened: { ...s.opened, [p]: true },
+      justOpened: p,
+    });
+    return p;
+  });
+  await expect(page.locator(".partnerMark")).toHaveCount(1);
+  await expect(
+    page.locator(`[data-seat="${partner}"] .avatar .partnerMark`),
+  ).toHaveCount(1);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
 // four sets of tiles in the settings: the lobby's pile is all of them, and
