@@ -232,6 +232,33 @@ export function withTitles(players) {
   return players.map((p) => ({ ...p, title: titles[p.id] ?? null }));
 }
 
+// One finished game's players as each page that recorded it summarized
+// them (`posts`, [key, players] each), put together alike on every page:
+// each count the most any page counted, as a page that missed steps mostly
+// counts fewer, the rest as the first post has it, the posts taken in order
+// of their keys (they come over the network in any order); the titles
+// worked out from that.
+// shortcut: the most any page counted, not a merge of their steps: a page
+// that missed a take put back (101's, counted off) keeps the higher count;
+// merge the steps if a title is seen going to the wrong player
+export function together(posts) {
+  const byId = new Map();
+  for (const [, players] of sortBy(posts, ([key]) => key)) {
+    for (const p of players) {
+      const was = byId.get(p.id);
+      if (!was) {
+        byId.set(p.id, { ...p });
+        continue;
+      }
+      for (const k of Object.keys(TITLES)) {
+        const most = Math.max(was[k] ?? -Infinity, p[k] ?? -Infinity);
+        if (most > -Infinity) was[k] = most;
+      }
+    }
+  }
+  return withTitles([...byId.values()]);
+}
+
 const MINUTE = 60 * 1000;
 
 // who sits where, seat → { id, name, bot }: Okey's seats, a table's as it

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { isEqual } from "lodash";
+import { useDoc, useMap } from "../../vendor/y-react";
 import { BUILD } from "../../version";
 import { decodeSave, encodeSave } from "../saveCode";
-import { snapshot, step, summarize, VERSION } from "./history";
+import { snapshot, step, summarize, together, VERSION } from "./history";
 
 // This device's record of the games its player sat at (history.js), in
 // IndexedDB: `games` what each game is (its kind, mode, who recorded it,
@@ -258,7 +260,7 @@ export function useRecord(id, state, { kind, mode, me, seated, over }) {
 }
 
 // game `id`'s summary once it's over and worked out, else null
-export function useSummary(id) {
+function useSummary(id) {
   const tick = useStatsTick((s) => s.n);
   const [summary, setSummary] = useState(null);
   useEffect(() => {
@@ -270,6 +272,30 @@ export function useSummary(id) {
     return () => (live = false);
   }, [id, tick]);
   return summary?.id === id ? summary : null;
+}
+
+// A finished game's players, titles and all, the same on every page in the
+// room, watching or not: each page that recorded game `id` posts its
+// summary's players to the room (`stats`, a map of its own, keyed by the
+// game and the poster, `me`; the last game's only), and every page shows
+// them put together (`together`), null till one's come. The summary kept
+// on the device stays as the device worked it out (StatsDialog).
+export function useSharedSummary(id, me) {
+  const summary = useSummary(id);
+  useMap("stats"); // re-render on every change
+  const map = useDoc().getMap("stats");
+  useEffect(() => {
+    if (!summary) return;
+    const key = `${id}/${me}`;
+    if (isEqual(map.get(key), summary.players)) return;
+    map.doc.transact(() => {
+      for (const k of map.keys()) if (!k.startsWith(`${id}/`)) map.delete(k);
+      map.set(key, summary.players);
+    });
+  }, [summary, map, id, me]);
+  if (!id) return null;
+  const posts = [...map.entries()].filter(([k]) => k.startsWith(`${id}/`));
+  return posts.length ? together(posts) : null;
 }
 
 // every finished game's summary, those from older stats worked out again

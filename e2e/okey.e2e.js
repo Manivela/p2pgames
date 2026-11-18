@@ -1410,6 +1410,76 @@ test("a title won says why when it's tapped", async ({ page }, info) => {
   await expect(why).toHaveCount(0);
 });
 
+// the titles the same on every page: Bora's page was hidden (a phone
+// locked) while Ayşe caught her three tiles, so his recording missed them;
+// the pages' summaries put together give him her title too, and a page
+// only watching sees it as well
+test("a title won shows on every page, one that missed it too", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "not about the layout");
+  const room = await sitDown(page);
+  const bora = await secondPlayer(page, room);
+  const guest = await secondPlayer(page, room);
+  await table(page, "start", 4);
+  const user = await bora.evaluate(
+    () => JSON.parse(localStorage.getItem("user")).state.currentUser,
+  );
+  // Bora in seat 2, held there by Ayşe's page as the others are
+  await page.evaluate((user) => {
+    const s = window.okey.get();
+    window.okey.set({
+      ...s,
+      players: s.players.map((p) => (p.id === 2 ? { ...p, user } : p)),
+    });
+  }, user);
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  await expect
+    .poll(() => bora.evaluate(() => window.okey.get().opened?.[1]), NET)
+    .toBeTruthy();
+  await bora.evaluate(() => {
+    Object.defineProperty(document, "hidden", { value: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  const last = await page.evaluate(() => {
+    const s = window.okey.get();
+    const thrown = s.players.slice(1).flatMap((p) => p.discardPile);
+    const hand = s.players[0].hand;
+    const tile = hand.findLast(Boolean);
+    window.okey.set({
+      ...s,
+      justOpened: null,
+      rules: { ...s.rules, rounds: s.rules.rounds.slice(0, 1) },
+      players: s.players.map((p) =>
+        p.id === 1
+          ? {
+              ...p,
+              caught: thrown.slice(0, 3).map((t) => t.id),
+              hand: hand.map((t) => (t === tile ? t : null)),
+            }
+          : p,
+      ),
+    });
+    return hand.indexOf(tile);
+  });
+  await drag(
+    page,
+    slot(page, last).locator(".tile"),
+    page.locator(".draw .stack"),
+  );
+  for (const p of [page, bora, guest]) {
+    await expect
+      .poll(async () => (await state(p))?.gameState, NET)
+      .toBe("finish");
+    await p.locator(".scores > summary").click();
+    await expect(p.locator(".scores thead .title")).toHaveText(
+      [/^(Hawk-eye|Şahin Göz)$/],
+      NET,
+    );
+  }
+});
+
 test("picked tiles move together", async ({ page }, info) => {
   anySize(info);
   await sitDown(page);

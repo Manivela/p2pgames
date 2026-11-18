@@ -24,7 +24,8 @@ import { colorOf, isOkey, okeyStandsFor, rankOf } from "./melds";
 import { colorMap, seatColors, symbols } from "./constants";
 import Tile, { TileFace, lastTurn, markOf } from "./Tile";
 import { t } from "../../i18n";
-import { useSummary } from "../Stats/store";
+import { useSharedSummary } from "../Stats/store";
+import { useAuthStore } from "../../hooks/useStore";
 import { TITLES } from "../Stats/history";
 
 // What a tile held over a meld would do there, by the rules: where it would
@@ -395,15 +396,16 @@ function Title({ won, all }) {
 // player, or a pair's when four play in pairs; the hand being played shows
 // what's owed so far (a caught tile, an okey thrown…), scored at its end.
 // Once the game's over, a title under anyone who stood out at it
-// (Stats/history.js), as this device recorded the game.
+// (Stats/history.js), the same on every page in the room (useSharedSummary).
 export function Scores() {
   const { okeyState } = useContext(OkeyContext);
   const { scores, rules, round, gameState } = okeyState;
   const over = gameState === "finish";
-  const summary = useSummary(over ? okeyState.gameId : null);
+  const me = useAuthStore((s) => s.currentUser?.id);
+  const all = useSharedSummary(over ? okeyState.gameId : null, me);
   // whoever has the seat at the end, in the game's summary (one who left
   // has no result there), and their title, if they won one
-  const at = (p) => summary?.players.find((x) => x.seat === p.id && x.result);
+  const at = (p) => all?.find((x) => x.seat === p.id && x.result);
   const titleOf = (p) => at(p)?.title;
   // a freed seat keeps its column: whoever sits there next carries it on
   const players = allSeats(okeyState.players).filter(
@@ -495,7 +497,7 @@ export function Scores() {
                     </span>
                   ))}
                   {team.filter(titleOf).map((p) => (
-                    <Title key={p.id} won={at(p)} all={summary.players} />
+                    <Title key={p.id} won={at(p)} all={all} />
                   ))}
                 </th>
               ))}

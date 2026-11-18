@@ -17,6 +17,7 @@ import {
   snapshot,
   step,
   summarize,
+  together,
   withTitles,
 } from "./history";
 
@@ -387,4 +388,40 @@ test("batak: a deal of four, won by its top scorer", () => {
       !s.winner ? "drawn" : p.seat === s.winner.seat ? "won" : "lost",
     ),
   );
+});
+
+test("pages' summaries put together: the most each counted, alike on every page", () => {
+  const player = (id, seat, counts) => ({
+    id,
+    name: id,
+    seat,
+    result: "lost",
+    ...counts,
+  });
+  // Ayşe's page saw all three tiles she caught; Bora's missed them (a gap)
+  const ayse = [
+    player("a", 1, { caught: 3, took: 1 }),
+    player("b", 2, { took: 2 }),
+    player("c", 3, {}),
+  ];
+  const bora = [
+    player("a", 1, { took: 1, title: null }),
+    player("b", 2, { took: 4 }),
+    player("c", 3, {}),
+  ];
+  const one = together([
+    ["g/a", ayse],
+    ["g/b", bora],
+  ]);
+  const other = together([
+    ["g/b", bora],
+    ["g/a", ayse],
+  ]);
+  assert.deepEqual(one, other);
+  const byId = Object.fromEntries(one.map((p) => [p.id, p]));
+  assert.equal(byId.a.caught, 3);
+  assert.equal(byId.b.took, 4);
+  assert.equal(byId.a.title, "caught");
+  assert.equal(byId.b.title, "took");
+  assert.isNull(byId.c.title);
 });
