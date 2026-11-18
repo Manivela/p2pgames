@@ -1,14 +1,28 @@
 import { expect, test } from "./test";
-import { BOT, MENU, NET, NEXT, SIT, enter, room } from "./seats";
+import {
+  BOT,
+  MENU,
+  NET,
+  NEXT,
+  SIT,
+  START,
+  WAIT_ALL,
+  enter,
+  room,
+  settings,
+} from "./seats";
 
 // Batak at the table: a player in the first seat, bots in the other three,
 // a deal played through. Its state through the dev-only window.batak.
 const game = (page) => page.evaluate(() => window.batak?.get());
 const PASS = /^(Pass|Pas)$/;
+const DEAL = /^(Deal|Dağıt)$/;
 const SAVED = /^(Saved games|Kayıtlı oyunlar)$/;
 const STATS = /^(Your stats|İstatistiklerin)$/;
 
-async function withBots(browser, info) {
+// the table full, waiting for its Start; the match's length (`deals`)
+// picked in the settings first, if given, then started
+async function withBots(browser, info, deals) {
   const page = await enter(browser, info, room("batak"), "batak", "Ayşe");
   await page
     .locator('[data-seat="0"]')
@@ -21,6 +35,15 @@ async function withBots(browser, info) {
       .getByRole("button", { name: BOT })
       .click();
   }
+  // nothing dealt till someone starts it
+  await expect(page.getByRole("button", { name: START })).toBeVisible();
+  expect(await game(page)).toBeFalsy();
+  if (deals) {
+    await settings(page);
+    await page.locator(".dialog select").selectOption(deals);
+    await page.keyboard.press("Escape");
+  }
+  await page.getByRole("button", { name: START }).click();
   await expect.poll(() => game(page), NET).toBeTruthy();
   return page;
 }
@@ -70,14 +93,11 @@ test("a match with three bots: its length, every card legal, the sheet, the winn
   browser,
 }, info) => {
   test.setTimeout(180000);
-  const page = await withBots(browser, info);
+  // the match's length, picked in the settings before its Start
+  const page = await withBots(browser, info, "4");
+  expect((await game(page)).deals).toBe(4);
   // 13 cards in your hand, none of the others'
   await expect(page.locator(".bk-hand .cd-card")).toHaveCount(13);
-  // the match's length, in ⋯ before anyone's played: dealt again
-  await page.getByRole("button", { name: MENU }).click();
-  await page.locator(".tb-menu select").selectOption("4");
-  await page.keyboard.press("Escape");
-  await expect.poll(async () => (await game(page)).deals).toBe(4);
   const keyed = {};
   await playTo(page, 1, keyed);
   // the deal's points on the sheet and by each name; then the next seat,
@@ -134,8 +154,10 @@ test("a match with three bots: its length, every card legal, the sheet, the winn
     end.score.map(String),
   );
   await page.keyboard.press("Escape");
-  // a new match: from nothing
+  // a new match: back to waiting for its Start, then from nothing
   await page.getByRole("button", { name: NEXT }).click();
+  await expect.poll(() => game(page), NET).toBeFalsy();
+  await page.getByRole("button", { name: START }).click();
   await expect
     .poll(async () => {
       const s = await game(page);
@@ -161,6 +183,49 @@ test("a match with three bots: its length, every card legal, the sheet, the winn
     .getByRole("button", { name: /^(How to play|Nasıl oynanır)$/ })
     .click();
   await expect(page.getByRole("dialog")).toContainText("Batak");
+});
+
+// The room waits for everyone (⋯ → Settings): a hand's end waits for its
+// players' Deal, a bot due to deal never dealing by itself; switched off,
+// the bot deals as before.
+test("a hand's end waits for the players' Deal, and a bot deals once it's off", async ({
+  browser,
+}, info) => {
+  test.setTimeout(180000);
+  const page = await withBots(browser, info);
+  await settings(page);
+  await page.getByRole("checkbox", { name: WAIT_ALL }).check();
+  await page.keyboard.press("Escape");
+  const keyed = {};
+  // the next deal a bot's, the one after Ayşe
+  const toBot = () =>
+    page.evaluate(() => window.batak.set({ ...window.batak.get(), turn: 1 }));
+  const over = () =>
+    expect.poll(async () => (await game(page)).phase, NET).toBe("over");
+  await playTo(page, 1, keyed);
+  await over();
+  await toBot();
+  // not dealt by itself, the bot's pace long past
+  await page.waitForTimeout(1500);
+  expect((await game(page)).round).toBe(1);
+  // Ayşe's Deal, the one player's: dealt, from the bot's seat
+  await page.getByRole("button", { name: DEAL }).click();
+  await expect
+    .poll(async () => {
+      const s = await game(page);
+      return [s.round, s.dealer];
+    }, NET)
+    .toEqual([2, 1]);
+  // the next hand's end, waiting switched off: the bot deals by itself
+  await playTo(page, 2, keyed);
+  await over();
+  await toBot();
+  await page.waitForTimeout(1500);
+  expect((await game(page)).round).toBe(2);
+  await settings(page);
+  await page.getByRole("checkbox", { name: WAIT_ALL }).uncheck();
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => (await game(page)).round, NET).toBe(3);
 });
 
 // one move for whoever's turn it is on `page`, seated at `seat`: a pass,
@@ -202,10 +267,11 @@ test("two at the table: each sees only their own hand, the other's card across",
       .getByRole("button", { name: BOT })
       .click();
   }
+  // the full table waits for a Start, either player's: Bora's deals it,
+  // and the deal both see first is the one that stays
+  await b.getByRole("button", { name: START }).click();
   await expect.poll(() => game(a), NET).toBeTruthy();
   await expect.poll(() => game(b), NET).toBeTruthy();
-  // one page deals as the table fills, Ayşe's, the first seat's: the deal
-  // both see first is the one that stays
   const { id } = await game(a);
   expect((await game(b)).id).toBe(id);
   const shown = (page) =>

@@ -9,7 +9,8 @@ import { TableSettings } from "./GameSettings";
 import { t } from "../../i18n";
 import { Confirm } from "../Confirm";
 import { Dialog, SavedGames, useAutoSave } from "../Saves";
-import { useKeyHints } from "../../hooks/useStore";
+import Settings from "../Settings";
+import { useRackRow } from "../../hooks/useStore";
 import { useDismiss } from "../../hooks/useKey";
 
 export { Confirm, Dialog };
@@ -246,12 +247,9 @@ export default function TableMenu() {
     newGame,
     redealRound,
     act,
-    volume,
-    setVolume,
     newVersion,
   } = useContext(OkeyContext);
   const { roomId } = useParams();
-  const { hints, setHints } = useKeyHints();
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState(null);
   // a game in the lobby has nothing to keep yet
@@ -285,8 +283,8 @@ export default function TableMenu() {
         ⋯
       </button>
       {open && (
-        // in groups, a line between them (an empty one takes none): this
-        // device, your seat, the others', the game's tools, and the moves
+        // in groups, a line between them (an empty one takes none): the
+        // settings, your seat, the others', the game's tools, and the moves
         // that leave or end the round or the game at the bottom, in red; a
         // long menu scrolls on a phone
         <div className="menu">
@@ -296,27 +294,7 @@ export default function TableMenu() {
                 {t("Update to the new version")}
               </button>
             )}
-            <label className="volume">
-              {t("Sound")}
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-              />
-            </label>
-            {/* the keycaps on Take, Call! and the pile: on at first on a
-                computer (useKeyHints) */}
-            <label className="hints">
-              {t("Key hints")}
-              <input
-                type="checkbox"
-                checked={hints}
-                onChange={(e) => setHints(e.target.checked)}
-              />
-            </label>
+            <button onClick={() => show("settings")}>{t("Settings")}</button>
           </div>
           {/* standing leaves your hand to whoever sits down, you again too:
               nothing lost, so one tap */}
@@ -406,6 +384,41 @@ export default function TableMenu() {
       {dialog === "load" && <LoadDialog onClose={() => setDialog(null)} />}
       {dialog === "setup" && <SetUpDialog onClose={() => setDialog(null)} />}
       {dialog === "rules" && <TableSettings onClose={() => setDialog(null)} />}
+      {dialog === "settings" && (
+        <Settings device={<RackRow />} onClose={() => setDialog(null)} />
+      )}
     </div>
+  );
+}
+
+// Your rack's rows on this device (useRackRow), at every game you sit at;
+// empty: the table's. Taken on Enter or leaving the field, as a number
+// half typed doesn't fit; one this game's rules won't take says why, and
+// the table's is played meanwhile (OkeyContext).
+function RackRow() {
+  const { okeyState, me } = useContext(OkeyContext);
+  const { row, setRow } = useRackRow();
+  const [draft, setDraft] = useState(row ?? "");
+  const take = () => {
+    const v = draft === "" ? null : Number(draft);
+    if (v === row) return;
+    setRow(v);
+    const no = me && okeyState.rules && okey.setRow(okeyState, me, v);
+    if (typeof no === "string") toast(t(no));
+  };
+  return (
+    <label>
+      <span>{t("Slots in each row of your own rack; empty: the table's")}</span>
+      <input
+        type="number"
+        placeholder={String(
+          (okeyState.rules ?? okeyState.setup)?.rowSlots ?? 13,
+        )}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={take}
+        onKeyDown={(e) => e.key === "Enter" && take()}
+      />
+    </label>
   );
 }

@@ -4,11 +4,11 @@ import {
   NEXT,
   againstBot,
   bothSides,
-  MENU,
   enter,
   moving,
   pick,
   room,
+  settings,
   sitDown,
 } from "./seats";
 
@@ -124,13 +124,15 @@ test("one device, face to face: a word to each, the far side turned", async ({
   expect((await game(page)).passes).toBe(0);
 });
 
-test("a 13×13 board, picked in the table's ⋯", async ({ browser }, info) => {
+test("a 13×13 board, picked in the table's settings", async ({
+  browser,
+}, info) => {
   const page = await sitDown(browser, info, room("go"), "go", "Ayşe", 0);
   await bothSides(page, false);
   await expect.poll(() => game(page), NET).toBeTruthy();
-  await page.getByRole("button", { name: MENU }).click();
+  await settings(page);
   await page.getByRole("combobox", { name: BOARD }).selectOption("13");
-  await page.locator(".tb-menu .backdrop").click();
+  await page.keyboard.press("Escape");
   await expect.poll(async () => (await game(page)).stones.length).toBe(169);
   await expect(page.locator(".go-point")).toHaveCount(169);
   // the far corner, on the bigger board

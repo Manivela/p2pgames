@@ -88,7 +88,7 @@ function RackPoints({ player }) {
 // seat to sit in or put a bot in; a bot's seat is anyone's to take over
 // (a seat round the table, on its avatar: `avatarSits`)
 function Name({ player, avatarSits, children }) {
-  const { okeyState, me, sit, seatBot } = useContext(OkeyContext);
+  const { okeyState, me, sit, seatBot, together } = useContext(OkeyContext);
   const seat = seatAt(okeyState, player);
   const bot = seat.user?.bot && !avatarSits;
   const sitHere = !me && (!seat.user || bot) && (
@@ -128,6 +128,10 @@ function Name({ player, avatarSits, children }) {
           ) : (
             <span className="badge">{t("opened")}</span>
           ))}
+        {/* pressed for the next round, while it waits for everyone */}
+        {together.ready.includes(player) && (
+          <span className="badge">{t("ready")}</span>
+        )}
         {sitHere}
       </span>
       {playing && turn && <TeaGlass />}

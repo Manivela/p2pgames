@@ -4,7 +4,6 @@ import { isEmpty, isEqual, pickBy, uniq } from "lodash";
 import { toast } from "react-hot-toast";
 import { OkeyContext } from "./OkeyContext";
 import { Confirm, Dialog } from "./TableMenu";
-import { setRow } from "./okey";
 import {
   AMERICANO,
   CLASSIC,
@@ -543,18 +542,14 @@ function Settings({ base, changed, start, onClose }) {
 // once: the rules read every number the moment it's written, an emptied one
 // too. Only what was changed here is written, over the rules as they are
 // by then. A setting a saved game's rules lack (an older build's) at its
-// default, as the lobby's are.
+// default, as the lobby's are. Your own rack's rows are this device's
+// (⋯ → Settings).
 const DEALT = "The table";
 export function TableSettings({ onClose }) {
-  const { okeyState, setRules, me, act } = useContext(OkeyContext);
+  const { okeyState, setRules } = useContext(OkeyContext);
   const [opened] = useState({ ...DEFAULTS, ...okeyState.rules });
   const [draft, setDraft] = useState(opened);
-  // your own rack's rows, apart from the table's rules (null: the table's)
-  const mine = okeyState.players.find((p) => p.id === me)?.rowSlots ?? null;
-  const [row, setRowDraft] = useState(mine);
   const apply = () => {
-    // the rows that don't fit say why (okey.setRow), and the dialog stays
-    if (row !== mine && !act(setRow, me, row)) return;
     const changes = pickBy(draft, (v, k) => !isEqual(v, opened[k]));
     if (isEmpty(changes)) return onClose();
     const rules = { ...DEFAULTS, ...okeyState.rules, ...changes };
@@ -565,24 +560,6 @@ export function TableSettings({ onClose }) {
   };
   return (
     <Dialog title={t("Rules")} className="settings" onClose={onClose}>
-      {me && (
-        <>
-          <h4>{t("Just for you")}</h4>
-          <div className="group">
-            <label>
-              <span>
-                {t("Slots in each row of your own rack; empty: the table's")}
-              </span>
-              <input
-                type="number"
-                placeholder={String(okeyState.rules.rowSlots)}
-                value={row ?? ""}
-                onChange={(e) => setRowDraft(number(e.target.value))}
-              />
-            </label>
-          </div>
-        </>
-      )}
       <Groups
         groups={GROUPS.filter(([heading]) => heading !== DEALT)}
         setup={draft}

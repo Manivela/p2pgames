@@ -163,8 +163,7 @@ function NextStep() {
   const {
     okeyState,
     me,
-    newGame,
-    nextRound,
+    together,
     act,
     selected,
     picking,
@@ -222,10 +221,19 @@ function NextStep() {
         )
       );
     }
+    // pressed by every player while the room waits for everyone (together)
     case "roundEnd":
-      return <button onClick={nextRound}>{t("Next Round")}</button>;
     case "finish":
-      return <button onClick={() => newGame()}>{t("New Game")}</button>;
+      return (
+        together.press && (
+          <button
+            aria-pressed={together.waits ? together.pressed : undefined}
+            onClick={together.press}
+          >
+            {t(okeyState.gameState === "finish" ? "New Game" : "Next Round")}
+          </button>
+        )
+      );
     default:
       return null;
   }

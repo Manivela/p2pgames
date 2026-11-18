@@ -13,6 +13,7 @@ import Awareness from "../Components/Awareness";
 import HowToPlay, { RULES, usePlaying } from "../Components/HowToPlay";
 import Menu, { useRoomGame } from "../Components/Menu";
 import Okey from "../Components/Okey";
+import { useRoomSync } from "../hooks/useRoom";
 import { t } from "../i18n";
 
 // the games a room plays, by the room's `game` (Menu.jsx's useRoomGame),
@@ -28,13 +29,15 @@ const GAMES = {
 // Whether the room's game is known: it's come over the network, or this
 // page has synced with everyone who answered (none picked: Okey), or no
 // one has within a second of reaching the signaling server (an empty
-// room: Okey). A slow network gets 6 s, then Okey till the room's comes.
+// room: the game this tab was at, a reload alone, else Okey). A slow
+// network gets 6 s, then Okey till the room's comes.
 // The room's first page doesn't wait: the login writes a new room's game,
 // and the e2e's say so, once (sessionStorage alone: the room's id).
 function useKnown() {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, { signaling: signalingServers, peerOpts });
-  const has = useDoc().getMap("room").has("game");
+  const room = useDoc().getMap("room");
+  const has = room.has("game") || room.has("seed");
   const [heard, setHeard] = useState(() => {
     try {
       if (sessionStorage.getItem("alone") !== roomId) return false;
@@ -72,10 +75,25 @@ function useKnown() {
     if (heard || has) return;
     const done = () => setHeard(true);
     const answered = () => provider.room?.webrtcConns.size > 0;
+    // nobody answered: the game and its way of playing this tab was at
+    // (Root), as the room's `seed`, which a game picked since outranks
+    // (Menu.jsx's useRoomGame), so a page that only seemed alone never
+    // takes the room from its game
+    const seed = () => {
+      try {
+        const was = JSON.parse(sessionStorage.getItem("room-game"));
+        if (was?.room !== roomId || room.has("game") || room.has("seed"))
+          return;
+        room.set("seed", { game: was.game, mode: was.mode });
+        if (was.mode != null) usePlaying.setState({ pick: was });
+      } catch {
+        // blocked or unreadable: Okey
+      }
+    };
     let alone;
     const reached = () => {
       clearTimeout(alone);
-      alone = setTimeout(() => answered() || done(), 1000);
+      alone = setTimeout(() => answered() || (seed(), done()), 1000);
     };
     const conns = provider.signalingConns;
     if (conns.some((c) => c.connected)) reached();
@@ -89,7 +107,7 @@ function useKnown() {
       conns.forEach((c) => c.off("connect", reached));
       provider.off("synced", synced);
     };
-  }, [provider, heard, has]);
+  }, [provider, heard, has, room, roomId]);
   return has || heard;
 }
 
@@ -123,6 +141,13 @@ class Caught extends Component {
   }
 }
 
+// the room's settings and this device's kept agreed, once the room's state
+// is known (hooks/useRoom.js)
+function RoomSync() {
+  useRoomSync();
+  return null;
+}
+
 export default function Root() {
   // the menu, from the button in the corner: opened afresh each time
   const [menuOpen, setMenuOpen] = useState(false);
@@ -135,11 +160,30 @@ export default function Root() {
   const helps = game in RULES;
   // nothing to pick, nor a game shown, till the room's is known: someone
   // joining would see Okey first, or take the room there
-  if (!useKnown()) return <Awareness />;
+  const known = useKnown();
+  // the game this tab is at, and how it's played, for a reload alone in
+  // the room (useKnown): the room's own, never Okey shown while it's on
+  // its way
+  const { roomId } = useParams();
+  const room = useDoc().getMap("room");
+  const set = room.has("game") || room.has("seed");
+  useEffect(() => {
+    if (!known || !set) return;
+    try {
+      sessionStorage.setItem(
+        "room-game",
+        JSON.stringify({ room: roomId, game, mode: playing }),
+      );
+    } catch {
+      // blocked: a reload alone comes back to Okey
+    }
+  }, [known, set, roomId, game, playing]);
+  if (!known) return <Awareness />;
   return (
     <>
       {/* you to the others, and their pointers: open or not, the menu */}
       <Awareness />
+      <RoomSync />
       {menuOpen && <Menu onClose={closeMenu} />}
       {/* the corner buttons, on every page: where each table keeps them */}
       <div className="corner">

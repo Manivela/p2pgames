@@ -97,6 +97,18 @@ html:has(.tb-fit) {
   color: #ffccbc;
 }
 
+/* pressed for the next game, while it waits for everyone: on the plate,
+   and round the board's next-game tap */
+.tb-plate .ready {
+  color: #b9f6ca;
+  opacity: 1;
+}
+
+.tb-wrap button[aria-pressed="true"] {
+  outline: 2px solid #b9f6ca;
+  outline-offset: 2px;
+}
+
 /* the seat's piece, the game's own drawing of it */
 .tb-mark {
   flex: none;
@@ -191,31 +203,6 @@ html:has(.tb-fit) {
 /* the moves that end or replace the game */
 .tb-menu .ends button:not(.armed) {
   color: #c62828;
-}
-
-/* this device's sound level, the keycaps, and how its players sit */
-.tb-menu :is(.volume, .hints, .facing) {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  padding: 2px 6px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.tb-menu .facing select {
-  margin-left: auto;
-}
-
-.tb-menu .volume input {
-  flex: 1;
-  min-width: 90px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  box-shadow: none;
-  background: none;
 }
 
 .tb-menu .menu button {

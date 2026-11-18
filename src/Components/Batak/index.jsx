@@ -119,9 +119,16 @@ function Middle({ state, table, place, dealing, from }) {
   const { phase, turn, trick, lastTrick, last } = state;
   const yours = turn !== null && table.mine.includes(turn);
   const act = (next) => table.act(next);
-  const deal = phase === "over" && yours && (() => act(dealNext(state, turn)));
+  // the next deal: its dealer's tap, or while the room waits for everyone,
+  // each player's (Table's useTable deals once all have)
+  const deal =
+    phase === "over" &&
+    turn !== null &&
+    (table.waits ? table.deal : yours && (() => act(dealNext(state, turn))));
   const next = phase === "over" && turn === null && table.deal;
-  useKey("n", deal || next);
+  // a full table waits for a player's Start
+  const start = phase === "none" && table.start;
+  useKey("n", deal || next || start);
   const won = phase === "over" && turn === null && state.winners;
   const nameOf = (s) =>
     table.seats[s]?.bot ? table.seats[s].name : table.names[s];
@@ -139,6 +146,14 @@ function Middle({ state, table, place, dealing, from }) {
     const by = `translate(${was.x - r.left}px, ${was.y - r.top}px)`;
     el.animate([{ transform: by }, {}], { duration: 250, easing: "ease-out" });
   }, [last?.n, last?.card, from]);
+  if (start) {
+    return (
+      <button className="bk-next start" aria-label={t("Start")} onClick={start}>
+        {t("Start")}
+        <kbd>N</kbd>
+      </button>
+    );
+  }
   if (phase === "none") return <p className="bk-note">{table.note}</p>;
   // the bids once the cards are dealt (Cards/deal.js)
   if (yours && phase === "bid" && !dealing) {
@@ -189,6 +204,7 @@ function Middle({ state, table, place, dealing, from }) {
         <button
           className="bk-next"
           aria-label={t(deal ? "Deal" : "Next game")}
+          aria-pressed={table.waits ? table.pressed : undefined}
           onClick={deal || next}
         >
           {t(deal ? "Deal" : "Next game")}
@@ -252,7 +268,13 @@ function Hand({ state, table, seat, from }) {
 
 export default function Batak() {
   // the mode: how many deals a match is
-  const table = useTable("batak", newGame, SIDES, "8", bot);
+  const table = useTable("batak", newGame, SIDES, "8", bot, {
+    hand: {
+      over: (s) => s.phase === "over" && s.turn !== null,
+      next: (s) => dealNext(s, s.turn),
+    },
+    lobby: true,
+  });
   const state = table.game ?? EMPTY;
   // everyone hears a card put down, a trick slid to its taker, and a
   // short clap for a bid made at a deal's end (the match's own applause
@@ -318,11 +340,12 @@ export default function Batak() {
         ) : null
       }
       info={(s) => info(state, s)}
-      // the match's length, before it starts (Go's board size, as well)
-      options={
+      // the match's length, before it starts (Go's board size, as well),
+      // everyone's
+      everyone={
         table.setMode && (
-          <label className="facing">
-            {t("Deals")}
+          <label>
+            <span>{t("Deals")}</span>
             <select
               value={DEALS.includes(Number(table.mode)) ? table.mode : "8"}
               onChange={(e) => table.setMode(e.target.value)}

@@ -12,6 +12,9 @@ import { isEqual, omit } from "lodash";
 // A client that hasn't received the doc yet (a phone rejoining) writes to the
 // "lobby" deal and never moves the pointer, so its empty table can't replace
 // a game in progress; once the doc arrives, the pointer wins over the lobby.
+// Outside the state, at the map's root and each its writer's: the fake okeys'
+// spin (`spun`, kept through every deal), and each player's press for the
+// next round (`ready-<seat>`, hooks/useRoom.js), gone with the deal.
 function parts(s) {
   return {
     seats: s.players.map((p) =>

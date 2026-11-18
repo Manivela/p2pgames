@@ -1,4 +1,5 @@
 import { expect, test } from "./test";
+import { HINTS, READY, WAIT_ALL, settings } from "./seats";
 
 // Labels in English (desktop) or Turkish (phones)
 const GO = /^(Go|Gir)$/;
@@ -341,22 +342,22 @@ test("D draws from the middle pile; the menu hides the keys' keycaps, off at fir
   await table(page, "toMyTurn", false);
   const top = (await state(page)).drawPile.at(-1).id;
   const key = page.locator(".draw kbd");
-  const hints = page.locator(".table-menu .hints input");
+  const hints = page.getByRole("checkbox", { name: HINTS });
   if (info.project.name === "desktop") {
     await expect(key).toBeVisible();
-    await page.getByRole("button", { name: MENU }).click();
+    await settings(page);
     await hints.uncheck();
     await expect(key).toBeHidden();
     await hints.check();
     await expect(key).toBeVisible();
-    await page.getByRole("button", { name: MENU }).click();
+    await page.keyboard.press("Escape");
   } else {
-    // a touch screen, or one taken for it, turns them on in ⋯
+    // a touch screen, or one taken for it, turns them on in ⋯ → Settings
     await expect(key).toBeHidden();
-    await page.getByRole("button", { name: MENU }).click();
+    await settings(page);
     await hints.check();
     await expect(key).toBeVisible();
-    await page.getByRole("button", { name: MENU }).click();
+    await page.keyboard.press("Escape");
   }
   // and it flies there, as a tile drawn by someone else does
   const flights = () => page.evaluate(() => window.okeyFlights ?? 0);
@@ -993,8 +994,8 @@ test("the rules can be changed mid-game, for the whole table", async ({
   ).toBeVisible();
 });
 
-// your own rack's rows, apart from the table's: yours to set any time, in
-// the Rules, your hand laid out on them
+// your own rack's rows, apart from the table's: this device's, set any time
+// in ⋯ → Settings, your hand laid out on them, and kept for the next game
 test("your own rack's rows are set mid-round, and your hand moves onto them", async ({
   page,
 }, info) => {
@@ -1002,22 +1003,25 @@ test("your own rack's rows are set mid-round, and your hand moves onto them", as
   await sitDown(page);
   await table(page, "start", 2);
   const tiles = (await handIds(page)).filter(Boolean).length;
-  await page.getByRole("button", { name: MENU }).click();
-  await page.getByRole("button", { name: RULES }).click();
+  await settings(page);
   // Americano's: a hand, a draw and three takes want 11 at least
   const rows = page.getByLabel(
     /^(Slots in each row of your own rack|Kendi ıstakanın her sırasındaki)/,
   );
   await rows.fill("10");
-  await page.locator(".settings .start").click();
+  await rows.press("Enter");
   await expect(
     page.getByText(/^(Make the rack's rows longer|Istaka sıralarını uzat)$/),
   ).toBeVisible();
   await rows.fill("11");
-  await page.locator(".settings .start").click();
+  await rows.press("Enter");
+  await page.keyboard.press("Escape");
   await expect(page.locator(".rack:not(.mini) .top > *")).toHaveCount(11);
   expect((await handIds(page)).filter(Boolean)).toHaveLength(tiles);
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  // kept on the device, for every game sat at (useRackRow)
+  const kept = () => JSON.parse(localStorage.getItem("rack-row")).state.row;
+  expect(await page.evaluate(kept)).toBe(11);
 });
 
 // the settings: a game set up any way, started from them and kept on this
@@ -1809,16 +1813,17 @@ test("on the pair round a tap spreads a discard pile out", async ({ page }) => {
   await expect(page.locator(".peek")).toHaveCount(1);
 });
 
-test("the sound level is set in the menu and kept", async ({ page }) => {
+test("the sound level is set in the settings and kept", async ({ page }) => {
   await sitDown(page);
-  await page.getByRole("button", { name: MENU }).click();
+  await settings(page);
   await page.getByLabel(SOUND).fill("0.3");
   // one level for every game on this device (useStore.js)
   const kept = () => JSON.parse(localStorage.getItem("volume")).state.volume;
   expect(await page.evaluate(kept)).toBe(0.3);
+  await page.keyboard.press("Escape");
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
   await page.reload();
-  await page.getByRole("button", { name: MENU }).click();
+  await settings(page);
   await expect(page.getByLabel(SOUND)).toHaveValue("0.3");
 });
 
@@ -2243,6 +2248,59 @@ test("between rounds a seat can be freed and taken", async ({
   expect(scores[3]).toHaveLength(1);
   // Ece starts level with the worst total still playing
   expect(total(4)).toBe(Math.max(total(1), total(2)));
+});
+
+// The room waits for everyone (⋯ → Settings): the next round deals once
+// every player in it has pressed Next Round, a bot never waited for; a
+// player who comes in later learns the room's switch, and keeps it.
+test("the next round waits for every player, never a bot, once the room says so", async ({
+  page,
+  browser,
+}, info) => {
+  anySize(info);
+  const room = await sitDown(page);
+  await settings(page);
+  await page.getByRole("checkbox", { name: WAIT_ALL }).check();
+  await page.keyboard.press("Escape");
+  await table(page, "start", 3);
+  await table(page, "playToEnd");
+  // Ece comes in and sits in the free seat; her device learns the switch
+  const guest = await (await browser.newContext()).newPage();
+  await sitDown(guest, { room, name: "Ece", sit: false });
+  await arrived(guest);
+  await guest.getByRole("button", { name: SIT }).click();
+  await expect
+    .poll(async () => (await state(page)).players.map((p) => p.user?.name))
+    .toEqual(["Ayşe", "Bora", "Can", "Ece"]);
+  const kept = () => JSON.parse(localStorage.getItem("wait-all")).state.on;
+  await expect.poll(() => guest.evaluate(kept)).toBe(true);
+  // Bora and Can bots, never waited for
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    window.okey.set({
+      ...s,
+      players: s.players.map((p) =>
+        p.id === 2 || p.id === 3 ? { ...p, user: { ...p.user, bot: true } } : p,
+      ),
+    });
+  });
+  const { round } = await state(page);
+  // Ayşe's press: ready by her name on Ece's table, no deal yet
+  await page.getByRole("button", { name: NEXT }).click();
+  await expect(page.getByRole("button", { name: NEXT })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(guest.locator(".badge", { hasText: READY })).toHaveCount(1, NET);
+  await page.waitForTimeout(500);
+  expect((await state(page)).gameState).toBe("roundEnd");
+  // Ece's: dealt, by one page, with her in it
+  await guest.getByRole("button", { name: NEXT }).click();
+  await expect.poll(async () => (await state(page)).round, NET).toBe(round + 1);
+  expect((await state(page)).gameState).toBe("play");
+  // ⋯ → New Game mid-game: at once, as ever
+  await confirm(page, NEW_GAME);
+  await expect.poll(async () => (await state(page)).gameState).toBe("start");
 });
 
 test("mid-round, the round is dealt again once the seats are right", async ({

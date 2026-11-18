@@ -6,6 +6,7 @@ How each part works is in its code comments; this file holds the conventions, de
 - Every string a page shows is English through `t()`, with a Turkish line in `src/i18n.js`.
 - A feature that fits every game goes to every table at once. When that's more than the task, it's still built in the shared code (`src/Components/`, `src/hooks/`), called from the tables that have it so far, so another table takes it up with a call and nothing moves.
 - Gestures over buttons wherever one fits. Moves that end or replace the game, or change who's in it, live in the table's ⋯ menu (Okey's `TableMenu.jsx`, the others' `Table/index.jsx`) behind a second tap (`Confirm`). Nothing times out: the turn waits for the player.
+- A setting goes in ⋯ → Settings (`Settings.jsx`), under whom it changes things for: this device (localStorage, `hooks/useStore.js`) or everyone here (the room's `room` map, where the newest switch wins on every device that sees it, `hooks/useRoom.js`). Okey's rules stay in its Rules.
 - Every menu, dialog and popup closes on a tap outside it and on Escape: `useDismiss` (`hooks/useKey.js`), or a backdrop and `useEscape`, as the shared `Dialog` (`Saves.jsx`) does.
 - Two quick taps on bare felt knock on the table (`knock.js`). At the shared table only an element marked `data-felt` knocks, so a new board marks its own bare felt (Batak's middle) and never a piece, square or button.
 - A game shows as few words as it can; explaining belongs on its help page (`?`). Playing should feel like sitting at a real table together.

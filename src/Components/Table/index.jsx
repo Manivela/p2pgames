@@ -10,11 +10,13 @@ import {
   useVolume,
 } from "../../hooks/useStore";
 import { MOD, useEscape, useKey } from "../../hooks/useKey";
+import { useTogether } from "../../hooks/useRoom";
 import { signalingServers, peerOpts } from "../../constants";
 import { Confirm } from "../Confirm";
 import { usePlaying } from "../HowToPlay";
 import { PLAYS } from "../Menu";
 import { SavedGames, useAutoSave } from "../Saves";
+import Settings from "../Settings";
 import { useRecord } from "../Stats/store";
 import { decodeSave } from "../saveCode";
 import { t } from "../../i18n";
@@ -40,8 +42,19 @@ import "./table.css";
 // it deals again; once a game's over, the next one.
 // `bot`: the game's, { play(state, seat): its move, the next state;
 // wait(state): ms before it, 900 when not given }. Each game dealt has an
-// `id`, as it's kept on the device (Saves.jsx).
-export function useTable(name, newGame, sides, first, bot) {
+// `id`, as it's kept on the device (Saves.jsx). `options`: a game played
+// in hands (Batak), `hand`: { over(state): one's over, the next to deal;
+// next(state): its deal }; a table that waits to start (`lobby`, Batak's):
+// a full table deals only at a player's Start (`start`), and a new game
+// goes back to that.
+export function useTable(
+  name,
+  newGame,
+  sides,
+  first,
+  bot,
+  { hand, lobby } = {},
+) {
   const { roomId } = useParams();
   const provider = useWebRtc(roomId, { signaling: signalingServers, peerOpts });
   const { states, localID } = useAwareness(provider.awareness);
@@ -85,16 +98,22 @@ export function useTable(name, newGame, sides, first, bot) {
       ...newGame(game, ids, m),
       id: Math.random().toString(36).slice(2),
     });
+  // a new game: dealt, or at a table that waits to start, back to waiting
+  const again = () => (lobby ? map.set("game", null) : deal());
   // with nobody seated, a game left on the board goes with it
   const empty = !seats.some(Boolean);
   const canMode = (hosts && idle) || empty;
+  // a table that waits to start goes back to waiting, in the new mode
   const setMode = (m) => {
     map.set("mode", m);
-    if (full && idle) deal(m);
+    if (lobby) {
+      if (game) map.set("game", null);
+    } else if (full && idle) deal(m);
     else if (empty && game) map.set("game", null);
   };
 
-  // the first game starts once every seat's taken, dealt by one page, so
+  // the first game starts once every seat's taken (or at a table that waits
+  // to start, at its Start), dealt by one page, so
   // no hand shows only to be replaced as two pages deal at once: the page
   // of the first seated player here, or with bots in every seat, the
   // room's first page (as plays a bot whose page is gone, below)
@@ -105,7 +124,35 @@ export function useTable(name, newGame, sides, first, bot) {
       ? mine.includes(firstHere)
       : bots && localID === Math.min(...states.keys());
   useEffect(() => {
-    if (!game && full && hosts && dealer) deal();
+    if (!lobby && !game && full && hosts && dealer) deal();
+  });
+
+  // The next game, or hand, once every player has pressed for it, while
+  // the room waits for everyone (hooks/useRoom.js): a press is for the game
+  // as it stands, so a move since wipes it. Started by one page, the first
+  // seated player's here (their first tab, by its key).
+  const startsHere =
+    firstHere >= 0 &&
+    localID ===
+      Math.min(
+        ...[...states]
+          .filter(([, s]) => s?.user?.id === seats[firstHere].id)
+          .map(([id]) => id),
+      );
+  const together = useTogether({
+    map,
+    round: game && full ? `${game.id}/${game.last?.n}` : null,
+    need: seats.flatMap((u, i) =>
+      u && !u.bot ? [{ key: i, here: here.has(u.id) }] : [],
+    ),
+    mine,
+    starts: startsHere,
+    go: () => {
+      const now = map.get("game");
+      if (hand?.over(now))
+        map.set("game", { ...hand.next(now), touched: true });
+      else again();
+    },
   });
 
   // A bot sits in an empty seat, either or both, and plays its turns
@@ -135,6 +182,8 @@ export function useTable(name, newGame, sides, first, bot) {
       () => {
         // as it is now: a score reset since doesn't come back
         const now = map.get("game");
+        // a hand's end, waiting for everyone: dealt by one page (above)
+        if (together.waits && hand?.over(now)) return;
         if (now.turn !== null && !now.winner && seats[now.turn]?.bot) {
           const next = bot.play(now, now.turn);
           if (next) map.set("game", next);
@@ -143,7 +192,7 @@ export function useTable(name, newGame, sides, first, bot) {
       Number(pace ?? bot.wait?.(game) ?? 900),
     );
     return () => clearTimeout(timer);
-  }, [plays, game?.id, game?.last.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [plays, game?.id, game?.last.n, together.waits]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // the game kept on this device once a move's been made in it, so a deal
   // nobody's played yet doesn't push out the last one kept; a kept one
@@ -277,13 +326,15 @@ export function useTable(name, newGame, sides, first, bot) {
     live: !!game || seats.some(Boolean),
     note: game
       ? null
-      : seats.some(Boolean)
-        ? t(
-            sides.length > 2
-              ? "Waiting for players"
-              : "Waiting for a second player",
-          )
-        : t("Sit down to play"),
+      : full && lobby
+        ? t("Waiting to start")
+        : seats.some(Boolean)
+          ? t(
+              sides.length > 2
+                ? "Waiting for players"
+                : "Waiting for a second player",
+            )
+          : t("Sit down to play"),
     // a player's move (a bot's is written by the bot's driver, above)
     act: (next) => next && map.set("game", { ...next, touched: true }),
     sit,
@@ -291,8 +342,17 @@ export function useTable(name, newGame, sides, first, bot) {
     addBot: (i) => bot && !seats[i] && (() => addBot(i)),
     stand: () => mine.forEach((i) => map.set(`seat-${i}`, null)),
     free: (i) => map.set(`seat-${i}`, null),
-    // the next game, for the hosts of a full table
-    deal: hosts && full ? () => deal() : null,
+    // ⋯ → New Game, for the hosts of a full table, at once (to waiting,
+    // at a table that waits to start); Start there, one player's tap
+    newGame: hosts && full && (!lobby || game) ? again : null,
+    start: lobby && hosts && full && !game ? () => deal() : null,
+    // the next game, or hand, at one's end: pressed for while the room
+    // waits for everyone, who's pressed (`ready`, seats) and whether this
+    // page has (`pressed`)
+    deal: hosts && full ? together.press : null,
+    waits: together.waits,
+    pressed: together.pressed,
+    ready: together.ready,
     mode,
     setMode: canMode ? setMode : null,
     saves: hosts || empty ? saves : null,
@@ -303,13 +363,15 @@ export function useTable(name, newGame, sides, first, bot) {
 // free (and 🤖, a bot: `bot`), a number by the name (`info`: { value,
 // title }), and the games they've won (`points`), on their own plate, so
 // there's no telling whose is whose. A bot's, to someone not seated, has
-// the Sit that takes it over in place of the number.
+// the Sit that takes it over in place of the number. `ready`: pressed for
+// the next game, while it waits for everyone.
 function Plate({
   mark,
   name,
   user,
   turn,
   here,
+  ready,
   info,
   points,
   sit,
@@ -339,6 +401,7 @@ function Plate({
         </button>
       )}
       {user && !here && <small className="away">{t("away")}</small>}
+      {ready && <small className="ready">{t("ready")}</small>}
       {info && !sit && <small title={info.title}>{info.value}</small>}
       <b className="tb-points" title={t("Score")}>
         {points}
@@ -348,14 +411,11 @@ function Plate({
 }
 
 // in groups, a line between them, as at the Okey table (TableMenu.jsx):
-// this device, your seat, the others', and in red the moves that end or
+// the settings, your seat, the others', and in red the moves that end or
 // replace the game
 function Menu({
-  volume,
-  setVolume,
-  options,
-  facing,
-  setFacing,
+  device,
+  everyone,
   stand,
   playBoth,
   free,
@@ -365,13 +425,13 @@ function Menu({
 }) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [settings, setSettings] = useState(false);
   // the menu folds away once an item has done its job
   const then = (action) => () => {
     setOpen(false);
     action();
   };
   useEscape(open && (() => setOpen(false)));
-  const { hints, setHints } = useKeyHints();
   return (
     <div className="tb-menu">
       <button
@@ -387,38 +447,9 @@ function Menu({
           <div className="backdrop" onClick={() => setOpen(false)} />
           <div className="menu">
             <div className="group">
-              <label className="volume">
-                {t("Sound")}
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={volume}
-                  onChange={(e) => setVolume(Number(e.target.value))}
-                />
-              </label>
-              {options}
-              {/* the keycaps on Undo, the dice, the bowl and the next
-                  game's tap, as at the Okey table (useKeyHints) */}
-              <label className="hints">
-                {t("Key hints")}
-                <input
-                  type="checkbox"
-                  checked={hints}
-                  onChange={(e) => setHints(e.target.checked)}
-                />
-              </label>
-              {setFacing && (
-                <label className="facing">
-                  {t("Face to face")}
-                  <input
-                    type="checkbox"
-                    checked={facing}
-                    onChange={(e) => setFacing(e.target.checked)}
-                  />
-                </label>
-              )}
+              <button onClick={then(() => setSettings(true))}>
+                {t("Settings")}
+              </button>
             </div>
             <div className="group">
               {/* the empty seat too, taking turns on this device */}
@@ -462,6 +493,13 @@ function Menu({
       {saved && saves && (
         <SavedGames {...saves} onClose={() => setSaved(false)} />
       )}
+      {settings && (
+        <Settings
+          device={device}
+          everyone={everyone}
+          onClose={() => setSettings(false)}
+        />
+      )}
     </div>
   );
 }
@@ -469,14 +507,22 @@ function Menu({
 // The table (useTable): the players and their scores beside the board, the
 // ⋯ menu in the corner, and the board, `children`, as big as the room
 // left fits. `mark(seat)`: the side's piece; `info(seat)`: a number by
-// its name; `options`: the game's own settings, in the menu. A board that
+// its name; `device`, `everyone`: the game's own settings, this device's
+// and the room's (Settings.jsx). A board that
 // seats its players round it itself (Batak) is a function, given each
 // seat's plate: `children(plate)`. A game played as a match keeps a score
 // sheet (`sheet`: its rounds' `rows`, ScoreSheet.jsx), above ⋯; its
 // totals are the rows', so the score isn't reset on its own.
-export function Table({ table, mark, info, options, sheet, children }) {
+export function Table({
+  table,
+  mark,
+  info,
+  device,
+  everyone,
+  sheet,
+  children,
+}) {
   const { seats, game, mine, seated, both, full, near, far, across } = table;
-  const { volume, setVolume } = useVolume();
   useApplause(game);
   const { hints } = useKeyHints();
   const score = game?.score ?? seats.map(() => 0);
@@ -498,6 +544,7 @@ export function Table({ table, mark, info, options, sheet, children }) {
         (game.winners?.includes(s) ?? (game.winner?.seat ?? game.turn) === s)
       }
       here={seats[s]?.bot || table.here.has(seats[s]?.id)}
+      ready={table.ready.includes(s)}
       // a seat nobody's in has no pips or prisoners to speak of
       info={seats[s] && info?.(s)}
       points={score[s]}
@@ -531,11 +578,23 @@ export function Table({ table, mark, info, options, sheet, children }) {
           </div>
         )}
         <Menu
-          volume={volume}
-          setVolume={setVolume}
-          options={options}
-          facing={table.facing}
-          setFacing={both && table.setFacing}
+          device={
+            <>
+              {device}
+              {/* the two on this device, the screen between them */}
+              {both && (
+                <label>
+                  <span>{t("Face to face")}</span>
+                  <input
+                    type="checkbox"
+                    checked={table.facing}
+                    onChange={(e) => table.setFacing(e.target.checked)}
+                  />
+                </label>
+              )}
+            </>
+          }
+          everyone={everyone}
           stand={seated && table.stand}
           // two seats only: a hand of cards isn't for passing round
           playBoth={
@@ -551,7 +610,7 @@ export function Table({ table, mark, info, options, sheet, children }) {
               name: table.names[i],
               go: () => table.free(i),
             }))}
-          newGame={table.deal}
+          newGame={table.newGame}
           saves={table.saves}
           resetScore={
             !sheet &&

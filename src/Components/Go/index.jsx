@@ -39,10 +39,10 @@ export default function Go() {
       info={(seat) => ({ value: state.taken[seat], title: t("Prisoners") })}
       // the size, the rules the same on each: a setting, not a game of
       // its own in the site's menu
-      options={
+      everyone={
         table.setMode && (
-          <label className="facing">
-            {t("Board")}
+          <label>
+            <span>{t("Board")}</span>
             <select
               value={table.mode}
               onChange={(e) => table.setMode(e.target.value)}

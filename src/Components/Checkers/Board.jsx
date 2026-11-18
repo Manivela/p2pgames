@@ -154,6 +154,7 @@ export default function Board({ state, table }) {
           <button
             className="ck-next"
             aria-label={t("Next game")}
+            aria-pressed={table.waits ? table.pressed : undefined}
             title={t("Next game")}
             onClick={deal}
           >

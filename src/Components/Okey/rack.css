@@ -1256,42 +1256,6 @@ html:has(.fit) {
   color: #fff;
 }
 
-/* this device's sound level */
-.table-menu .volume {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  padding: 2px 6px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.table-menu .volume input {
-  flex: 1;
-  min-width: 90px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  box-shadow: none;
-  background: none;
-}
-
-.table-menu .hints {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0;
-  padding: 2px 6px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.table-menu .hints input {
-  margin: 0;
-}
-
 /* a second tap confirms */
 .table-menu button.armed {
   background-color: #e53935;
@@ -1331,36 +1295,10 @@ html:has(.fit) {
   margin: 4px 0;
 }
 
-/* a setting a line: what it does, then its switch or number, in a column
-   of their own; one hanging on the switch above, set in under it */
-.settings .group label {
-  display: grid;
-  grid-template-columns: 1fr 70px;
-  align-items: center;
-  gap: 12px;
-  margin: 0;
-  padding: 5px 0;
-  border-top: 1px solid #eee;
-  font-weight: normal;
-  cursor: pointer;
-}
-
-.settings .group label:first-child {
-  border-top: none;
-}
-
+/* a setting a line (saves.css); one hanging on the switch above, set in
+   under it */
 .settings .group .under {
   padding-left: 20px;
-}
-
-.settings .group input {
-  margin: 0;
-}
-
-.settings .group input[type="checkbox"] {
-  justify-self: center;
-  width: 18px;
-  height: 18px;
 }
 
 /* a setting changed from its ruleset's, with what it was */

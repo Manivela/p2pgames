@@ -431,7 +431,6 @@ const TR = [
     /^On a round that opens with pairs, a tap on a discard pile spreads its tiles out to look through$/,
     "Çiftle açılan elde, atılan taşlara dokununca hepsi açılır, bakılabilir",
   ],
-  [/^Just for you$/, "Yalnız senin için"],
   [
     /^Slots in each row of your own rack; empty: the table's$/,
     "Kendi ıstakanın her sırasındaki yuva; boşsa masanınki",
@@ -579,6 +578,19 @@ const TR = [
   [/^Home on the left$/, "Ev solda"], // before "(.+) left"
   [/^(.+) left$/, "$1 ayrıldı"],
   [/^(.+) changed the rules$/, "$1 kuralları değiştirdi"],
+  // the room's settings (Settings.jsx, hooks/useRoom.js)
+  [/^Settings$/, "Ayarlar"],
+  [/^This device$/, "Bu cihaz"],
+  [/^Everyone here$/, "Buradaki herkes"],
+  [/^Next round waits for everyone$/, "Sonraki el herkesi bekler"],
+  [/^(.+): next round waits for everyone$/, "$1: sonraki el herkesi bekler"],
+  [
+    /^(.+): next round doesn't wait for everyone$/,
+    "$1: sonraki el herkesi beklemez",
+  ],
+  [/^Someone$/, "Biri"],
+  [/^ready$/, "hazır"],
+  [/^Waiting to start$/, "Başlatılmayı bekliyor"],
   // how the round finished (LastTurn)
   [/^(.+) drew from the pile$/, "$1 ortadan çekti"],
   [/^(.+) took (.+)'s discard$/, "$1 yandan aldı: $2"],

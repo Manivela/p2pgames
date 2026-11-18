@@ -297,6 +297,7 @@ export default function Sheet({ state, table }) {
         <button
           className="tt-next"
           aria-label={t("Next game")}
+          aria-pressed={table.waits ? table.pressed : undefined}
           title={t("Next game")}
           onClick={deal}
         >

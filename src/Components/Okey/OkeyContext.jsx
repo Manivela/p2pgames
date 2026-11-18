@@ -4,8 +4,10 @@ import { useAwareness, useDoc, useMap, useWebRtc } from "../../vendor/y-react";
 import { toast } from "react-hot-toast";
 import useSound from "use-sound";
 import { useParams } from "react-router-dom";
-import { useAuthStore, useVolume } from "../../hooks/useStore";
+import { useAuthStore, useRackRow, useVolume } from "../../hooks/useStore";
+import { useTogether } from "../../hooks/useRoom";
 import * as okey from "./okey";
+import { rowFits } from "./rulesets";
 import * as bots from "./bot";
 import { readState, replaceState, wentBack, writeState } from "./sync";
 import { t } from "../../i18n";
@@ -654,6 +656,38 @@ export function OkeyProvider({ children }) {
     [map, okeyState.players, okeyState.rules, okeyState.setup],
   );
 
+  // Next Round, and New Game once the game's over, pressed by every player
+  // in it while the room waits for everyone (hooks/useRoom.js), a bot
+  // never waited for, someone away holding it up; dealt by the first
+  // player's page. The presses are keys of the map's own (`ready-<seat>`),
+  // gone with the next deal (replaceState). Start in the lobby stays one
+  // player's tap.
+  const ended =
+    okeyState.gameState === "roundEnd" || okeyState.gameState === "finish";
+  // the same rules again, not a tap's event for them
+  const nextGame = useCallback(() => newGame(), [newGame]);
+  const together = useTogether({
+    map,
+    round: ended ? `${okeyState.deal}/${okeyState.gameState}` : null,
+    need: okeyState.players
+      .filter((p) => (p.user && !p.user.bot) || p.away)
+      .map((p) => ({ key: p.id, here: !!p.user })),
+    mine: me ? [me] : [],
+    starts:
+      okeyState.players.find((p) => p.user && !p.user.bot)?.userKey === localID,
+    go: okeyState.gameState === "finish" ? nextGame : nextRound,
+  });
+
+  // your rack's rows, this device's (⋯ → Settings), on your seat at every
+  // game, where its rules take them (rowFits); the table's where they don't
+  const { row } = useRackRow();
+  React.useEffect(() => {
+    if (!me || !okeyState.rules) return;
+    const want = row !== null && rowFits(okeyState.rules, row) ? row : null;
+    const next = okey.setRow(okeyState, me, want);
+    if (next && typeof next !== "string") setOkeyState(next);
+  }, [me, row, okeyState, setOkeyState]);
+
   // the lobby's settings, anyone's to change (GameSettings.jsx), and a pile
   // of as many sets as they play
   const setSetup = useCallback(
@@ -902,6 +936,7 @@ export function OkeyProvider({ children }) {
       addPick,
       playOnMeld,
       takeBack,
+      together,
       nextRound,
       redealRound,
       dragged,
@@ -952,6 +987,7 @@ export function OkeyProvider({ children }) {
       addPick,
       playOnMeld,
       takeBack,
+      together,
       nextRound,
       redealRound,
       newVersion,

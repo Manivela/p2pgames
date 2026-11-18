@@ -65,6 +65,45 @@
   box-sizing: border-box;
 }
 
+/* a setting a line (Settings.jsx, Okey's GameSettings.jsx): what it does,
+   then its switch, number or slider, in a column of their own */
+:is(.settings, .prefs) .group label {
+  display: grid;
+  grid-template-columns: 1fr 70px;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 5px 0;
+  border-top: 1px solid #eee;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+:is(.settings, .prefs) .group label:first-child {
+  border-top: none;
+}
+
+:is(.settings, .prefs) .group input {
+  margin: 0;
+}
+
+:is(.settings, .prefs) .group input[type="checkbox"] {
+  justify-self: center;
+  width: 18px;
+  height: 18px;
+}
+
+/* every table's settings: a slider and a board size want more room */
+.prefs .group label {
+  grid-template-columns: 1fr 110px;
+}
+
+.prefs .group :is(input[type="range"], select) {
+  width: 100%;
+  padding: 0;
+  box-shadow: none;
+}
+
 .dialog .saves {
   display: flex;
   flex-direction: column;

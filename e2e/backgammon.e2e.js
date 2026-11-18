@@ -17,6 +17,7 @@ import {
   moving,
   pick,
   room,
+  settings,
   sitDown as sit,
 } from "./seats";
 
@@ -98,9 +99,9 @@ test("each player sees their own home bottom right", async ({
   }
   // black plays with their home on the left: the board the other way
   // round, the tray on the left too, kept on a reload
-  await black.getByRole("button", { name: MENU }).click();
+  await settings(black);
   await black.getByRole("checkbox", { name: LEFT }).check();
-  await black.locator(".tb-menu .backdrop").click();
+  await black.keyboard.press("Escape");
   await black.reload();
   const mid = async (n) => {
     const b = await point(black, n).boundingBox();
@@ -177,9 +178,9 @@ test("one device plays both sides, taking turns", async ({ browser }, info) => {
   await setUp(page, { 13: 1, 6: 14 }, { 13: 1, 6: 14 }, [3, 2]);
   // the two sit face to face: what's black's to read is turned to black,
   // white's isn't
-  await page.getByRole("button", { name: MENU }).click();
+  await settings(page);
   await page.getByRole("checkbox", { name: FACING }).check();
-  await page.locator(".tb-menu .backdrop").click();
+  await page.keyboard.press("Escape");
   await point(page, 13).click();
   await expect(page.locator(".bg-mark")).toHaveCount(3);
   await expect(page.locator(".bg-mark.over")).toHaveCount(0);

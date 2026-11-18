@@ -251,6 +251,11 @@
   animation: bk-show 0.2s ease-out 1.35s backwards;
 }
 
+/* a full table's Start: no trick to see off first */
+.bk-next.start {
+  animation-delay: 0s;
+}
+
 /* the match won: by whom, over the new match's tap */
 .bk-won {
   position: absolute;

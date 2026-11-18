@@ -6,6 +6,20 @@ export const BOTH = /^(Play both sides|İki tarafı da oyna)$/;
 export const MENU = /^(Table menu|Masa menüsü)$/;
 export const FACING = /^(Face to face|Karşılıklı)$/;
 export const NEXT = /^(Next game|Sonraki oyun)$/;
+export const START = /^(Start|Başlat)$/;
+export const SETTINGS = /^(Settings|Ayarlar)$/;
+export const WAIT_ALL =
+  /^(Next round waits for everyone|Sonraki el herkesi bekler)$/;
+export const READY = /^(ready|hazır)$/;
+export const HINTS = /^(Key hints|Tuş ipuçları)$/;
+export const SOUND = /^(Sound|Ses)$/;
+
+// a table's ⋯ → Settings (Settings.jsx, Okey's too), closed with Escape
+export async function settings(page) {
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: SETTINGS }).click();
+}
+
 // why the menu can't take the room to another game, or mode, now
 export const IN_PLAY =
   /^(A game is in play: finish it, or start a new one in ⋯|Oyun sürüyor: bitirin ya da ⋯ menüsünden yenisini başlatın)$/;
@@ -78,9 +92,9 @@ export async function bothSides(page, facing) {
   await page.getByRole("button", { name: MENU }).click();
   await page.getByRole("button", { name: BOTH }).click();
   if (!facing) return;
-  await page.getByRole("button", { name: MENU }).click();
+  await settings(page);
   await page.getByRole("checkbox", { name: FACING }).check();
-  await page.locator(".tb-menu .backdrop").click();
+  await page.keyboard.press("Escape");
 }
 
 // the most of `selector` animating at once, each frame for `ms`: long

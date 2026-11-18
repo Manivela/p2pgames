@@ -233,11 +233,12 @@ export const PLAYS = [
 
 // The room's game, the same for everyone in it, in the room's Yjs map
 // `room`: Okey till one's picked, and for someone joining, till the
-// room's comes over the network
+// room's comes over the network. A tab reloaded alone in its room brings
+// back the one it was at, as `seed` (root.jsx), under any picked since.
 export const useRoomGame = () => {
   useMap("room"); // re-render on every change
   const room = useDoc().getMap("room");
-  const game = room.get("game");
+  const game = room.get("game") ?? room.get("seed")?.game;
   return [
     PLAYS.some((p) => p.game === game) ? game : "okey",
     (g) => room.set("game", g),

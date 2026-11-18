@@ -13,7 +13,10 @@ import {
   bothSides,
   moving,
   room,
+  settings,
   sitDown,
+  HINTS,
+  WAIT_ALL,
 } from "./seats";
 
 // Tic-tac-toe at the table: two browsers, or one device playing both
@@ -71,6 +74,85 @@ test("X wins in a row: both pages, the score, then O starts", async ({
   await o.getByRole("button", { name: NEXT }).click();
   await expect.poll(async () => (await game(x)).turn, NET).toBe(1);
   await expect(x.locator(".tt-ink")).toHaveCount(0);
+});
+
+// The room waits for everyone (⋯ → Settings, switched on by one player
+// for all): the next game deals once both have tapped for it, each tap
+// shown by its player's name; ⋯ → New Game still deals at once.
+test("the next game waits for both players, once the room says so", async ({
+  browser,
+}, info) => {
+  const { x, o } = await twoPlayers(browser, info);
+  await settings(x);
+  await x.getByRole("checkbox", { name: WAIT_ALL }).check();
+  await x.keyboard.press("Escape");
+  // Bora hears of it, and his device keeps it
+  await expect(
+    o.getByText(
+      /^Ayşe: (next round waits for everyone|sonraki el herkesi bekler)$/,
+    ),
+  ).toBeVisible(NET);
+  const kept = () => JSON.parse(localStorage.getItem("wait-all")).state.on;
+  expect(await o.evaluate(kept)).toBe(true);
+  // X wins along the top row
+  for (const [page, i] of [
+    [x, 0],
+    [o, 3],
+    [x, 1],
+    [o, 4],
+    [x, 2],
+  ]) {
+    const seat = page === x ? 0 : 1;
+    await expect.poll(async () => (await game(page)).turn, NET).toBe(seat);
+    await cell(page, i).click();
+  }
+  await expect.poll(async () => (await game(o)).winner?.seat, NET).toBe(0);
+  // Bora's tap: ready, on both pages, and no new game yet
+  const next = (page) => page.getByRole("button", { name: NEXT });
+  await next(o).click();
+  await expect(next(o)).toHaveAttribute("aria-pressed", "true");
+  for (const page of [x, o]) {
+    await expect(page.locator(".tb-plate .ready")).toHaveCount(1, NET);
+  }
+  await x.waitForTimeout(500);
+  expect((await game(x)).winner?.seat).toBe(0);
+  // Ayşe's: the next game, O to start
+  await next(x).click();
+  await expect.poll(async () => (await game(o)).turn, NET).toBe(1);
+  await expect(o.locator(".tb-plate .ready")).toHaveCount(0);
+  // ⋯ → New Game deals at once, as ever
+  const { id } = await game(x);
+  await x.getByRole("button", { name: MENU }).click();
+  await x.getByRole("button", { name: NEW_GAME }).click();
+  await x.locator(".tb-menu button.armed").click();
+  await expect.poll(async () => (await game(x)).id).not.toBe(id);
+  // and Ayşe's device brings it to the next room it opens, for good
+  await x.goto(`/${room("ttt")}`);
+  await settings(x);
+  await expect(x.getByRole("checkbox", { name: WAIT_ALL })).toBeChecked();
+});
+
+// alone in the room, a reload comes back to the game it was at, and its
+// way of playing: not to Okey
+test("a reload alone in the room comes back to Super tic-tac-toe", async ({
+  browser,
+}, info) => {
+  const page = await sitDown(
+    browser,
+    info,
+    room("ttt"),
+    "tictactoe",
+    "Ayşe",
+    0,
+  );
+  await pick(page, SUPER);
+  await expect(page.locator(".site-menu")).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("button", { name: /^(Menu|Menü)$/ }).click();
+  await expect(page.locator(".site-menu .games .active")).toHaveCount(1);
+  await expect(page.locator(".site-menu .games .active")).toHaveAccessibleName(
+    SUPER,
+  );
 });
 
 // two quick taps, as a mouse or a finger makes them
@@ -179,10 +261,10 @@ test("keys: ⌘Z takes back, N deals the next game, Escape closes ⋯", async ({
   const desktop = info.project.name === "desktop";
   const key = page.locator(".tb-undo kbd");
   await expect(key).toBeVisible({ visible: desktop });
-  await page.getByRole("button", { name: MENU }).click();
-  await page.locator(".tb-menu .hints input").setChecked(!desktop);
+  await settings(page);
+  await page.getByRole("checkbox", { name: HINTS }).setChecked(!desktop);
   await page.keyboard.press("Escape");
-  await expect(page.locator(".tb-menu .menu")).toHaveCount(0);
+  await expect(page.locator(".dialog")).toHaveCount(0);
   await expect(key).toBeVisible({ visible: !desktop });
   await page.keyboard.press("ControlOrMeta+Shift+z");
   expect((await game(page)).cells[4]).toBe(0);

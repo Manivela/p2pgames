@@ -76,6 +76,26 @@ export const useFacing = create(
   ),
 );
 
+// your Okey rack's row length on this device, any game you sit at (the
+// Settings dialog); null: the table's (OkeyContext writes it on your seat)
+export const useRackRow = create(
+  persist((set) => ({ row: null, setRow: (row) => set({ row }) }), {
+    name: "rack-row",
+    storage: createJSONStorage(() => localStorage),
+  }),
+);
+
+// the room's "next round waits for everyone" as this device last saw it:
+// { on, at, by }, `at` when someone last switched it (0: never), carried
+// to every room this device joins, where the newest switch wins
+// (hooks/useRoom.js)
+export const useWaitAllSeen = create(
+  persist(() => ({ on: true, at: 0, by: null }), {
+    name: "wait-all",
+    storage: createJSONStorage(() => localStorage),
+  }),
+);
+
 // the level the Okey table kept for itself before, moved here once: set,
 // so it's saved (loading alone saves nothing)
 try {
@@ -91,9 +111,11 @@ try {
   // storage blocked: full volume
 }
 
-// another tab's login or new name, here too: one player, one name
+// another tab's login or new name, here too: one player, one name; and a
+// switch another tab saw, so this one never saves an older one over it
 addEventListener("storage", (e) => {
   if (e.key === "user") useAuthStore.persist.rehydrate();
+  if (e.key === "wait-all") useWaitAllSeen.persist.rehydrate();
 });
 
 // the name an older build remembered, for a player kept for each tab: in

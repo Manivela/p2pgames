@@ -68,10 +68,10 @@ export default function Backgammon() {
           ? (s) => ({ value: pips(state.checkers[s]), title: t("Pips to go") })
           : null
       }
-      options={
+      device={
         tavla && (
-          <label className="facing">
-            {t("Home on the left")}
+          <label>
+            <span>{t("Home on the left")}</span>
             <input
               type="checkbox"
               checked={left}
