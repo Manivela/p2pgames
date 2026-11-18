@@ -109,20 +109,30 @@ const land = (el) =>
   );
 
 // A copy flies from the rect `from` to the element `to`, which stays hidden
-// until it lands; `into` a seat, it shrinks and fades into the avatar.
+// until it lands; `into` a seat, it shrinks and fades into the avatar. One
+// that lies turned (the latest discard, the tile thrown to finish) is
+// measured upright, and the copy turns to its angle on the way, about its
+// middle as the tile does, so it lands as the tile lies.
 function fly(from, to, { html, delay = 0, duration = 360, into = false }) {
   if (!from || !to) return;
+  const angle = into ? "none" : getComputedStyle(to).rotate;
+  if (angle !== "none") to.style.rotate = "none";
   const b = tileRect(to);
+  to.style.rotate = "";
   const el = copy(html ?? to.outerHTML);
   if (import.meta.env.DEV) window.okeyFlights = (window.okeyFlights ?? 0) + 1;
   // its own size, before scaling (an svg has no offsetWidth)
   const { width: w, height: h } = el.getBoundingClientRect();
   const s = from.width / w;
+  const turn = (deg) =>
+    into
+      ? ""
+      : ` translate(${w / 2}px, ${h / 2}px) rotate(${deg}) translate(${-w / 2}px, ${-h / 2}px)`;
   const end = into
     ? `translate(${b.left + b.width / 2 - (w * s) / 4}px, ${
         b.top + b.height / 2 - (h * s) / 4
       }px) scale(${s / 2})`
-    : place(b, b.width / w);
+    : place(b, b.width / w) + turn(angle === "none" ? "0deg" : angle);
   if (!into) to.style.visibility = "hidden";
   const done = () => {
     el.remove();
@@ -132,7 +142,7 @@ function fly(from, to, { html, delay = 0, duration = 360, into = false }) {
   };
   el.animate(
     [
-      { transform: place(from, s), opacity: 1 },
+      { transform: place(from, s) + turn("0deg"), opacity: 1 },
       { transform: end, opacity: into ? 0 : 1 },
     ],
     { duration, delay, easing: EASE, fill: "both" },

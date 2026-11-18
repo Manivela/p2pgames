@@ -3,3 +3,9 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer-when-downgrade
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Vite names each file here by its content, so a new build brings new
+# names: kept for good, a load paints (the felt, index.css) without first
+# asking the server whether the CSS changed
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

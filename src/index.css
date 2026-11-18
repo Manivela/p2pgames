@@ -277,6 +277,16 @@ i {
   color: #818181;
 }
 
+/* the tables' felt (rack.css, table.css) from the first frame, so a room
+   isn't white while it hears whether anyone's in it (root.jsx's useKnown)
+   or loads its game; the name form and an error stay on white */
+body:not(:has(.centered, #error-page)) {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 50% 42%, #3b8f2c 0%, #2a6a1f 48%, #163f10 100%);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.45);
+}
+
 /* the games start below the corner buttons */
 #detail {
   flex: 1;

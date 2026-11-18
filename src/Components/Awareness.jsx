@@ -23,16 +23,11 @@ export default function Awareness() {
   const { states, localID, setLocalState } = useAwareness(provider.awareness);
   const currentUser = useAuthStore((state) => state.currentUser);
 
+  // the same object while the player's the same, under any new copy of them
+  const { id, name, color } = currentUser ?? {};
   const userData = useMemo(
-    () =>
-      currentUser
-        ? {
-            id: currentUser.id,
-            name: currentUser.name,
-            color: currentUser.color,
-          }
-        : null,
-    [currentUser?.id, currentUser?.name, currentUser?.color],
+    () => (id ? { id, name, color } : null),
+    [id, name, color],
   );
 
   const handlePointerMove = useCallback(
