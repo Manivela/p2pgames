@@ -536,11 +536,7 @@ export default function Board({
               // over the ones standing while it slides
               zIndex: sliding && moved.has(`${seat}-${id}`) ? 20 : i + 1,
             }}
-          >
-            {top && ids.length > 5 && pos !== OFF && (
-              <b className={away(seat) ? "over" : undefined}>{ids.length}</b>
-            )}
-          </div>,
+          />,
         );
       }),
     ),

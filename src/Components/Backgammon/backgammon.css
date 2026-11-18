@@ -274,10 +274,6 @@
   color: #eee;
 }
 
-.bg-checker b {
-  font-size: calc(var(--p) * 0.42);
-}
-
 /* borne off: on its side in the tray */
 .bg-checker.off {
   --drop: 0 calc(var(--p) * 0.03) calc(var(--p) * 0.05) rgba(0, 0, 0, 0.6);
