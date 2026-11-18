@@ -19,7 +19,10 @@ const spot = (i, viewer) =>
 // a side of the board: its player's word and Undo
 function Side({ far, over, said, onUndo }) {
   return (
-    <div className={`ck-side${far ? " far" : ""}${over ? " over" : ""}`}>
+    <div
+      className={`ck-side${far ? " far" : ""}${over ? " over" : ""}`}
+      data-felt=""
+    >
       {said && <p className="ck-said">{said}</p>}
       {onUndo && <Undo className="ck-undo" onClick={onUndo} />}
     </div>

@@ -33,7 +33,10 @@ function Side({ seat, far, over, said, onUndo, onPass }) {
   const Bowl = onPass ? "button" : "div";
   useKey("p", onPass);
   return (
-    <div className={`go-side${far ? " far" : ""}${over ? " over" : ""}`}>
+    <div
+      className={`go-side${far ? " far" : ""}${over ? " over" : ""}`}
+      data-felt=""
+    >
       {said && <p className="go-said">{said}</p>}
       {onUndo && <Undo className="go-undo" onClick={onUndo} />}
       <Bowl

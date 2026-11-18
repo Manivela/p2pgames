@@ -18,6 +18,7 @@ import { SavedGames, useAutoSave } from "../Saves";
 import { useRecord } from "../Stats/store";
 import { decodeSave } from "../saveCode";
 import { t } from "../../i18n";
+import { useKnock, useKnockTaps } from "../knock";
 import tok from "./assets/tok.mp3";
 import applause from "../Okey/assets/finish.mp3";
 import "./table.css";
@@ -58,6 +59,14 @@ export function useTable(name, newGame, sides, first, bot) {
   // the board as your seat sees it, the first seat's for someone watching
   // or playing both
   const near = both ? 0 : (mine[0] ?? 0);
+  // a knock on the table (knock.js), heard from the seat this page sees from
+  const { volume } = useVolume();
+  const knock = useKnock(
+    provider.awareness,
+    sides.map((_, i) => ({ id: i })),
+    near,
+    volume,
+  );
   const full = seats.every(Boolean);
   // no game in play: none yet, one over, or one no player has moved in yet
   // (a bot may have: a mode picked deals again)
@@ -255,6 +264,7 @@ export function useTable(name, newGame, sides, first, bot) {
     full,
     near,
     far: 1 - near,
+    knock,
     // the two on this device sit face to face (Table's ⋯ menu): what's
     // one's to read is turned to them (`.over`)
     across: both && facing,
@@ -468,6 +478,11 @@ export function Table({ table, mark, info, options, children }) {
   const { hints } = useKeyHints();
   const score = game?.score ?? seats.map(() => 0);
   const around = typeof children === "function";
+  // two quick taps on the felt knock (knock.js): only where it's bare,
+  // marked data-felt, as beside the board, never on a piece or a button
+  const onKnock = useKnockTaps(table.knock, (el) =>
+    el.hasAttribute("data-felt"),
+  );
   const plate = (s) => (
     <Plate
       mark={mark(s)}
@@ -492,8 +507,10 @@ export function Table({ table, mark, info, options, children }) {
   return (
     <div
       className={`tb-fit${hints ? "" : " no-keys"}${around ? " around" : ""}`}
+      data-felt=""
+      onPointerDown={onKnock}
     >
-      <div className="tb-head">
+      <div className="tb-head" data-felt="">
         {!around && plate(far)}
         {!around && plate(near)}
         <Menu
@@ -526,7 +543,9 @@ export function Table({ table, mark, info, options, children }) {
           }
         />
       </div>
-      <div className="tb-wrap">{around ? children(plate) : children}</div>
+      <div className="tb-wrap" data-felt="">
+        {around ? children(plate) : children}
+      </div>
     </div>
   );
 }

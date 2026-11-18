@@ -73,6 +73,51 @@ test("X wins in a row: both pages, the score, then O starts", async ({
   await expect(x.locator(".tt-ink")).toHaveCount(0);
 });
 
+// two quick taps, as a mouse or a finger makes them
+async function doubleTap(page, info, { x, y }) {
+  if (info.project.name === "desktop") await page.mouse.dblclick(x, y);
+  else {
+    await page.touchscreen.tap(x, y);
+    await page.touchscreen.tap(x, y);
+  }
+}
+
+// an easter egg at every table (knock.js), as at Okey's
+test("a knock on the felt is heard across the board; on the paper, none", async ({
+  browser,
+}, info) => {
+  const { x, o } = await twoPlayers(browser, info);
+  // a spot of bare felt, beside the paper or the plates
+  const felt = await x.evaluate(() => {
+    for (let i = 1; i < 40; i++) {
+      for (let j = 1; j < 40; j++) {
+        const at = { x: (i * innerWidth) / 40, y: (j * innerHeight) / 40 };
+        const el = document.elementFromPoint(at.x, at.y);
+        if (el?.hasAttribute("data-felt")) return at;
+      }
+    }
+  });
+  await doubleTap(x, info, felt);
+  const table = await x.locator(".tb-fit").boundingBox();
+  const right = ((felt.x - table.x) / table.width) * 2 - 1;
+  const heard = (p) => p.evaluate(() => window.knocks ?? []);
+  // Ayşe hears it where she knocked; Bora, across, on his other side
+  await expect.poll(() => heard(x)).toHaveLength(1);
+  expect((await heard(x))[0]).toBeCloseTo(right);
+  await expect.poll(() => heard(o), NET).toHaveLength(1);
+  expect((await heard(o))[0]).toBeCloseTo(-right);
+  // two taps on a square mark it, and knock nowhere
+  const square = await cell(x, 4).boundingBox();
+  await doubleTap(x, info, {
+    x: square.x + square.width / 2,
+    y: square.y + square.height / 2,
+  });
+  await expect.poll(async () => (await game(o)).cells[4], NET).toBe(0);
+  await x.waitForTimeout(500);
+  expect(await heard(x)).toHaveLength(1);
+  expect(await heard(o)).toHaveLength(1);
+});
+
 test("a reload shows the sheet as it is: no ink being drawn", async ({
   browser,
 }, info) => {

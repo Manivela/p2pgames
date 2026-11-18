@@ -14,6 +14,7 @@ import * as okey from "./okey";
 import { ended, freeSlot, isElden, pileOut, rowOf, tableSeats } from "./okey";
 import { useKeyHints } from "../../hooks/useStore";
 import { useEscape, useKey } from "../../hooks/useKey";
+import { useKnockTaps } from "../knock";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -337,34 +338,8 @@ function useTablePick() {
   ];
 }
 
-// two quick taps on the felt, off anything to pick up or press, knock on
-// the table (knock.js) where they land: x and y from -1 to 1 across it
-function useKnock() {
-  const { knock } = useContext(OkeyContext);
-  const last = useRef(null);
-  return (e) => {
-    if (e.target.closest(`${CONTROLS}, .rack`)) return;
-    const tap = { at: e.timeStamp, x: e.clientX, y: e.clientY };
-    const before = last.current;
-    last.current = tap;
-    if (
-      !before ||
-      tap.at - before.at > 350 ||
-      Math.hypot(tap.x - before.x, tap.y - before.y) > 30
-    ) {
-      return;
-    }
-    last.current = null;
-    const r = e.currentTarget.getBoundingClientRect();
-    knock(
-      ((tap.x - r.left) / r.width) * 2 - 1,
-      1 - ((tap.y - r.top) / r.height) * 2,
-    );
-  };
-}
-
 function Board() {
-  const { okeyState, me } = useContext(OkeyContext);
+  const { okeyState, me, knock } = useContext(OkeyContext);
   // you first, then round the table: right, across, left
   const players = tableSeats(okeyState);
   const myIndex = players.findIndex((p) => p.id === me);
@@ -378,7 +353,11 @@ function Board() {
   const fit = useTileSize(rowOf(okeyState, me) + 3.8);
   const [table, pileAside] = usePileAside(okeyState.deal);
   useMoves();
-  const onKnock = useKnock();
+  // on the felt, off anything to pick up or press, and the racks
+  const onKnock = useKnockTaps(
+    knock,
+    (el) => !el.closest(`${CONTROLS}, .rack`),
+  );
   const [lasso, pick] = useTablePick();
   const { hints } = useKeyHints();
   return (

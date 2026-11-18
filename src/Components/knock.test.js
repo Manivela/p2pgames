@@ -21,3 +21,11 @@ test("a knock is heard from where it was, as each player sits", () => {
   // never past full left or right
   near(panOf({ x: 1, y: -1, by: 2 }, four, 1), 1);
 });
+
+test("at the shared table: the seats by number, from 0", () => {
+  const two = [{ id: 0 }, { id: 1 }];
+  // across the board: the other's right is your left
+  near(panOf({ x: 0.5, y: 0.2, by: 1 }, two, 0), -0.5);
+  near(panOf({ x: 0.5, y: 0.2, by: 0 }, two, 0), 0.5);
+  near(panOf({ x: 0.5, y: 0.2, by: 0 }, two, 1), -0.5);
+});

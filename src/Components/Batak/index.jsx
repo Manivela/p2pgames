@@ -80,7 +80,7 @@ function Middle({ state, table, place }) {
   const shown = trick.length ? trick : (lastTrick?.cards ?? []);
   const taker = !trick.length && lastTrick?.by;
   return (
-    <div className="bk-trick">
+    <div className="bk-trick" data-felt="">
       {shown.map(({ seat, card }) => (
         <Card
           key={card}
@@ -142,13 +142,19 @@ export default function Batak() {
       info={(s) => info(state, s)}
     >
       {(plate) => (
-        <div className="bk-table">
+        // the felt, bare between the cards, knocks (Table)
+        <div className="bk-table" data-felt="">
           {[0, 1, 2, 3].map((s) => (
-            <div key={s} className={`bk-seat ${place(s)}`} data-seat={s}>
+            <div
+              key={s}
+              className={`bk-seat ${place(s)}`}
+              data-seat={s}
+              data-felt=""
+            >
               {plate(s)}
             </div>
           ))}
-          <div className="bk-middle">
+          <div className="bk-middle" data-felt="">
             <Middle state={state} table={table} place={place} />
           </div>
           {table.mine.includes(viewer) && (

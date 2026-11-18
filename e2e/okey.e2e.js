@@ -1145,7 +1145,7 @@ test("a knock on the table is heard from where it was", async ({
   }
   const x = ((at.x - board.x) / board.width) * 2 - 1;
   const y = 1 - ((at.y - board.y) / board.height) * 2;
-  const heard = (p) => p.evaluate(() => window.okeyKnocks ?? []);
+  const heard = (p) => p.evaluate(() => window.knocks ?? []);
   // Ayşe hears it on her left; Bora sits on her right, so that side of the
   // table is in front of him: the farther up her screen, the more to his right
   await expect.poll(() => heard(page)).toHaveLength(1);
