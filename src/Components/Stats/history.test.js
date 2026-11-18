@@ -7,6 +7,8 @@ import { AMERICANO } from "../Okey/rulesets";
 import * as tictactoe from "../TicTacToe/rules";
 import * as backgammon from "../Backgammon/rules";
 import backgammonBot from "../Backgammon/bot";
+import * as batak from "../Batak/rules";
+import batakBot from "../Batak/bot";
 import {
   diff,
   identities,
@@ -366,4 +368,23 @@ test("backgammon: rolls and doubles by who rolled, the mars, who won", () => {
     assert.equal(p.result, p.seat === s.winner.seat ? "won" : "lost");
   });
   assert.equal(summary.mars, s.winner.points === 2);
+});
+
+test("batak: a deal of four, won by its top scorer", () => {
+  const seats = [ayse, ...["b", "c", "d"].map((id) => ({ id, name: id }))];
+  let s = batak.newGame(null, ["a", "b", "c", "d"]);
+  const states = [{ ...s, seats }];
+  while (s.turn !== null)
+    states.push({ ...(s = batakBot.play(s, s.turn)), seats });
+  const summary = summarize(
+    { id: "bk", kind: "batak", me: "a" },
+    record("batak", states),
+  );
+  assert.lengthOf(summary.players, 4);
+  summary.players.forEach((p) =>
+    assert.equal(
+      p.result,
+      !s.winner ? "drawn" : p.seat === s.winner.seat ? "won" : "lost",
+    ),
+  );
 });

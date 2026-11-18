@@ -283,7 +283,8 @@ function people(kind, views) {
   const seats =
     kind === "okey"
       ? end.players.filter((p) => p.user || end.scores?.[p.id]).map((p) => p.id)
-      : [0, 1];
+      : // a table's every seat, two before Batak's four
+        Array.from(end.seats ?? [0, 1], (_, i) => i);
   for (const seat of seats) {
     const p = lastIn[seat];
     if (p) p.result = p.result === undefined ? resultOf(kind, end, seat) : null;
