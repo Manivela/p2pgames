@@ -1,0 +1,203 @@
+/* The Batak table (index.jsx): the four seats round the middle, where the
+   trick lies or the bidding's done, and your hand along the bottom, all
+   sized by --cw, a card's width, from the room the board has. Names start
+   with bk-, clear of Bootstrap 3's global classes. */
+
+.bk-table {
+  /* a card's width: 13 across the board, or the height's share of two
+     plates, the trick and the hand */
+  --cw: min(13cqw, (100cqh - 100px) / 4.6, 110px);
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    ". top ."
+    "left middle right"
+    ". me ."
+    "hand hand hand";
+  gap: 6px;
+  align-items: center;
+  justify-items: center;
+}
+
+.bk-seat {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.bk-seat .tb-plate {
+  width: 100%;
+  max-width: 200px;
+}
+
+.bk-seat.top {
+  grid-area: top;
+}
+
+.bk-seat.left {
+  grid-area: left;
+}
+
+.bk-seat.right {
+  grid-area: right;
+}
+
+.bk-seat.me {
+  grid-area: me;
+  width: min(200px, 100cqw);
+}
+
+.bk-seat.top,
+.bk-seat.me {
+  min-width: 170px;
+}
+
+/* a narrow board, a phone upright: across at the top, the two beside you
+   under it, either side */
+@container (max-width: 600px) and (orientation: portrait) {
+  .bk-table {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "top top"
+      "left right"
+      "middle middle"
+      "me me"
+      "hand hand";
+  }
+
+  .bk-seat.left {
+    justify-content: flex-start;
+  }
+
+  .bk-seat.right {
+    justify-content: flex-end;
+  }
+
+  .bk-seat.top,
+  .bk-seat.me {
+    width: min(200px, 100%);
+  }
+}
+
+.bk-middle {
+  grid-area: middle;
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--cw) * 3.2);
+}
+
+.bk-note {
+  margin: 0;
+  font-size: 18px;
+  text-align: center;
+}
+
+/* the trick: each card by the seat that played it */
+.bk-trick {
+  position: relative;
+  width: calc(var(--cw) * 3.2);
+  height: calc(var(--cw) * 2.94);
+}
+
+.bk-trick .cd-card {
+  position: absolute;
+}
+
+.bk-trick .at-me {
+  left: calc(var(--cw) * 1.1);
+  bottom: 0;
+}
+
+.bk-trick .at-top {
+  left: calc(var(--cw) * 1.1);
+  top: 0;
+}
+
+.bk-trick .at-left {
+  left: 0;
+  top: calc(50% - var(--cw) * 0.7);
+}
+
+.bk-trick .at-right {
+  right: 0;
+  top: calc(50% - var(--cw) * 0.7);
+}
+
+/* the trick just taken, the card that took it */
+.bk-trick .took {
+  box-shadow: 0 0 0 3px #ffd54f;
+}
+
+/* the bids open to you, or the four suits to name trumps */
+.bk-bids {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(max(var(--cw), 40px) * 4.4);
+}
+
+.bk-bids button {
+  min-width: max(calc(var(--cw) * 0.75), 38px);
+  height: max(calc(var(--cw) * 0.75), 38px);
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  color: #1b5e20;
+  font-size: max(calc(var(--cw) * 0.3), 16px);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.bk-bids.suits button {
+  font-size: max(calc(var(--cw) * 0.5), 26px);
+}
+
+/* the next deal: a tap in the middle */
+.bk-next {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 20px;
+  background: #fff;
+  color: #1b5e20;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* your hand, overlapping as it has to to fit the width */
+.bk-hand {
+  grid-area: hand;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding-top: calc(var(--cw) * 0.2);
+}
+
+.bk-hand .cd-card + .cd-card {
+  margin-left: calc(
+    min(var(--cw) * 0.72, (100cqw - var(--cw)) / max(var(--n) - 1, 1)) -
+      var(--cw)
+  );
+}
+
+/* your turn: the cards you can play raised, the rest dimmed */
+.bk-hand .cd-card.ok {
+  translate: 0 calc(var(--cw) * -0.2);
+}
+
+.bk-hand .cd-card.no {
+  filter: brightness(0.72);
+}

@@ -223,6 +223,35 @@ html:has(.tb-fit) {
   color: #fff;
 }
 
+/* a board that seats its players round it itself (Batak's): no column
+   of plates, the board between the corner buttons, bottom left and right,
+   so a hand along its bottom clears them; upright, above their row */
+.tb-fit.around {
+  grid-template-columns: calc(var(--t) * 1.66) minmax(0, 1fr) calc(
+      var(--t) * 1.66
+    );
+}
+
+.tb-fit.around .tb-head {
+  display: contents;
+}
+
+.tb-fit.around .tb-wrap {
+  grid-column: 2;
+}
+
+@media (orientation: portrait) {
+  .tb-fit.around {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) calc(var(--t) * 0.92);
+  }
+
+  .tb-fit.around .tb-wrap {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
 /* the board, as big as the room left fits */
 .tb-wrap {
   position: relative;

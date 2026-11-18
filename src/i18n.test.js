@@ -12,6 +12,7 @@ test("every message the rules return has a Turkish version", () => {
     "TicTacToe/rules.js",
     "Go/rules.js",
     "Checkers/rules.js",
+    "Batak/rules.js",
   ]
     .map((f) => readFileSync(`src/Components/${f}`, "utf8"))
     .join("\n");
@@ -70,7 +71,7 @@ test("every game's How to play reads in Turkish, and in English as written", () 
   for (const { title, lines } of Object.values(RULES).flatMap(Object.values)) {
     for (const line of [title, ...lines]) {
       // names the same in Turkish
-      if (!["Go", "Okey", "Dama", "101", "Americano"].includes(line)) {
+      if (!["Go", "Okey", "Dama", "Batak", "101", "Americano"].includes(line)) {
         assert.notEqual(t(line, true), line, line);
       }
       assert.equal(t(line, false), line, line);

@@ -1,0 +1,54 @@
+/* a card face up (Card.jsx), sized by --cw, its width; names start with
+   cd-, clear of Bootstrap 3's global classes */
+.cd-card {
+  position: relative;
+  flex: none;
+  display: block;
+  width: var(--cw);
+  height: calc(var(--cw) * 1.4);
+  padding: 0;
+  border: 1px solid #bbb;
+  border-radius: calc(var(--cw) * 0.09);
+  background: #fffdf8;
+  color: #1c1c1c;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1;
+}
+
+.cd-card.red,
+.cd-suit.red {
+  color: #c62828;
+}
+
+/* the rank and suit in the corner, all a fanned hand shows of it, and the
+   suit large across the rest */
+.cd-card b,
+.cd-card i {
+  position: absolute;
+  left: calc(var(--cw) * 0.08);
+  font-size: calc(var(--cw) * 0.34);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+}
+
+.cd-card b {
+  top: calc(var(--cw) * 0.08);
+}
+
+.cd-card i {
+  top: calc(var(--cw) * 0.44);
+}
+
+.cd-card::after {
+  content: attr(data-suit);
+  position: absolute;
+  right: calc(var(--cw) * 0.1);
+  bottom: calc(var(--cw) * 0.06);
+  font-size: calc(var(--cw) * 0.62);
+}
+
+.cd-suit {
+  font-style: normal;
+}

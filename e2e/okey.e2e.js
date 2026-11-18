@@ -1784,7 +1784,7 @@ test("the menu finds a game by name and goes to it", async ({ page }, info) => {
   const room = await sitDown(page);
   await page.getByRole("button", { name: SITE_MENU }).click();
   const games = page.locator(".site-menu .games button");
-  await expect(games).toHaveCount(9);
+  await expect(games).toHaveCount(10);
   await expect(page.locator(".site-menu .games .active")).toHaveAccessibleName(
     "Okey Americano",
   );

@@ -21,10 +21,10 @@ import { t } from "../../i18n";
 import tok from "./assets/tok.mp3";
 import "./table.css";
 
-// A table for two in the room, for a game played in turns (Backgammon, Go,
-// TicTacToe): its own Yjs map, `name`, with `seat-0` and `seat-1`, who
-// plays each side, each written by whoever sits or stands, and `game`, the
-// rules' state, written by the player to move, or by its hosts for a
+// A table in the room, for a game played in turns (Backgammon, Go,
+// TicTacToe for two, Batak for four): its own Yjs map, `name`, with a
+// `seat-0`, `seat-1`… for each of `sides`, who plays each, each written
+// by whoever sits or stands, and `game`, the rules' state, written by the player to move, or by its hosts for a
 // new game. Only one player moves at a time, so one key holds the whole
 // game. A game's state has `turn`, the seat to move, `winner` ({ seat })
 // once one's won, and `score`, carried over by `newGame(prev, ids, mode)`
@@ -45,14 +45,14 @@ export function useTable(name, newGame, sides, first, bot) {
   useMap(name); // re-render on every change
   const map = useDoc().getMap(name);
   // each seat its own key, so two sitting down at once both stay
-  const seats = [map.get("seat-0") ?? null, map.get("seat-1") ?? null];
+  const seats = sides.map((_, i) => map.get(`seat-${i}`) ?? null);
   const game = map.get("game") ?? null;
   const { facing, setFacing } = useFacing();
 
-  // the seats this page plays: one, or both on one device, taking turns
-  const mine = [0, 1].filter((i) => seats[i]?.id === currentUser.id);
+  // the seats this page plays: one, or more on one device, taking turns
+  const mine = seats.flatMap((u, i) => (u?.id === currentUser.id ? [i] : []));
   const seated = mine.length > 0;
-  const both = mine.length === 2;
+  const both = mine.length > 1;
   // the board as your seat sees it, the first seat's for someone watching
   // or playing both
   const near = both ? 0 : (mine[0] ?? 0);
@@ -132,7 +132,7 @@ export function useTable(name, newGame, sides, first, bot) {
   // and the table's mode to its (the game's own, Go's the table's)
   const kept = useMemo(
     () => game && { table: name, game, seats, mode: game.mode ?? mode },
-    [game, seats[0], seats[1], mode], // eslint-disable-line react-hooks/exhaustive-deps
+    [game, ...seats, mode], // eslint-disable-line react-hooks/exhaustive-deps
   );
   useAutoSave(name, game?.last.kind !== "new" && kept, game?.id);
   // every game played here recorded on the device, for the stats, with
@@ -156,7 +156,9 @@ export function useTable(name, newGame, sides, first, bot) {
     PLAYS.find((p) => p.game === name);
   // who sat there, or as at the table (`named`), its side
   const sat = (s, i) =>
-    (s.seats[0]?.id !== s.seats[1]?.id && s.seats[i]?.name) || t(sides[i]);
+    (s.seats.filter((u) => u?.id === s.seats[i]?.id).length < 2 &&
+      s.seats[i]?.name) ||
+    t(sides[i]);
   const saves = {
     name,
     state: kept,
@@ -170,12 +172,12 @@ export function useTable(name, newGame, sides, first, bot) {
         s.game.winner
           ? t(`${sat(s, s.game.winner.seat)} wins!`)
           : s.game.turn !== null && t(`${sat(s, s.game.turn)}'s turn`),
-        [0, 1].map((i) => `${sat(s, i)} ${s.game.score[i]}`).join(", "),
+        sides.map((_, i) => `${sat(s, i)} ${s.game.score[i]}`).join(", "),
       ]
         .filter(Boolean)
         .join(" · "),
     seats: (s) =>
-      [0, 1].map((i) => [t(sides[i]), s.seats[i]?.name, seats[i]?.name]),
+      sides.map((_, i) => [t(sides[i]), s.seats[i]?.name, seats[i]?.name]),
     load: (s) =>
       map.doc.transact(() => {
         map.set("mode", s.mode);
@@ -250,13 +252,17 @@ export function useTable(name, newGame, sides, first, bot) {
     facing,
     setFacing,
     here,
-    names: [0, 1].map(named),
+    names: sides.map((_, i) => named(i)),
     // the room's here: a game, or a seat taken waiting for one
     live: !!game || seats.some(Boolean),
     note: game
       ? null
       : seats.some(Boolean)
-        ? t("Waiting for a second player")
+        ? t(
+            sides.length > 2
+              ? "Waiting for players"
+              : "Waiting for a second player",
+          )
         : t("Sit down to play"),
     // a player's move (a bot's is written by the bot's driver, above)
     act: (next) => next && map.set("game", { ...next, touched: true }),
@@ -443,12 +449,15 @@ function Menu({
 // The table (useTable): the players and their scores beside the board, the
 // ⋯ menu in the corner, and the board, `children`, as big as the room
 // left fits. `mark(seat)`: the side's piece; `info(seat)`: a number by
-// its name; `options`: the game's own settings, in the menu.
+// its name; `options`: the game's own settings, in the menu. A board that
+// seats its players round it itself (Batak) is a function, given each
+// seat's plate: `children(plate)`.
 export function Table({ table, mark, info, options, children }) {
   const { seats, game, mine, seated, both, full, near, far, across } = table;
   const { volume, setVolume } = useVolume();
   const { hints } = useKeyHints();
-  const score = game?.score ?? [0, 0];
+  const score = game?.score ?? seats.map(() => 0);
+  const around = typeof children === "function";
   const plate = (s) => (
     <Plate
       mark={mark(s)}
@@ -468,10 +477,12 @@ export function Table({ table, mark, info, options, children }) {
     />
   );
   return (
-    <div className={hints ? "tb-fit" : "tb-fit no-keys"}>
+    <div
+      className={`tb-fit${hints ? "" : " no-keys"}${around ? " around" : ""}`}
+    >
       <div className="tb-head">
-        {plate(far)}
-        {plate(near)}
+        {!around && plate(far)}
+        {!around && plate(near)}
         <Menu
           volume={volume}
           setVolume={setVolume}
@@ -479,9 +490,15 @@ export function Table({ table, mark, info, options, children }) {
           facing={table.facing}
           setFacing={both && table.setFacing}
           stand={seated && table.stand}
-          playBoth={seated && !full && (() => table.sit(1 - mine[0]))}
-          free={[0, 1]
-            .filter((i) => seats[i] && !mine.includes(i))
+          // two seats only: a hand of cards isn't for passing round
+          playBoth={
+            seats.length === 2 &&
+            seated &&
+            !full &&
+            (() => table.sit(1 - mine[0]))
+          }
+          free={seats
+            .flatMap((u, i) => (u && !mine.includes(i) ? [i] : []))
             .map((i) => ({
               seat: i,
               name: table.names[i],
@@ -492,11 +509,11 @@ export function Table({ table, mark, info, options, children }) {
           resetScore={
             table.hosts &&
             game?.score.some(Boolean) &&
-            (() => table.act({ ...game, score: [0, 0] }))
+            (() => table.act({ ...game, score: score.map(() => 0) }))
           }
         />
       </div>
-      <div className="tb-wrap">{children}</div>
+      <div className="tb-wrap">{around ? children(plate) : children}</div>
     </div>
   );
 }

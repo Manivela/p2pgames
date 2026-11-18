@@ -164,6 +164,54 @@ export const PLAYS = [
     kind,
     icon: tile,
   })),
+  {
+    game: "batak",
+    mode: "batak",
+    name: "Batak",
+    icon: (
+      <>
+        <rect width="40" height="40" fill="#2a6a1f" />
+        <g stroke="#bbb" strokeWidth="0.8">
+          <rect
+            x="6"
+            y="8"
+            width="17"
+            height="24"
+            rx="2"
+            fill="#fffdf8"
+            transform="rotate(-12 14 20)"
+          />
+          <rect
+            x="17"
+            y="8"
+            width="17"
+            height="24"
+            rx="2"
+            fill="#fffdf8"
+            transform="rotate(10 26 20)"
+          />
+        </g>
+        <text
+          x="11"
+          y="23"
+          fontSize="11"
+          fill="#1c1c1c"
+          transform="rotate(-12 14 20)"
+        >
+          ♠
+        </text>
+        <text
+          x="23"
+          y="25"
+          fontSize="11"
+          fill="#c62828"
+          transform="rotate(10 26 20)"
+        >
+          ♥
+        </text>
+      </>
+    ),
+  },
   // its board's size picked at the table (its ⋯): the rules are the same
   {
     game: "go",

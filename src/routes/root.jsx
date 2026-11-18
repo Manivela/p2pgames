@@ -22,6 +22,7 @@ const GAMES = {
   tictactoe: lazy(() => import("../Components/TicTacToe")),
   backgammon: lazy(() => import("../Components/Backgammon")),
   go: lazy(() => import("../Components/Go")),
+  batak: lazy(() => import("../Components/Batak")),
 };
 
 // Whether the room's game is known: it's come over the network, or this

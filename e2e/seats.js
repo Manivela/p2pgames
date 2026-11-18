@@ -30,6 +30,7 @@ const FIRST = {
   tictactoe: /^(Tic-tac-toe Classic|XOX Klasik)$/,
   backgammon: /^(Backgammon|Tavla)$/,
   go: /^Go$/,
+  batak: /^Batak$/,
 };
 const made = new Set();
 
