@@ -45,6 +45,31 @@ if (!webrtc) {
 // pages load and answer taps: its loader (Performance on in the project's
 // Client Keys settings) fetches the SDK with tracing at once
 if (import.meta.env.PROD && location.hostname !== "localhost") {
+  // every event tagged with the screen it came from, which Sentry can't tell
+  // on its own: the window and the screen in CSS pixels, the pixel ratio and
+  // which way it's turned, as they were at load. The loader calls this before
+  // its own init, and merges these options into it
+  window.sentryOnLoad = () => {
+    const { Sentry } = window;
+    const shown = {
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+      screen: `${screen.width}x${screen.height}`,
+      dpr: window.devicePixelRatio,
+      orientation: screen.orientation?.type,
+    };
+    // tags for errors, attributes for the spans tracing streams
+    Sentry.init({ initialScope: { tags: shown, attributes: shown } });
+    // the phone's model, which Android Chrome leaves out of its user agent
+    // ("K") but gives a page that asks, with no prompt; Safari and Firefox
+    // don't say
+    navigator.userAgentData
+      ?.getHighEntropyValues(["model"])
+      .then(({ model }) => {
+        if (!model) return;
+        Sentry.setTag("model", model);
+        Sentry.setAttribute("model", model);
+      });
+  };
   document.head.append(
     Object.assign(document.createElement("script"), {
       src: "https://js.sentry-cdn.com/5265340ee468b6a55143d3db1ac2cf4a.min.js",

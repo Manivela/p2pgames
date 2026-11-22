@@ -2171,6 +2171,30 @@ test("another player's move flies across the table", async ({ page }, info) => {
   await expect.poll(flights).toBeGreaterThan(before);
 });
 
+// a frame held up while a tile flies is a hitch, sent to Sentry (here, in
+// development, window.hitches), blamed on the page's own work where the
+// browser's long animation frames cover it (hitches.js)
+test("a frame held up while a tile flies is sent as a hitch", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 1); // my discard
+  await page.evaluate(async () => {
+    (await import("/e2e/table.js")).play(1); // Bora's, flying to his pile
+    const flying = () =>
+      document.getAnimations().some((a) => a.constructor === Animation);
+    while (!flying()) await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+    const until = performance.now() + 150;
+    while (performance.now() < until);
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.hitches?.[0]?.tags))
+    .toEqual({ hitch: "main thread", moving: "move" });
+});
+
 test("tiles taken out of turn fly into their slots on my rack", async ({
   page,
 }, info) => {

@@ -35,8 +35,8 @@ Worth doing once a slower device shows a hitch.
 
 - **`:has()` selectors:** all 18 rules dropped changed little.
 - **`removeChild`** can show several ms in a profile. That's the profiler's attribution: removals timed directly take under 0.5 ms.
-- **Sentry** can't see this. Its tracing (the loader in `main.jsx`) covers page loads and how fast taps are answered, never frames during play. Its long frames are all at load, the worst Cloudflare's Rocket Loader (a zone setting, up to 400 ms).
-- **What was felt on the deployed site** (choppy discards) isn't the main thread's on this Mac. When it's felt again, record DevTools' Performance panel in that browser while it happens; a probe that sends players' hitches to Sentry is designed in TODO.md (Every table). Candidates:
+- **Sentry's tracing** can't see this: it (the loader in `main.jsx`) covers page loads and how fast taps are answered, never frames during play. Hitches during play reach it through `src/hitches.js` instead. Its long frames are all at load, the worst Cloudflare's Rocket Loader (a zone setting, up to 400 ms).
+- **What was felt on the deployed site** (choppy discards) isn't the main thread's on this Mac. When it's felt again, record DevTools' Performance panel in that browser while it happens; meanwhile `src/hitches.js` sends players' hitches to Sentry, with what held each up where Chrome can say. Candidates:
   - GPU stalls: shaders compiled into an empty cache, 100–260 ms in a fresh browser.
   - A browser capping the frame rate: Opera GX's GX Control, or Chrome's Energy Saver at 30 fps.
 

@@ -3,6 +3,7 @@ import { OkeyContext } from "./OkeyContext";
 import { symbols } from "./constants";
 import { isOkey } from "./melds";
 import { t } from "../../i18n";
+import { watch } from "../../hitches";
 
 // Moves animate from state diffs: tiles keep their ids within a deal, so
 // comparing where each tile was and is now tells what happened, and a copy
@@ -464,4 +465,13 @@ export function useMoves() {
       }
     }
   }, [okeyState, me, dragged]);
+
+  // while what that set off is still moving, the frames are timed for
+  // hitches (hitches.js): the animations made here, never CSS's own
+  useLayoutEffect(() => {
+    if (flying()) watch("move", flying);
+  }, [okeyState]);
 }
+
+const flying = () =>
+  document.getAnimations().some((a) => a.constructor === Animation);

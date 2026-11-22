@@ -13,6 +13,7 @@ import Board from "./Board";
 import { OkeyContext, OkeyProvider } from "./OkeyContext";
 import { PRESETS } from "./rulesets";
 import Tile, { SLOP } from "./Tile";
+import { watch } from "../../hitches";
 import "./rack.css";
 
 // The table to the site's menu (Menu.jsx, Table's useTable does the same):
@@ -78,6 +79,11 @@ function DragPreview() {
   const offset = useSyncExternalStore(subscribe, () =>
     monitor.getClientOffset(),
   );
+  // while a tile is dragged, the frames are timed for hitches (hitches.js)
+  const dragging = !!item;
+  useEffect(() => {
+    if (dragging) watch("drag", () => monitor.isDragging());
+  }, [dragging, monitor]);
   // the touch backend ends a drag on touchend only: a touch the phone
   // cancels (its own long press, a system gesture) would leave the tile in
   // the air
