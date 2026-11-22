@@ -1450,7 +1450,9 @@ test("a claim waits in the slot it was dropped on, and can be taken back", () =>
   s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
 
   s = okey.claimDiscard(s, 3, 20);
-  assert.deepEqual(player(s, 3).claim, { id: s.offer.id, slot: 20 });
+  const width = okey.rowOf(s, 3);
+  const penalty = okey.penaltySlot(player(s, 3).hand, 20, width);
+  assert.deepEqual(player(s, 3).claim, { id: s.offer.id, slot: 20, penalty });
   s = okey.claimDiscard(s, 3, null);
   assert.isEmpty(okey.claimants(s));
 
@@ -1486,6 +1488,53 @@ test("a claim dropped on a tile is made room for; its penalty tile lands beside 
   assert.equal(player(s, 3).hand[at].id, offered.id);
   assert.equal(player(s, 3).hand[penalty].id, drawnNext);
   assertAllTiles(s);
+});
+
+test("a claim's ghosts land where they were moved, the discard as it was turned", () => {
+  let s = okey.startGame(seated(3));
+  s = okey.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  const offered = player(s, 1).discardPile.at(-1);
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  s = okey.claimDiscard(s, 3, 20);
+  // turned face down, and again, and again: down
+  for (let i = 0; i < 3; i++) s = okey.flipTile(s, 3, offered.id);
+  assert.isTrue(player(s, 3).claim.hidden);
+  // its penalty tile moved off to the other row's end
+  const { claim } = player(s, 3);
+  const waiting = {
+    tile: { ...offered, source: "claim-3" },
+    slot: claim.slot,
+    claim: true,
+    penalty: { tile: { id: "penalty" }, slot: claim.penalty },
+  };
+  const end = player(s, 3).hand.lastIndexOf(null);
+  s = okey.moveTiles(s, 3, ["penalty"], end, "penalty", waiting);
+  assert.equal(player(s, 3).claim.penalty, end);
+  s = okey.discardTile(s, 2, player(s, 2).hand.find(Boolean), afterWait(s));
+  const drawnNext = player(s, 3).inbox.at(-1).id;
+  s = okey.collectInbox(s, 3);
+  const hand = player(s, 3).hand;
+  assert.equal(hand[20].id, offered.id);
+  assert.isTrue(hand[20].hidden);
+  assert.equal(hand[end].id, drawnNext);
+  assert.isFalse(hand[end].hidden);
+  assertAllTiles(s);
+});
+
+test("a claim taken back leaves no turn behind; nothing else turns as a claim", () => {
+  let s = okey.startGame(seated(3));
+  s = okey.discardTile(s, 1, player(s, 1).hand.find(Boolean));
+  const offered = player(s, 1).discardPile.at(-1);
+  s = okey.drawTile(s, 2, s.drawPile.at(-1), 25);
+  // no claim of mine on it: not mine to turn
+  assert.isUndefined(okey.flipTile(s, 3, offered.id));
+  s = okey.claimDiscard(s, 3, 20);
+  assert.isUndefined(okey.flipTile(s, 3, "penalty"));
+  s = okey.flipTile(s, 3, offered.id);
+  s = okey.claimDiscard(s, 3, null);
+  assert.isNull(player(s, 3).claim);
+  s = okey.claimDiscard(s, 3, 20);
+  assert.isUndefined(player(s, 3).claim.hidden);
 });
 
 test("El aç with nothing picked: the round's melds out of the whole rack, the highest first, okeys last", () => {

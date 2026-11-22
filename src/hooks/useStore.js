@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { customNanoid } from "../utils/customNanoid";
+import { speak } from "../i18n";
 
 // define the initial state
 const initialState = {
@@ -55,6 +56,17 @@ export const useKeyHints = create(
     },
   ),
 );
+
+// this device's language, "en" or "tr" (⋯ → Settings); null till one's
+// picked: the device's own. t() reads it (i18n.js), root.jsx redraws.
+export const useLanguage = create(
+  persist((set) => ({ lang: null, setLang: (lang) => set({ lang }) }), {
+    name: "language",
+    storage: createJSONStorage(() => localStorage),
+  }),
+);
+speak(useLanguage.getState().lang);
+useLanguage.subscribe(({ lang }) => speak(lang));
 
 // backgammon's home on the left on this device, as some play it (its ⋯ menu)
 export const useLeftHome = create(

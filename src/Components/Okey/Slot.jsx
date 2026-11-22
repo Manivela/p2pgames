@@ -14,6 +14,7 @@ function Slot({
   canDiscard,
   disabled,
   onDragOff,
+  onFlip,
   // what lies under its tile (a pile's next tile, DiscardPile)
   under,
   ...props
@@ -60,6 +61,7 @@ function Slot({
           tile={tile}
           disabled={disabled}
           onDragOff={onDragOff}
+          onFlip={onFlip}
         />
       )}
     </div>

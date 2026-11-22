@@ -1,5 +1,5 @@
-import { t } from "../i18n";
-import { useKeyHints, useVolume } from "../hooks/useStore";
+import { t, turkish } from "../i18n";
+import { useKeyHints, useLanguage, useVolume } from "../hooks/useStore";
 import { useWaitAll } from "../hooks/useRoom";
 import { Dialog } from "./Saves";
 
@@ -10,6 +10,7 @@ import { Dialog } from "./Saves";
 export default function Settings({ device, everyone, onClose }) {
   const { volume, setVolume } = useVolume();
   const { hints, setHints } = useKeyHints();
+  const setLang = useLanguage((s) => s.setLang);
   const [wait, setWait] = useWaitAll();
   return (
     <Dialog title={t("Settings")} className="prefs" onClose={onClose}>
@@ -25,6 +26,17 @@ export default function Settings({ device, everyone, onClose }) {
             value={volume}
             onChange={(e) => setVolume(Number(e.target.value))}
           />
+        </label>
+        {/* each language named in its own: the device's till one's picked */}
+        <label>
+          <span>{t("Language")}</span>
+          <select
+            value={turkish ? "tr" : "en"}
+            onChange={(e) => setLang(e.target.value)}
+          >
+            <option value="en">English</option>
+            <option value="tr">Türkçe</option>
+          </select>
         </label>
         {/* the keycaps on the tables' buttons: on at first on a computer */}
         <label>

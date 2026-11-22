@@ -211,6 +211,14 @@ export const ONE_O_ONE = {
 // Set up a game): Americano, the one most play
 export const PRESETS = [AMERICANO, CLASSIC, ONE_O_ONE];
 
+// the rules the next game starts with (the lobby's), the first preset until
+// someone picks; a setting they lack (written by an older build, or a game
+// of one just ended) at its default, as a kept ruleset's are
+export const setupOf = (state) => ({
+  ...DEFAULTS,
+  ...(state.setup ?? PRESETS[0]),
+});
+
 // Turkish "3'lü", "5'li", "6'lı", "9'lu": by how the number ends
 const SUFFIX = ["lu", "li", "li", "lü", "lü", "li", "lı", "li", "li", "lu"];
 const KIND = { kut: "küt", seri: "seri" };

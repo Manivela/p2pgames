@@ -24,6 +24,7 @@ export const CHECK_ENDED = /^(Ready check ended|Bekleme bitti)$/;
 // on to the next round or game without the rest's press (⋯)
 export const GO_ON = /^(Go on without waiting|Beklemeden devam et)$/;
 export const SOUND = /^(Sound|Ses)$/;
+export const LANGUAGE = /^(Language|Dil)$/;
 
 // a table's ⋯ → Settings (Settings.jsx, Okey's too), closed with Escape
 export async function settings(page) {

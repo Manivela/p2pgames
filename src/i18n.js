@@ -1,10 +1,16 @@
 // Text follows the device language: Turkish devices get Turkish, everyone
-// else English. Rules and shared messages are written in English and
-// translated on display, so each player reads their own language. TR takes
-// the first pattern that matches: a specific one sits above any catch-all it
-// would hit ("No tiles left" above "(.+) left"). i18n.test.js checks the
-// `return "…"` messages of the rules files it lists: a new one joins it.
-export const turkish = /^tr\b/i.test(globalThis.navigator?.language ?? "");
+// else English, till a language is picked in ⋯ → Settings. Rules and shared
+// messages are written in English and translated on display, so each player
+// reads their own language. TR takes the first pattern that matches: a
+// specific one sits above any catch-all it would hit ("No tiles left" above
+// "(.+) left"). i18n.test.js checks the `return "…"` messages of the rules
+// files it lists: a new one joins it.
+const device = /^tr\b/i.test(globalThis.navigator?.language ?? "");
+export let turkish = device;
+
+// the language picked on this device, "en" or "tr", null for the device's
+// (useLanguage in hooks/useStore.js, which sets it; root.jsx redraws)
+export const speak = (lang) => (turkish = lang ? lang === "tr" : device);
 
 const COLORS = { red: "kırmızı", black: "siyah", blue: "mavi", yellow: "sarı" };
 
@@ -581,6 +587,7 @@ const TR = [
   // the room's settings (Settings.jsx, hooks/useRoom.js)
   [/^Settings$/, "Ayarlar"],
   [/^This device$/, "Bu cihaz"],
+  [/^Language$/, "Dil"],
   [/^Everyone here$/, "Buradaki herkes"],
   [/^Next round waits for$/, "Sonraki el kimi bekler"],
   [/^Everyone$/, "Herkesi"],

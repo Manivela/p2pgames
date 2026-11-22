@@ -22,17 +22,13 @@ import {
   upForClaim,
   ended,
   partner,
-  penaltySlot,
+  flipTile,
   placeTiles,
   rowOf,
   seatAt,
 } from "./okey";
 import { seatColors } from "./constants";
 import TeaGlass from "./TeaGlass";
-
-// a claim's penalty tile on the rack before it's drawn: face down, as no
-// one knows it yet
-const PENALTY = { id: "penalty", source: "claim", hidden: true };
 
 const turnOf = (s, player) =>
   s.gameState === "play" && s.currentPlayer === player;
@@ -156,6 +152,7 @@ function Rack({ player, hands }) {
     takeBack,
     held,
     unhold,
+    flipHeld,
     waiting,
   } = useContext(OkeyContext);
   const offer = upForClaim(okeyState);
@@ -164,18 +161,24 @@ function Rack({ player, hands }) {
     offer?.tileId === tile.id && me !== okeyState.currentPlayer;
   // My claim on the discard, or my draw while the others have time to
   // catch the discard, waits as a ghost in the slot I dropped it on
-  // (OkeyContext's `waiting`): moved along the rack as any tile, the others
-  // making room for it; dragged off the rack, it's withdrawn. A claim's
-  // penalty tile, unknown till it's drawn, a blank ghost where it'll land.
+  // (OkeyContext's `waiting`): moved along the rack and turned as any tile,
+  // the others making room for it; dragged off the rack, it's withdrawn. A
+  // claim's penalty tile, unknown till it's drawn, a blank ghost beside it,
+  // moved and dragged off as any ghost too.
   const ghost = me === player &&
     waiting && {
       ...waiting,
       cancel: waiting.claim ? () => act(claimDiscard, me, null) : unhold,
+      flip: waiting.claim ? () => act(flipTile, me, waiting.tile.id) : flipHeld,
     };
-  const isGhost = (tile) => !!ghost && tile?.id === ghost.tile.id;
+  const isPenalty = (tile) => !!tile && tile.id === ghost?.penalty?.tile.id;
+  const isGhost = (tile) =>
+    !!ghost && (tile?.id === ghost.tile.id || isPenalty(tile));
   function onDrop(tile, toIndex) {
     if (isGhost(tile) || tile.source.includes("hand")) {
       moveTile(player, tile, toIndex);
+    } else if (tile.id === "penalty") {
+      // its claim just won or lost: nothing to move
     } else if (tile.source.startsWith("claim-") || claim(tile)) {
       // a claim, or its ghost just won or lost: refused then, not a draw
       act(claimDiscard, me, toIndex);
@@ -188,12 +191,11 @@ function Rack({ player, hands }) {
   const over = ended(okeyState);
   const hand = me === player && !over ? myHand(player) : [];
   const width = rowOf(okeyState, player);
-  // the rack as it shows: the ghost in its slot with the rest
+  // the rack as it shows: the ghosts in their slots with the rest
   const shown = [...hand];
-  if (ghost && ghost.slot >= 0 && !shown[ghost.slot]) {
-    shown[ghost.slot] = ghost.tile;
+  for (const g of [ghost, ghost?.penalty]) {
+    if (g && g.slot >= 0 && !shown[g.slot]) shown[g.slot] = g.tile;
   }
-  const penalty = ghost?.claim ? penaltySlot(hand, ghost.slot, width) : -1;
 
   // A tile held over a slot shows what dropping it there would do
   // (placeTiles): the tiles in its way slide aside, the moved ones leave
@@ -229,13 +231,11 @@ function Rack({ player, hands }) {
     moved.length > 0 &&
     placeTiles(shown, width, moved, hover.index, dragging.id);
   function slotProps(tile, index) {
-    if (!tile && index === penalty && !preview) {
-      return { tile: PENALTY, className: "ghost", disabled: true };
-    }
     const ghostly = isGhost(tile);
     const props = {
       tile: tile?.id === held ? null : tile,
       ...(ghostly && { onDragOff: ghost.cancel }),
+      ...(ghostly && !isPenalty(tile) && { onFlip: ghost.flip }),
     };
     const cls = (...c) => [ghostly && "ghost", ...c].filter(Boolean).join(" ");
     if (!preview) return { ...props, className: cls() };

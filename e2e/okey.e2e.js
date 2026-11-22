@@ -1,6 +1,7 @@
 import { expect, test } from "./test";
 import {
   HINTS,
+  LANGUAGE,
   READY,
   WAIT_ALL,
   settings,
@@ -1059,6 +1060,30 @@ test("your own rack's rows are set mid-round, and your hand moves onto them", as
   expect(await page.evaluate(kept)).toBe(11);
 });
 
+// your own rack's rows, set in the lobby: the game's first deal fills them,
+// the top row first, as on the table's
+test("your own rack's rows set in the lobby are the ones dealt onto", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await settings(page);
+  const rows = page.getByLabel(
+    /^(Slots in each row of your own rack|Kendi ıstakanın her sırasındaki)/,
+  );
+  await rows.fill("11");
+  await rows.press("Enter");
+  await page.keyboard.press("Escape");
+  await table(page, "seatBots", 4);
+  await page.getByRole("button", { name: START }).click();
+  await expect.poll(async () => (await state(page))?.gameState).toBe("play");
+  // the starter's 15: the top row's 11, then the bottom's first 4
+  const dealt = (await handIds(page)).map(Boolean);
+  expect(dealt).toEqual([...Array(15).fill(true), ...Array(7).fill(false)]);
+  await expect(page.locator(".rack:not(.mini) .top > *")).toHaveCount(11);
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+});
+
 // the settings: a game set up any way, started from them and kept on this
 // device under a name, for the next night
 test("a game set up in the settings starts that way, and is kept", async ({
@@ -1862,6 +1887,48 @@ test("the sound level is set in the settings and kept", async ({ page }) => {
   await expect(page.getByLabel(SOUND)).toHaveValue("0.3");
 });
 
+// a language picked mid-round draws the table afresh in it (root.jsx):
+// the hand as it was, and its tiles still taken, moved and thrown
+test("a language picked mid-round keeps the hand playable", async ({
+  page,
+}, info) => {
+  anySize(info);
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "toMyTurn", false);
+  const before = await handIds(page);
+  const tr = info.project.use.locale === "tr-TR";
+  await settings(page);
+  await page
+    .getByRole("combobox", { name: LANGUAGE })
+    .selectOption(tr ? "en" : "tr");
+  await expect(
+    page.getByRole("button", { name: tr ? "Table menu" : "Masa menüsü" }),
+  ).toBeVisible();
+  expect(await handIds(page)).toEqual(before);
+  // the left discard taken, moved along the rack, then thrown
+  const top = (await state(page)).players[3].discardPile.at(-1).id;
+  const [a, b] = [
+    before.indexOf(null),
+    before.indexOf(null, before.indexOf(null) + 1),
+  ];
+  await drag(page, page.locator('[data-pile="4"] .slot .tile'), slot(page, a));
+  await expect.poll(async () => (await handIds(page))[a]).toBe(top);
+  await drag(page, slot(page, a).locator(".tile"), slot(page, b));
+  await expect.poll(async () => (await handIds(page))[b]).toBe(top);
+  await drag(
+    page,
+    slot(page, b).locator(".tile"),
+    page.locator('[data-pile="1"] .slot'),
+  );
+  await expect
+    .poll(async () => (await state(page)).players[0].discardPile.at(-1)?.id)
+    .toBe(top);
+  expect(errors).toEqual([]);
+});
+
 // a second player, in the same browser: tabs sync over BroadcastChannel,
 // and this one keeps the game while the first reloads, once it has it.
 // build: a newer one it runs
@@ -2178,6 +2245,153 @@ test("a claim's ghost is made room for, and its tiles land where shown", async (
   await expect(page.locator(".rack .ghost")).toHaveCount(0);
 });
 
+// Americano: a claim's penalty tile, a blank ghost, stays in sight while
+// a tile is held, and moves as any tile; won, its tile lands where it is
+test("a claim's blank stays while a tile is held, and moves as any", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora: Bora's discard on offer
+  const offered = (await state(page)).players[1].discardPile.at(-1).id;
+  const free = (await handIds(page)).indexOf(null);
+  await drag(page, page.locator('[data-pile="2"] .slot'), slot(page, free));
+  const blank = page.locator('.rack:not(.mini) [data-tile-id="penalty"]');
+  await expect(blank).toHaveCount(1);
+  // a tile of mine held over the rack, not let go
+  const ids = await handIds(page);
+  const a = await slot(page, ids.findIndex(Boolean))
+    .locator(".tile")
+    .boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  const b = await slot(page, ids.lastIndexOf(null)).boundingBox();
+  await holdAt(page, b.x + b.width / 2, b.y + b.height / 2);
+  await expect(page.locator(".rack.holding")).toHaveCount(1);
+  await expect(blank).toBeVisible();
+  await page.mouse.up();
+  // the blank dragged to a free slot away from its claim stays there
+  const claim = async () => (await state(page)).players[0].claim;
+  const { slot: at, penalty } = await claim();
+  const to = (await handIds(page)).findIndex(
+    (t, i) => !t && i !== penalty && Math.abs(i - at) > 1,
+  );
+  await drag(page, blank, slot(page, to));
+  await expect.poll(async () => (await claim()).penalty).toBe(to);
+  await expect(slot(page, to).locator('[data-tile-id="penalty"]')).toHaveCount(
+    1,
+  );
+  // the next player discards: the claim's won, each tile where its ghost was
+  await table(page, "play", 1);
+  await expect.poll(async () => (await handIds(page))[at]).toBe(offered);
+  expect((await handIds(page))[to]).not.toBeNull();
+  await expect(blank).toHaveCount(0);
+});
+
+// a claim into the rack's last free slot: its ghost, and no blank, as its
+// penalty tile has nowhere to wait
+test("a claim into the last free slot waits with no blank", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora: Bora's discard on offer
+  // every gap on my rack filled from the pile but the last
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    const drawPile = [...s.drawPile];
+    const [me, ...rest] = s.players;
+    const last = me.hand.lastIndexOf(null);
+    const hand = me.hand.map(
+      (t, i) =>
+        t ||
+        (i === last
+          ? null
+          : { ...drawPile.pop(), source: "hand-1", hidden: false }),
+    );
+    window.okey.set({ ...s, drawPile, players: [{ ...me, hand }, ...rest] });
+  });
+  const free = (await handIds(page)).indexOf(null);
+  await drag(page, page.locator('[data-pile="2"] .slot'), slot(page, free));
+  await expect(slot(page, free)).toHaveClass(/ghost/);
+  await expect(page.locator('[data-tile-id="penalty"]')).toHaveCount(0);
+  expect((await state(page)).players[0].claim.penalty).toBe(-1);
+});
+
+// a tile turned: a right click, or on a phone held still and let go
+async function turn(page, info, tile) {
+  if (info.project.name === "desktop") return tile.click({ button: "right" });
+  const touch = (type) =>
+    tile.evaluate((el, type) => {
+      const r = el.getBoundingClientRect();
+      const t = new Touch({
+        identifier: 1,
+        target: el,
+        clientX: r.left + r.width / 2,
+        clientY: r.top + r.height / 2,
+      });
+      const on = type === "touchstart" ? [t] : [];
+      el.dispatchEvent(
+        new TouchEvent(type, {
+          touches: on,
+          targetTouches: on,
+          changedTouches: [t],
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }, type);
+  await touch("touchstart");
+  await page.waitForTimeout(800);
+  await touch("touchend");
+}
+
+// the tile waiting on the rack, a claim's or a draw's that waits out the
+// others' time, turns face down as any tile, and lands as it lies
+test("a claim waiting on the rack turns as any, and lands as it lies", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await table(page, "start", 4);
+  await table(page, "play", 2); // me, then Bora: Bora's discard on offer
+  const offered = (await state(page)).players[1].discardPile.at(-1).id;
+  const free = (await handIds(page)).indexOf(null);
+  await drag(page, page.locator('[data-pile="2"] .slot'), slot(page, free));
+  const ghost = page.locator(`.rack:not(.mini) [data-tile-id="${offered}"]`);
+  await turn(page, info, ghost);
+  await expect(ghost).toHaveClass(/back/);
+  await table(page, "play", 1);
+  const tile = async (id) =>
+    (await state(page)).players[0].hand.find((t) => t?.id === id);
+  await expect.poll(async () => (await tile(offered))?.hidden).toBe(true);
+});
+
+test("a draw waiting out the others' time turns, and is drawn as it lies", async ({
+  page,
+}, info) => {
+  anySize(info);
+  await sitDown(page);
+  await stages.play(page);
+  await table(page, "toMyTurn", false);
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    const rules = { ...s.rules, catchWaitSeconds: 4 };
+    window.okey.set({ ...s, discardFits: true, rules });
+  });
+  const top = (await state(page)).players[3].discardPile.at(-1).id;
+  const gap = (await handIds(page)).indexOf(null);
+  await drag(page, page.locator('[data-pile="4"] .slot'), slot(page, gap));
+  await expect(slot(page, gap)).toHaveClass(/ghost/);
+  await turn(page, info, slot(page, gap).locator(".tile"));
+  await expect(slot(page, gap).locator(".tile")).toHaveClass(/back/);
+  const tile = async () =>
+    (await state(page)).players[0].hand.find((t) => t?.id === top);
+  await expect.poll(async () => (await tile())?.hidden, NET).toBe(true);
+});
+
 // Americano: a claim on the discard, dragged off the rack, is withdrawn
 test("a claim's ghost dragged off the rack withdraws it", async ({
   page,
@@ -2187,12 +2401,21 @@ test("a claim's ghost dragged off the rack withdraws it", async ({
   await table(page, "start", 4);
   await table(page, "play", 2); // me, then Bora: Bora's discard on offer
   const free = (await handIds(page)).indexOf(null);
-  await drag(page, page.locator('[data-pile="2"] .slot'), slot(page, free));
+  const claim = () =>
+    drag(page, page.locator('[data-pile="2"] .slot'), slot(page, free));
+  await claim();
   await expect(slot(page, free)).toHaveClass(/ghost/);
   await drag(page, slot(page, free).locator(".tile"), await felt(page));
   await expect(slot(page, free)).not.toHaveClass(/ghost/);
   expect((await state(page)).players[0].claim).toBeNull();
   await expect(page.locator("[role=status]")).toHaveCount(0);
+  // and its penalty tile's blank, dragged off, too
+  await claim();
+  const blank = page.locator('.rack:not(.mini) [data-tile-id="penalty"]');
+  await expect(blank).toHaveCount(1);
+  await drag(page, blank, await felt(page));
+  await expect(page.locator(".rack:not(.mini) .ghost")).toHaveCount(0);
+  expect((await state(page)).players[0].claim).toBeNull();
 });
 
 // Americano's out-of-turn takes: yours this round, beside the round's name;

@@ -18,6 +18,7 @@ import {
   keptRulesets,
   pointsRound,
   roundName,
+  setupOf,
 } from "./rulesets";
 import { customNanoid } from "../../utils/customNanoid";
 import { t } from "../../i18n";
@@ -251,14 +252,6 @@ const meldName = ([type, size]) =>
   type === "pair" ? t("Pair") : t(roundName([[type, size]]));
 
 const number = (v) => (v === "" ? null : Number(v));
-
-// the rules the next game starts with, the first preset until someone
-// picks; a setting they lack (written by an older build, or a game of one
-// just ended) at its default, as a kept ruleset's are
-const setupOf = (okeyState) => ({
-  ...DEFAULTS,
-  ...(okeyState.setup ?? PRESETS[0]),
-});
 
 // The lobby: the rules the next game starts with, shared by everyone in the
 // room (`setup`) and anyone's to change; picked from the presets and this

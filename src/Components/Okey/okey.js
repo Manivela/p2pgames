@@ -56,10 +56,21 @@ export const canFlip = (state, player, tile) =>
   state.gameState === "play" && tile.source === `hand-${player}`;
 export function flipTile(state, player, tileId) {
   const tile = seat(state, player)?.hand.find((t) => t?.id === tileId);
-  if (!tile || !canFlip(state, player, tile)) return;
+  if (!tile) return flipClaim(state, player, tileId);
+  if (!canFlip(state, player, tile)) return;
   const s = cloneDeep(state);
   const flipped = seat(s, player).hand.find((t) => t?.id === tileId);
   flipped.hidden = !flipped.hidden;
+  return s;
+}
+// the discard my claim waits on, its ghost on my rack, turned: it lands
+// as it lies (resolveOffer)
+function flipClaim(state, player, tileId) {
+  const offer = upForClaim(state);
+  const claim = seat(state, player)?.claim;
+  if (!offer || offer.tileId !== tileId || claim?.id !== offer.id) return;
+  const s = cloneDeep(state);
+  seat(s, player).claim.hidden = !claim.hidden;
   return s;
 }
 
@@ -958,7 +969,11 @@ export function claimDiscard(state, player, slot = null) {
     { tile, slot: -1 },
   );
   me.hand = placed.hand;
-  me.claim = { id: offer.id, slot: placed.slot };
+  // its penalty tile beside it, both moved along the rack from then on as
+  // any tile (game.moveTiles); won, each lands where it is (resolveOffer)
+  const row = game.rowOf(state, player);
+  const penalty = penaltySlot(placed.hand, placed.slot, row);
+  me.claim = { id: offer.id, slot: placed.slot, penalty };
   return s;
 }
 
@@ -986,9 +1001,10 @@ export function freeSlot(hand, width) {
   return i >= 0 ? i : hand.lastIndexOf(null);
 }
 
-// a won discard goes to the slot its ghost was in, if that's still free;
-// anything after it (a claim's penalty tile) right beside it, in its row,
-// else where it would go by itself (freeSlot)
+// each won tile goes to the slot its ghost was in, if that's still free;
+// one without (a claim's penalty tile with no room for its ghost) right
+// beside the one before, in its row, else where it would go by itself
+// (freeSlot)
 function intoHand(hand, tiles, width) {
   const h = [...hand];
   let last = -1;
@@ -1006,7 +1022,7 @@ function intoHand(hand, tiles, width) {
   return h;
 }
 
-// where a won claim's penalty tile will land (intoHand), its claim in
+// where a claim's penalty tile waits at first (claimDiscard), its claim in
 // `slot`: beside it in its row, else where it would go by itself; -1 off
 // the rack
 export function penaltySlot(hand, slot, width) {
@@ -1036,16 +1052,18 @@ function resolveOffer(s, current) {
   if (!winner || !s.drawPile.length || isCaught(s, offer.tileId)) return;
   const from = seat(s, offer.from);
   if (from.discardPile.at(-1)?.id !== offer.tileId) return;
+  // each where its ghost was, the discard face down if it was turned
+  const { claim } = winner;
   const won = [
-    { ...from.discardPile.at(-1), slot: winner.claim.slot },
-    s.drawPile.at(-1),
+    { ...from.discardPile.at(-1), slot: claim.slot, hidden: !!claim.hidden },
+    { ...s.drawPile.at(-1), slot: claim.penalty, hidden: false },
   ];
   from.discardPile = from.discardPile.slice(0, -1);
   s.drawPile = s.drawPile.slice(0, -1);
   s.takes = { ...s.takes, [winner.id]: (s.takes?.[winner.id] ?? 0) + 1 };
   winner.inbox = [
     ...(winner.inbox ?? []),
-    ...won.map((t) => ({ ...t, hidden: false, source: `hand-${winner.id}` })),
+    ...won.map((t) => ({ ...t, source: `hand-${winner.id}` })),
   ];
 }
 

@@ -421,7 +421,7 @@ function RackRow() {
     const v = draft === "" ? null : Number(draft);
     if (v === row) return;
     setRow(v);
-    const no = me && okeyState.rules && okey.setRow(okeyState, me, v);
+    const no = me && okey.setRow(okeyState, me, v);
     if (typeof no === "string") toast(t(no));
   };
   return (

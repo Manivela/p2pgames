@@ -1,5 +1,6 @@
 import {
   Component,
+  Fragment,
   lazy,
   Suspense,
   useCallback,
@@ -14,6 +15,7 @@ import HowToPlay, { RULES, usePlaying } from "../Components/HowToPlay";
 import Menu, { useRoomGame } from "../Components/Menu";
 import Okey from "../Components/Okey";
 import { useRoomSync } from "../hooks/useRoom";
+import { useLanguage } from "../hooks/useStore";
 import { t } from "../i18n";
 
 // the games a room plays, by the room's `game` (Menu.jsx's useRoomGame),
@@ -184,9 +186,13 @@ export default function Root() {
       // blocked: a reload alone comes back to Okey
     }
   }, [known, set, roomId, game, playing]);
+  // a language picked (⋯ → Settings) draws the room afresh in it, as each
+  // t() reads it while drawing: the doc, the connection and what's known
+  // of the room stay, so the table and its players carry on
+  const lang = useLanguage((s) => s.lang);
   if (!known) return <Awareness />;
   return (
-    <>
+    <Fragment key={lang}>
       {/* you to the others, and their pointers: open or not, the menu */}
       <Awareness />
       <RoomSync />
@@ -255,6 +261,6 @@ export default function Root() {
           </Suspense>
         </Caught>
       </div>
-    </>
+    </Fragment>
   );
 }

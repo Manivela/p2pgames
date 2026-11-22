@@ -17,6 +17,7 @@ import {
   sitDown,
   HINTS,
   WAIT_ALL,
+  LANGUAGE,
   CHECK,
   END_CHECK,
   BACK,
@@ -81,6 +82,34 @@ test("X wins in a row: both pages, the score, then O starts", async ({
   await o.getByRole("button", { name: NEXT }).click();
   await expect.poll(async () => (await game(x)).turn, NET).toBe(1);
   await expect(x.locator(".tt-ink")).toHaveCount(0);
+});
+
+// a language picked (⋯ → Settings) draws the page afresh in it, mid-game:
+// still in the room and in the seat, the game going on; kept on the device
+test("a language picked redraws the page mid-game, and is kept", async ({
+  browser,
+}, info) => {
+  const { x, o } = await twoPlayers(browser, info);
+  await cell(x, 0).click();
+  await expect(o.locator(".tt-ink")).toHaveCount(1, NET);
+  const tr = info.project.use.locale === "tr-TR";
+  await settings(x);
+  await x
+    .getByRole("combobox", { name: LANGUAGE })
+    .selectOption(tr ? "en" : "tr");
+  const menu = x.getByRole("button", {
+    name: tr ? "Table menu" : "Masa menüsü",
+    exact: true,
+  });
+  await expect(menu).toBeVisible();
+  await expect(x.locator(".tt-ink")).toHaveCount(1);
+  // the game carries on between the two
+  await cell(o, 4).click();
+  await expect(x.locator(".tt-ink")).toHaveCount(2, NET);
+  await cell(x, 1).click();
+  await expect(o.locator(".tt-ink")).toHaveCount(3, NET);
+  await x.reload();
+  await expect(menu).toBeVisible(NET);
 });
 
 // The room waits for everyone (⋯ → Settings, picked by one player for

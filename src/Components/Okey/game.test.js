@@ -298,6 +298,52 @@ test("a tile waiting on the rack is made room for, and moves as any", () => {
   assertAllTiles(s);
 });
 
+test("a claim's penalty tile waits beside it, made room for and moved as any", () => {
+  const W = {
+    tile: { id: "W" },
+    slot: 1,
+    penalty: { tile: { id: "P" }, slot: 2 },
+  };
+  const around = (row, id, at) => {
+    const hand = rack(row);
+    const tiles = [...hand, W.tile, W.penalty.tile].filter((t) => t?.id === id);
+    const {
+      hand: h,
+      slot,
+      penalty,
+    } = game.placeAround(hand, 4, tiles, at, id, W);
+    return [picture(h), slot, penalty];
+  };
+  // X dropped on P pushes it aside, W stays; neither is in the hand
+  assert.deepEqual(around("A__D" + "X___", "X", 2), ["A_XD" + "____", 1, 4]);
+  // P itself moved to the other row, W stays
+  assert.deepEqual(around("A__D" + "____", "P", 5), ["A__D" + "____", 1, 5]);
+  // through the rule, the claim keeps both slots
+  let s = game.startGame(seated(2));
+  const hand = player(s, 1).hand;
+  const [free, other] = [hand.indexOf(null), hand.lastIndexOf(null)];
+  s = {
+    ...s,
+    players: s.players.map((p) =>
+      p.id === 1
+        ? { ...p, claim: { id: 1, slot: free, penalty: free + 1 } }
+        : p,
+    ),
+  };
+  s = game.moveTiles(s, 1, ["P"], other, "P", {
+    tile: W.tile,
+    slot: free,
+    claim: true,
+    penalty: { tile: W.penalty.tile, slot: free + 1 },
+  });
+  assert.deepEqual(player(s, 1).claim, { id: 1, slot: free, penalty: other });
+  assert.notInclude(
+    player(s, 1).hand.map((t) => t?.id),
+    "P",
+  );
+  assertAllTiles(s);
+});
+
 test("picked tiles move together through the rules", () => {
   let s = game.startGame(seated(2));
   const hand = () => player(s, 1).hand;
@@ -489,6 +535,18 @@ test("a hand laid out on longer or shorter rack rows keeps its tiles and groups"
   // free slot
   const full = rows("a b c d e f _ _");
   assert.equal(ids(game.resizeRows(full, 4, 3)), "a b c e f d");
+});
+
+test("your own rack rows, set in the lobby, are the ones the first deal fills", () => {
+  let s = seated(2);
+  assert.equal(s.gameState, "start");
+  // by the next game's rules (Americano's till one's picked): 11 at least
+  assert.equal(game.setRow(s, 1, 10), "Make the rack's rows longer");
+  s = okey.startGame(game.setRow(s, 1, 11));
+  // the starter's 15: the top row's 11, then the bottom's first 4
+  const dealt = player(s, 1).hand.map(Boolean);
+  assert.deepEqual(dealt, [...Array(15).fill(true), ...Array(7).fill(false)]);
+  assert.equal(player(s, 2).hand.length, 26);
 });
 
 test("your own rack rows, set mid-round, lay out only your hand, and sync", () => {

@@ -7,7 +7,7 @@ import { useParams } from "react-router-dom";
 import { useAuthStore, useRackRow, useVolume } from "../../hooks/useStore";
 import { useReadyCheck, useTogether, WAIT_READY } from "../../hooks/useRoom";
 import * as okey from "./okey";
-import { rowFits } from "./rulesets";
+import { rowFits, setupOf } from "./rulesets";
 import * as bots from "./bot";
 import { readState, replaceState, wentBack, writeState } from "./sync";
 import { t } from "../../i18n";
@@ -351,8 +351,10 @@ export function OkeyProvider({ children }) {
   const unhold = useCallback(() => setHold(null), []);
   // The tile waiting on my rack, not in my hand yet: my claim on the
   // discard on offer (till the current player discards), or my draw held
-  // above. The rack shows it in its slot, and the others make room for it
-  // as for any tile (okey.placeAround); `claim`: it's my claim.
+  // above. The rack shows it in its slot, turned as I turned it, and the
+  // others make room for it as for any tile (okey.placeAround); `claim`:
+  // it's my claim, its penalty tile, unknown till it's drawn, a blank
+  // beside it (`penalty`, none when the rack's full).
   const waiting = React.useMemo(() => {
     const offer = okey.upForClaim(okeyState);
     const offered =
@@ -361,14 +363,32 @@ export function OkeyProvider({ children }) {
       okeyState.players.find((p) => p.id === offer.from)?.discardPile.at(-1);
     const claim = okeyState.players.find((p) => p.id === me)?.claim;
     if (offered && offered.id === offer.tileId && claim?.id === offer.id) {
+      const source = `claim-${me}`;
       return {
-        tile: { ...offered, source: `claim-${me}` },
+        tile: { ...offered, source, hidden: !!claim.hidden },
         slot: claim.slot,
         claim: true,
+        penalty:
+          claim.penalty >= 0
+            ? {
+                tile: { id: "penalty", source, hidden: true },
+                slot: claim.penalty,
+              }
+            : undefined,
       };
     }
-    return heldDraw && { tile: heldDraw.tile, slot: heldDraw.toIndex };
+    return (
+      heldDraw && {
+        tile: { ...heldDraw.tile, hidden: !!heldDraw.hidden },
+        slot: heldDraw.toIndex,
+      }
+    );
   }, [okeyState, me, heldDraw]);
+  // my held draw turned on the rack before it's drawn (Rack.jsx)
+  const flipHeld = useCallback(
+    () => setHold((h) => h && { ...h, hidden: !h.hidden }),
+    [],
+  );
   // `flies`: drawn by a key or a button (Take, D), not dragged: it flies to
   // the rack (moves.js) instead of only landing
   const drawTile = useCallback(
@@ -428,7 +448,7 @@ export function OkeyProvider({ children }) {
   }, [picking, selected]);
   // and a picked tile that leaves the rack (discarded, laid, a claim
   // lost) is unpicked
-  const inHand = [...myHand(me), waiting?.tile]
+  const inHand = [...myHand(me), waiting?.tile, waiting?.penalty?.tile]
     .filter(Boolean)
     .map((t) => t.id)
     .join();
@@ -512,6 +532,13 @@ export function OkeyProvider({ children }) {
     // made once a ready check's over
     if (paused) return;
     let timer;
+    // drawn as it lies on the rack, turned or not: in one move, as `act`
+    // works from the state it's handed
+    const draw = (s, p, ...args) => {
+      const next = okey.drawTile(s, p, ...args);
+      if (!hold.hidden || !next || typeof next === "string") return next;
+      return okey.flipTile(next, p, tile.id) ?? next;
+    };
     const move = () => {
       const now = Date.now();
       const at = turnStart.current;
@@ -523,7 +550,7 @@ export function OkeyProvider({ children }) {
       setHold(null);
       dragged.current = flies ? null : tile.id;
       if (discard) act(okey.discardTile, me, tile);
-      else act(okey.drawTile, me, tile, toIndex, now, at);
+      else act(draw, me, tile, toIndex, now, at);
     };
     move();
     return () => clearTimeout(timer);
@@ -708,11 +735,15 @@ export function OkeyProvider({ children }) {
   });
 
   // your rack's rows, this device's (⋯ → Settings), on your seat at every
-  // game, where its rules take them (rowFits); the table's where they don't
+  // game, where its rules take them (rowFits); the table's where they don't.
+  // In the lobby too, by the next game's rules, so its first deal lays your
+  // hand out on them
   const { row } = useRackRow();
   React.useEffect(() => {
-    if (!me || !okeyState.rules) return;
-    const want = row !== null && rowFits(okeyState.rules, row) ? row : null;
+    const lobby = okeyState.gameState === "start";
+    const rules = lobby ? setupOf(okeyState) : okeyState.rules;
+    if (!me || !rules) return;
+    const want = row !== null && rowFits(rules, row) ? row : null;
     const next = okey.setRow(okeyState, me, want);
     if (next && typeof next !== "string") setOkeyState(next);
   }, [me, row, okeyState, setOkeyState]);
@@ -968,6 +999,7 @@ export function OkeyProvider({ children }) {
       held,
       heldDraw,
       unhold,
+      flipHeld,
       waiting,
       openHand,
       openAll,
@@ -1020,6 +1052,7 @@ export function OkeyProvider({ children }) {
       held,
       heldDraw,
       unhold,
+      flipHeld,
       waiting,
       openHand,
       openAll,

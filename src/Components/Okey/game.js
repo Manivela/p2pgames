@@ -3,7 +3,7 @@ import { decodeSave as decode } from "../saveCode";
 import { colors, ranks } from "./constants";
 import { checkFinished } from "./checkFinish";
 import { createTile } from "./utils";
-import { rowFits } from "./rulesets";
+import { rowFits, setupOf } from "./rulesets";
 
 // A hand's moves and the table's facts, as pure functions: (state, player,
 // ...args) => new state, an error string to show the player, or undefined
@@ -499,37 +499,44 @@ export async function decodeSave(code) {
 
 // A tile waiting on the rack, not in the hand yet (`waiting`: { tile,
 // slot }, a claim's or a draw's that waits out the others' time; slot -1
-// before it's on the rack) placed with the rest as any tile is
-// (placeTiles), then left out of the hand: the others make room for it,
-// and none is dropped on it. The hand, and the waiting tile's slot now.
+// before it's on the rack), and a claim's penalty tile beside it
+// (`waiting.penalty`, the same shape), placed with the rest as any tile is
+// (placeTiles), then left out of the hand: the others make room for them,
+// and none is dropped on them. The hand, and each one's slot now.
 export function placeAround(hand, row, tiles, toIndex, held, waiting) {
+  const ghosts = [waiting, waiting.penalty].filter(Boolean);
   const h = [...hand];
-  if (waiting.slot >= 0 && !h[waiting.slot]) h[waiting.slot] = waiting.tile;
+  for (const g of ghosts) if (g.slot >= 0 && !h[g.slot]) h[g.slot] = g.tile;
   const placed = placeTiles(h, row, tiles, toIndex, held);
-  const slot = placed.findIndex((t) => t?.id === waiting.tile.id);
-  if (slot >= 0) placed[slot] = null;
-  return { hand: placed, slot };
+  const [slot, penalty = -1] = ghosts.map((g) => {
+    const i = placed.findIndex((t) => t?.id === g.tile.id);
+    if (i >= 0) placed[i] = null;
+    return i;
+  });
+  return { hand: placed, slot, penalty };
 }
 
 // Moves tiles along the player's rack (placeTiles): one, or the picked
 // ones together, `held` the one under the finger; round the tile waiting
-// on it (placeAround), or that tile itself, its claim's slot moved too
-// (`waiting.claim`).
+// on it and its penalty tile (placeAround), or those tiles themselves,
+// their slots in the claim moved too (`waiting.claim`).
 export function moveTiles(state, player, ids, toIndex, held, waiting) {
   if (roundOver(state)) return roundOver(state);
   const newState = cloneDeep(state);
   const myPlayer = seat(newState, player);
   if (!myPlayer) return;
-  const tiles = [...myPlayer.hand, waiting?.tile].filter(
-    (t) => t && ids.includes(t.id),
-  );
+  const tiles = [
+    ...myPlayer.hand,
+    waiting?.tile,
+    waiting?.penalty?.tile,
+  ].filter((t) => t && ids.includes(t.id));
   if (!tiles.length) return;
   const row = rowOf(state, player);
   if (!waiting) {
     myPlayer.hand = placeTiles(myPlayer.hand, row, tiles, toIndex, held);
     return newState;
   }
-  const { hand, slot } = placeAround(
+  const { hand, slot, penalty } = placeAround(
     myPlayer.hand,
     row,
     tiles,
@@ -538,17 +545,21 @@ export function moveTiles(state, player, ids, toIndex, held, waiting) {
     waiting,
   );
   myPlayer.hand = hand;
-  if (waiting.claim && myPlayer.claim && slot >= 0) myPlayer.claim.slot = slot;
+  const { claim } = myPlayer;
+  if (waiting.claim && claim && slot >= 0) claim.slot = slot;
+  if (waiting.claim && claim && penalty >= 0) claim.penalty = penalty;
   return newState;
 }
 
 // A player's own rack rows (null: the table's), set any time from the
 // Rules: their hand laid out on them again (resizeRows). Only for rows long
-// enough for the most a hand holds (rowFits).
+// enough for the most a hand holds (rowFits): in the lobby, by the rules
+// the next game starts with, which deals onto them.
 export function setRow(state, player, slots) {
   const me = seat(state, player);
   if (!me || (me.rowSlots ?? null) === slots) return;
-  if (slots !== null && !rowFits(state.rules, slots)) {
+  const rules = state.gameState === "start" ? setupOf(state) : state.rules;
+  if (slots !== null && !rowFits(rules, slots)) {
     return "Make the rack's rows longer";
   }
   const s = cloneDeep(state);

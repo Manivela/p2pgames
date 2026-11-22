@@ -58,7 +58,8 @@ export const markOf = (moves, id) =>
   (id && moves.findLastIndex((m) => m.tiles.includes(id)) + 1) || null;
 
 // onDragOff: the tile is a pending draw's ghost (Rack.jsx), which only a
-// slot of the rack takes; let go anywhere else, it calls this
+// slot of the rack takes; let go anywhere else, it calls this. onFlip: how
+// that ghost turns, as it isn't in the hand yet (Rack.jsx)
 function Tile({
   tile,
   disabled,
@@ -66,6 +67,7 @@ function Tile({
   style,
   numbered = true,
   onDragOff,
+  onFlip,
 }) {
   const { me, act, okeyState, selected, toggleSelected, spun, spin } =
     useContext(OkeyContext);
@@ -83,8 +85,12 @@ function Tile({
   // draw pile would show the next tile's
   const faceUp = (canSee || ended(okeyState)) && !tile.hidden && !okeyDown;
   // your tiles flip only while the round is played: once it's over, the
-  // hands are shown as they ended
-  const canFlip = myTile && okey.canFlip(okeyState, me, tile);
+  // hands are shown as they ended; the one waiting on your rack too
+  const flip =
+    onFlip ??
+    (myTile && okey.canFlip(okeyState, me, tile)
+      ? () => act(okey.flipTile, me, tile.id)
+      : null);
   function handleClick(e) {
     e.preventDefault();
     // Android long-presses fire contextmenu too; touch has its own hold below
@@ -95,7 +101,7 @@ function Tile({
     if (touch) return;
     // the fake okey, wherever anyone sees it, turns instead (OkeyContext)
     if (faceUp && tile.rank === "👌") spin(tile);
-    else if (canFlip) act(okey.flipTile, me, tile.id);
+    else if (flip) flip();
   }
   // phones have no right click: hold your tile still and let go to flip it.
   // Held long enough, it wiggles; a finger that moves drags it instead.
@@ -104,7 +110,7 @@ function Tile({
   const held = useRef(false);
   const [armed, setArmed] = useState(false);
   function startHold(e) {
-    if (!canFlip) return;
+    if (!flip) return;
     held.current = false;
     const { clientX, clientY } = e.touches[0];
     from.current = { x: clientX, y: clientY };
@@ -126,7 +132,7 @@ function Tile({
   function endHold() {
     if (armed) {
       held.current = true;
-      act(okey.flipTile, me, tile.id);
+      flip();
     }
     stopHold();
   }
