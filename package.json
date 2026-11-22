@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "nanoid": "^5.1.5",
+    "nanoid": "^6.0.2",
     "react": "^19.1.0",
     "react-dnd": "^16.0.1",
     "react-dnd-touch-backend": "^16.0.1",
@@ -28,37 +28,26 @@
     "react-hot-toast": "^2.5.2",
     "react-router-dom": "^7.5.2",
     "use-sound": "^5.0.0",
-    "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
     "y-webrtc": "^10.3.0",
-    "y-websocket": "^1.5.4",
     "yjs": "^13.6.26",
     "zustand": "^5.0.3"
   },
-  "overrides": {
-    "ws": "8.21.0",
-    "y-websocket": {
-      "ws": "6.2.4"
-    },
-    "@sentry/bundler-plugins": {
-      "glob": "14.0.3"
-    }
-  },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
-    "@playwright/test": "^1.64.1",
-    "@sentry/vite-plugin": "5.4.1",
+    "@playwright/test": "^1.65.1",
+    "@sentry/vite-plugin": "11.16.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "globals": "^14.0.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
     "knip": "^6.41.0",
-    "vite": "^6.3.3",
-    "vitest": "^5.0.5"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   }
 }

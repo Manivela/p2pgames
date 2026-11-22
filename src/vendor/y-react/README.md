@@ -9,3 +9,6 @@ still intact and unarchived, so this is that source at tag `v1.2.0` (commit
 path-alias config) and the `.spec.ts(x)` test files were dropped.
 
 MIT licensed, © 2021 Joseph R Miles - see LICENSE in this directory.
+
+Since dropped: `useWebSocket` and `useIndexedDb`, which nothing here called,
+and with them the `y-websocket` and `y-indexeddb` dependencies.

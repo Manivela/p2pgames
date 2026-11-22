@@ -24,6 +24,7 @@ const END_GAME = /^(End the game|Oyunu bitir)$/;
 const ENDING =
   /^(The game ends after this deal|Oyun bu dağıtımdan sonra bitiyor)$/;
 const SAVED = /^(Saved games|Kayıtlı oyunlar)$/;
+const DEALS = { name: /^(Deals|Dağıtım sayısı)/ };
 const STATS = /^(Your stats|İstatistiklerin)$/;
 
 // the table full, waiting for its Start; the match's length (`deals`)
@@ -46,7 +47,7 @@ async function withBots(browser, info, deals) {
   expect(await game(page)).toBeFalsy();
   if (deals) {
     await settings(page);
-    await page.locator(".dialog select").selectOption(deals);
+    await page.getByRole("combobox", DEALS).selectOption(deals);
     await page.keyboard.press("Escape");
   }
   await page.getByRole("button", { name: START }).click();
@@ -202,7 +203,9 @@ test("an endless match: picked as ∞, its sheet only what's been dealt", async 
   await expect(page.locator(".tb-scores tbody tr")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await settings(page);
-  await expect(page.locator(".dialog select option:checked")).toHaveText("∞");
+  await expect(
+    page.getByRole("combobox", DEALS).locator("option:checked"),
+  ).toHaveText("∞");
   await page.keyboard.press("Escape");
   const row = { dealer: 3, bidder: 1, contract: 5, trump: 0 };
   const played = {

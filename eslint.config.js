@@ -7,7 +7,15 @@ import prettier from "eslint-plugin-prettier/recommended";
 export default [
   js.configs.recommended,
   react.configs.flat.recommended,
-  reactHooks.configs["recommended-latest"],
+  // the hooks' own two rules: the plugin's recommended set adds the React
+  // Compiler's, which this code isn't written for (TODO.md)
+  {
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+    },
+  },
   prettier,
   {
     files: ["**/*.{js,jsx}"],
