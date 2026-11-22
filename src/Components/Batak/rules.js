@@ -8,7 +8,8 @@ import { deal, suitOf, takes } from "../Cards/cards";
 //   at the seat after the dealer's, going round (`next`, counter-clockwise
 //   as the table seats them, Board.jsx). Each bids one more than the
 //   highest so far, at least MIN_BID, or passes, out for good; the last
-//   one in takes it. All pass: the last to speak, the dealer, has to bid.
+//   one in takes it. All pass: the last to speak, the dealer, has to bid,
+//   at least FORCED_BID.
 // - The bidder names trumps and leads. Follow the suit led, higher than
 //   the highest of it on the table while you can (not once it's been
 //   trumped); with none of it, trump, higher than a trump on the table
@@ -18,8 +19,9 @@ import { deal, suitOf, takes } from "../Cards/cards";
 //   led; whoever takes it leads the next. `score` says what a deal's worth.
 //
 // The state, the same in every page (Table: `turn`, `winners`, `score`):
-// - players: the seated ids; deals: the match's length; round: the deal
-//   being played, from 1; dealer: the seat that dealt it
+// - players: the seated ids; deals: the match's length, 0 endless (ending:
+//   ended in ⋯, the deal being played its last); round: the deal being
+//   played, from 1; dealer: the seat that dealt it
 // - rows: each deal played, { dealer, bidder, contract, trump, points };
 //   score: each seat's total, the rows' sum
 // - hands: each seat's cards (Cards/cards.js), shown only to its player
@@ -36,10 +38,12 @@ import { deal, suitOf, takes } from "../Cards/cards";
 //   is over
 // - last: { n, kind, seat… }, what happened last, for the bots and sounds
 export const MIN_BID = 5;
+export const FORCED_BID = 4;
 export const next = (seat) => (seat + 1) % 4;
 
-// the lengths a match can be, in deals, everyone dealing as often
-export const DEALS = [4, 8, 12, 16];
+// the lengths a match can be, in deals, everyone dealing as often; 0
+// endless, played till someone starts a new one (⋯)
+export const DEALS = [4, 8, 12, 16, 32, 0];
 const dealsOf = (mode) => (DEALS.includes(Number(mode)) ? Number(mode) : 8);
 
 // A new match, its first deal dealt
@@ -73,6 +77,29 @@ export function dealNext(state, seat) {
   return dealt(state, seat);
 }
 
+// an endless match ended (⋯), once a deal's been played: whoever leads
+// wins it, at once between deals or in one just dealt (no bid yet), its
+// cards put away; mid-deal it ends once that deal's played (`ending`), so
+// no one ends it to get out of a deal going badly
+export function endMatch(state) {
+  const { deals, phase, turn, rows, bids, score, ending } = state;
+  if (deals !== 0 || turn === null || !rows.length || ending) return;
+  const dealt = phase === "bid" && bids.every((b) => b === null);
+  if (phase !== "over" && !dealt) return { ...state, ending: true };
+  const top = Math.max(...score);
+  return {
+    ...state,
+    phase: "over",
+    points: rows.at(-1).points,
+    hands: [[], [], [], []],
+    trick: [],
+    lastTrick: null,
+    turn: null,
+    winners: [0, 1, 2, 3].filter((s) => score[s] === top),
+    last: { n: state.last.n + 1, kind: "end" },
+  };
+}
+
 // a deal: the hands dealt by `dealer`, the bidding from the seat after
 function dealt(state, dealer) {
   return {
@@ -98,14 +125,14 @@ function dealt(state, dealer) {
 const highest = (bids) => Math.max(0, ...bids);
 
 // what the seat to speak may bid: 0 to pass, or one over the highest so
-// far, at least MIN_BID, up to 13; no pass for the last one in with no bid
-// made
+// far, at least MIN_BID, up to 13; the last one in with no bid made can't
+// pass, and bids from FORCED_BID
 export function bidsOpen(state) {
   const top = highest(state.bids);
-  const from = Math.max(MIN_BID, top + 1);
+  const forced = top === 0 && state.bids.filter((b) => b === 0).length === 3;
+  const from = forced ? FORCED_BID : Math.max(MIN_BID, top + 1);
   const up = Array.from({ length: Math.max(0, 14 - from) }, (_, i) => from + i);
-  const passed = state.bids.filter((b) => b === 0).length;
-  return top === 0 && passed === 3 ? up : [0, ...up];
+  return forced ? up : [0, ...up];
 }
 
 export function bid(state, seat, n) {
@@ -228,7 +255,8 @@ export function play(state, seat, card) {
     { dealer, bidder, contract, trump, points },
   ];
   const totals = state.score.map((p, s) => p + points[s]);
-  const end = rows.length >= (state.deals ?? 1);
+  const { deals = 1, ending } = state;
+  const end = (deals > 0 && rows.length >= deals) || !!ending;
   const top = Math.max(...totals);
   return {
     ...done,

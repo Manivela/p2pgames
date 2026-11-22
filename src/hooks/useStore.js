@@ -85,12 +85,12 @@ export const useRackRow = create(
   }),
 );
 
-// the room's "next round waits for everyone" as this device last saw it:
-// { on, at, by }, `at` when someone last switched it (0: never), carried
+// the room's "next round waits for" as this device last saw it:
+// { wait, at, by }, `at` when someone last switched it (0: never), carried
 // to every room this device joins, where the newest switch wins
 // (hooks/useRoom.js)
 export const useWaitAllSeen = create(
-  persist(() => ({ on: true, at: 0, by: null }), {
+  persist(() => ({ wait: "all", at: 0, by: null }), {
     name: "wait-all",
     storage: createJSONStorage(() => localStorage),
   }),

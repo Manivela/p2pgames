@@ -159,7 +159,7 @@ form[action$="destroy"] button {
 }
 
 /* (not a bot's avatar as Sit: it stays an avatar) */
-.board button:not(:where(.menu, .dialog) button, :where(.avatar)),
+.board button:not(:where(.menu, .dialog, .layer) button, :where(.avatar)),
 .scores > summary,
 #root:has(.fit, .tb-fit) .corner button,
 .tb-menu > .dots {

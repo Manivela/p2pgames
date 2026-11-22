@@ -8,8 +8,8 @@ export const FACING = /^(Face to face|Karşılıklı)$/;
 export const NEXT = /^(Next game|Sonraki oyun)$/;
 export const START = /^(Start|Başlat)$/;
 export const SETTINGS = /^(Settings|Ayarlar)$/;
-export const WAIT_ALL =
-  /^(Next round waits for everyone|Sonraki el herkesi bekler)$/;
+// whose presses start the next round (Settings.jsx): all, half or off
+export const WAIT_ALL = /^(Next round waits for|Sonraki el kimi bekler)$/;
 export const READY = /^(ready|hazır)$/;
 export const HINTS = /^(Key hints|Tuş ipuçları)$/;
 // a ready check after a break (⋯, hooks/useRoom.js): its item, its end, each

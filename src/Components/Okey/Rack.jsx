@@ -16,7 +16,6 @@ import {
   discardWait,
   freeSlot,
   isCaught,
-  isElden,
   pointsToOpen,
   rackPoints,
   roundOf,
@@ -53,11 +52,11 @@ const Timer = ({ okeyState }) => (
   </i>
 );
 
-// how many tiles a player holds, while a round is played (one finished
-// from the hand doesn't shrink)
+// how many tiles a player holds, while a round is played: in one finished
+// from the hand too, which never shrinks, as it still says who has drawn
 function TilesLeft({ player }) {
   const { okeyState, myHand } = useContext(OkeyContext);
-  if (okeyState.gameState !== "play" || isElden(okeyState)) return null;
+  if (okeyState.gameState !== "play") return null;
   const left = myHand(player).filter(Boolean).length;
   const drew = okeyState.currentPlayer === player && okeyState.drawn;
   return (

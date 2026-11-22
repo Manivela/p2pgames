@@ -104,7 +104,7 @@ html:has(.tb-fit) {
   opacity: 1;
 }
 
-.tb-wrap button[aria-pressed="true"] {
+.tb-wrap button[aria-pressed="true"]:not(.layer button) {
   outline: 2px solid #b9f6ca;
   outline-offset: 2px;
 }
@@ -251,36 +251,6 @@ html:has(.tb-fit) {
   display: grid;
   place-items: center;
   padding: 8px;
-}
-
-/* a ready check (index.jsx): the board dimmed under each player's Ready,
-   a tap on it still told that it waits */
-.tb-check {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.25);
-  pointer-events: none;
-}
-
-.tb-check > * {
-  height: 40px;
-  padding: 0 18px;
-  border: none;
-  border-radius: 20px;
-  background: #fff;
-  color: #1b5e20;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 40px;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-.tb-check > button {
-  pointer-events: auto;
 }
 
 /* turned to the one across the board from this device's other player */

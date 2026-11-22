@@ -9,13 +9,14 @@ import {
   useParams,
 } from "react-router-dom";
 import { DocumentProvider } from "./vendor/y-react";
-import { Toaster } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import Root from "./routes/root";
 import ErrorPage from "./error-page";
 import "./index.css";
 import Login from "./routes/login";
 import { RequireAuth } from "./routes/RequireAuth";
-import { peerOpts } from "./constants";
+import { peerOpts, webrtc } from "./constants";
+import { t } from "./i18n";
 
 // a TURN relay login, for players whose networks block a direct connection.
 // y-webrtc reads peerOpts as it connects to someone, after the login page.
@@ -25,6 +26,20 @@ fetch("/api/turn")
     ({ iceServers }) => iceServers && (peerOpts.config.iceServers = iceServers),
   )
   .catch(() => {}); // the dev server has no /api: STUN only
+
+// a browser that can't reach anyone (constants.js) says so, till tapped
+if (!webrtc) {
+  toast(
+    (n) => (
+      <span onClick={() => toast.dismiss(n.id)}>
+        {t(
+          "This browser has WebRTC turned off, so it can't play with others, only with bots.",
+        )}
+      </span>
+    ),
+    { id: "webrtc", duration: Infinity },
+  );
+}
 
 // errors on the deployed site go to Sentry (manivela/p2pgames), and how fast
 // pages load and answer taps: its loader (Performance on in the project's
@@ -48,7 +63,6 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route errorElement={<ErrorPage />}>
       <Route path="/" element={<Login />} />
-      {/* <Route path="/" element={<Login />} /> */}
       <Route path="/login" element={<Login />} />
       {/* the room, at the game it's playing (root.jsx) */}
       <Route

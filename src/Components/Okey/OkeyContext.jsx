@@ -302,7 +302,6 @@ export function OkeyProvider({ children }) {
     need,
     mine: me ? [me] : [],
     starts: startsHere,
-    live: okeyState.gameState !== "start",
   });
   const paused = check.open;
 
@@ -541,12 +540,13 @@ export function OkeyProvider({ children }) {
   // rules: a ruleset (rulesets.js)
   const startGame = useCallback(
     (rules) => {
+      if (paused) return void toast(t(WAIT_READY));
       const next = okey.startGame(okeyState, undefined, rules);
       // a failed start would still replace the table, seats and all
       if (next.gameState !== "play") toast(t(next.message));
       else replaceState(map, next);
     },
-    [map, okeyState],
+    [map, okeyState, paused],
   );
 
   const toggleSelected = useCallback(

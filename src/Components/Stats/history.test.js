@@ -388,6 +388,25 @@ test("batak: a match of four, won by the most points", () => {
   );
 });
 
+// an endless match, ended in ⋯ after two deals: counted, won by the lead
+test("batak: an endless match ended in ⋯ counts, won by the most points", () => {
+  const seats = [ayse, ...["b", "c", "d"].map((id) => ({ id, name: id }))];
+  let s = batak.newGame(null, ["a", "b", "c", "d"], "0");
+  const states = [{ ...s, seats }];
+  while ((s.rows?.length ?? 0) < 2 || s.phase !== "over")
+    states.push({ ...(s = batakBot.play(s, s.turn)), seats });
+  states.push({ ...(s = batak.endMatch(s)), seats });
+  const summary = summarize(
+    { id: "bk", kind: "batak", me: "a" },
+    record("batak", states),
+  );
+  assert.lengthOf(summary.players, 4);
+  const top = Math.max(...s.score);
+  summary.players.forEach((p) =>
+    assert.equal(p.result, s.score[p.seat] === top ? "won" : "lost"),
+  );
+});
+
 test("pages' summaries put together: the most each counted, alike on every page", () => {
   const player = (id, seat, counts) => ({
     id,

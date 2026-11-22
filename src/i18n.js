@@ -105,8 +105,8 @@ const TR = [
       "Dört oyuncu, herkes kendi için; herkese 13 kart, en büyüğü as.",
     ],
     [
-      "Bid in turn the tricks you'll take, at least 5 and more than the last bid, or pass, out for the deal. The last one in names trumps and leads; if everyone passes, the dealer has to bid.",
-      "Sırayla alacağın el sayısını söyle: en az 5 ve son ihaleden fazla; ya da pas de, o elde ihaleden çıkarsın. Son kalan kozu seçer ve ilk kartı atar; herkes pas derse ihale dağıtana kalır.",
+      "Bid in turn the tricks you'll take, at least 5 and more than the last bid, or pass, out for the deal. The last one in names trumps and leads; if everyone passes, the dealer has to bid, 4 or more.",
+      "Sırayla alacağın el sayısını söyle: en az 5 ve son ihaleden fazla; ya da pas de, o elde ihaleden çıkarsın. Son kalan kozu seçer ve ilk kartı atar; herkes pas derse ihale en az 4'le dağıtana kalır.",
     ],
     [
       "Follow the suit led, higher than the highest of it on the table if you can. With none of it, trump, higher than a trump on the table if you can; with neither, play anything.",
@@ -121,8 +121,8 @@ const TR = [
       "Her el bir puan. İhaleyi alan söylediği kadar, ya da başka biri hiç el alamazsa batar: ihale kadar puan kaybeder.",
     ],
     [
-      "A game is 8 deals, or 4, 12 or 16 as picked in ⋯ before it starts, each dealing in turn. The most points at the end wins.",
-      "Bir oyun 8 dağıtım sürer, ya da başlamadan ⋯ menüsünden seçilirse 4, 12 veya 16; herkes sırayla dağıtır. Sonunda en çok puanı olan kazanır.",
+      "A game is 8 deals, or 4, 12, 16, 32 or endless (∞, till someone ends it in ⋯), as picked in ⋯ before it starts, each dealing in turn. The most points at the end wins.",
+      "Bir oyun 8 dağıtım sürer, ya da başlamadan ⋯ menüsünden seçilirse 4, 12, 16, 32 veya sonsuz (∞, biri ⋯ menüsünden bitirene dek); herkes sırayla dağıtır. Sonunda en çok puanı olan kazanır.",
     ],
     ["Jump on with the same piece", "Aynı taşla yemeye devam et"],
     ["Take the most pieces you can", "Yiyebileceğin en çok taşı ye"],
@@ -582,12 +582,16 @@ const TR = [
   [/^Settings$/, "Ayarlar"],
   [/^This device$/, "Bu cihaz"],
   [/^Everyone here$/, "Buradaki herkes"],
-  [/^Next round waits for everyone$/, "Sonraki el herkesi bekler"],
+  [/^Next round waits for$/, "Sonraki el kimi bekler"],
+  [/^Everyone$/, "Herkesi"],
+  [/^Half$/, "Yarısını"],
+  [/^No one$/, "Kimseyi"],
   [/^(.+): next round waits for everyone$/, "$1: sonraki el herkesi bekler"],
   [
-    /^(.+): next round doesn't wait for everyone$/,
-    "$1: sonraki el herkesi beklemez",
+    /^(.+): next round waits for half the players$/,
+    "$1: sonraki el oyuncuların yarısını bekler",
   ],
+  [/^(.+): next round doesn't wait$/, "$1: sonraki el beklemez"],
   [/^Someone$/, "Biri"],
   [/^ready$/, "hazır"],
   [/^Waiting to start$/, "Başlatılmayı bekliyor"],
@@ -600,6 +604,13 @@ const TR = [
   [/^Everyone's ready$/, "Herkes hazır"],
   [/^Ready check ended$/, "Bekleme bitti"],
   [/^Go on without waiting$/, "Beklemeden devam et"],
+  // a browser with WebRTC off (constants.js)
+  [
+    exact(
+      "This browser has WebRTC turned off, so it can't play with others, only with bots.",
+    ),
+    "Bu tarayıcıda WebRTC kapalı: başkalarıyla oynanamaz, yalnızca botlarla.",
+  ],
   // how the round finished (LastTurn)
   [/^(.+) drew from the pile$/, "$1 ortadan çekti"],
   [/^(.+) took (.+)'s discard$/, "$1 yandan aldı: $2"],
@@ -663,6 +674,8 @@ const TR = [
   [/^Next Round$/, "Sonraki el"],
   [/^Shuffle and play on$/, "Karıştır, devam et"],
   [/^End the round$/, "Eli bitir"],
+  [/^End the game$/, "Oyunu bitir"],
+  [/^The game ends after this deal$/, "Oyun bu dağıtımdan sonra bitiyor"],
   [/^Scores$/, "Puanlar"],
   [/^Total$/, "Toplam"],
   [/^Sit$/, "Otur"],

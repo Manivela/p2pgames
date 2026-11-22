@@ -6,10 +6,13 @@ import { t } from "../i18n";
 
 // The room's settings, everyone's in it: one value in the room's Yjs map
 // `room` that every page plays by, anyone's to switch (the Settings
-// dialog). "Next round waits for everyone", `waitAll`: { on, at, by }, on
-// till someone switches it off (off in the e2e's, whose tests of it switch
-// it on).
-export const WAITS = import.meta.env.MODE !== "e2e";
+// dialog). "Next round waits for", `waitAll`: { wait, at, by }, `wait`
+// "all" (everyone), "half" or "off", everyone till someone picks another
+// (off in the e2e's, whose tests of it pick one).
+export const WAITS = import.meta.env.MODE !== "e2e" ? "all" : "off";
+
+// how many of `n` players' presses start the next round
+export const needed = (wait, n) => (wait === "half" ? Math.ceil(n / 2) : n);
 
 // Every device remembers the last switch it saw (useWaitAllSeen) and brings
 // it to each room it's in: whichever was switched last wins, written into
@@ -29,13 +32,13 @@ export function useWaitAll() {
   useMap("room"); // re-render on every change
   const room = useDoc().getMap("room");
   const me = useAuthStore((s) => s.currentUser);
-  const set = (on) =>
+  const set = (wait) =>
     room.set("waitAll", {
-      on,
+      wait,
       at: stamp(Date.now(), room.get("waitAll")),
       by: me && { id: me.id, name: me.name },
     });
-  return [room.get("waitAll")?.on ?? WAITS, set];
+  return [room.get("waitAll")?.wait ?? WAITS, set];
 }
 
 // Keeps the room and this device agreed (agree), once the room's state is
@@ -52,35 +55,33 @@ export function useRoomSync() {
     if (way === "room") room.set("waitAll", seen);
     if (way === "device") useWaitAllSeen.setState(shared);
   }, [shared?.at, seen.at]); // eslint-disable-line react-hooks/exhaustive-deps
-  const on = shared?.on ?? WAITS;
+  const wait = shared?.wait ?? WAITS;
   const was = useRef(null);
   useEffect(() => {
-    if (was.current !== null && was.current !== on && shared?.by?.id !== me) {
+    if (was.current !== null && was.current !== wait && shared?.by?.id !== me) {
       const by = shared?.by?.name ?? t("Someone");
-      toast(
-        t(
-          on
-            ? `${by}: next round waits for everyone`
-            : `${by}: next round doesn't wait for everyone`,
-        ),
-        { id: "wait-all" },
-      );
+      const said = {
+        all: "next round waits for everyone",
+        half: "next round waits for half the players",
+        off: "next round doesn't wait",
+      };
+      toast(t(`${by}: ${said[wait]}`), { id: "wait-all" });
     }
-    was.current = on;
-  }, [on]); // eslint-disable-line react-hooks/exhaustive-deps
+    was.current = wait;
+  }, [wait]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 // The next round or game started together: once every player in it has
-// pressed for it, while the room waits for everyone (useWaitAll); else, as
-// before, the first press starts it. `need`: the players waited for,
+// pressed for it, or half of them, as the room waits (useWaitAll, needed);
+// else, as before, the first press starts it. `need`: the players waited for,
 // [{ key, here }], never a bot; one away (`here` false) holds it up till
 // they're back or their seat's freed. Each press is its player's own key in
 // `map`, `ready-<key>`, holding the `round` it's for, so nothing carries
 // into the next. `mine`: the keys this page presses for; `starts`: whether
 // this page, the one page, calls `go` once all have pressed; not while
 // `hold` (a ready check open), but as soon as it's let go. `prefix`: the
-// presses' keys, `<prefix>-<key>`; `always`: waits whether the room does
-// or not (a ready check's).
+// presses' keys, `<prefix>-<key>`; `always`: waits for everyone whatever
+// the room's setting (a ready check's).
 // Returns `press` (null for someone not playing, while it waits), whether
 // this page has pressed, who has (`ready`), and `force`: any player's way on
 // without the rest (⋯), for one who can't press (a phone gone flat).
@@ -95,13 +96,16 @@ export function useTogether({
   prefix = "ready",
   always = false,
 }) {
-  const [on] = useWaitAll();
-  const waits = (always || on) && need.length > 0;
+  const [wait] = useWaitAll();
+  const waits = (always || wait !== "off") && need.length > 0;
   const has = (key) => round != null && map.get(`${prefix}-${key}`) === round;
   const ready = waits
     ? need.filter((p) => p.here && has(p.key)).map((p) => p.key)
     : [];
-  const all = waits && round != null && ready.length === need.length;
+  const all =
+    waits &&
+    round != null &&
+    ready.length >= needed(always ? "all" : wait, need.length);
   // once a round: a deal refused (too few players) isn't tried again
   const went = useRef(null);
   useEffect(() => {
@@ -135,13 +139,15 @@ export function useTogether({
   );
 }
 
-// A ready check, back from a break: any player starts it (⋯, `start`, while
-// a game's on, `live`) and the table's moves wait, each table refusing them
-// while it's `open`, its bots too, till every player in it (`need`, as for
-// useTogether, someone away holding it up) has pressed Ready, or any player
-// ends it (`cancel`). The check is `check` in `map`, { id, by }, each press
+// A ready check, back from a break: any player starts it (⋯, `start`), at
+// any time, a game on or not, and the table's moves wait, each table
+// refusing them while it's `open`, its bots and its Start too, till every
+// player in it (`need`, as for useTogether, someone away holding it up) has
+// pressed Ready, or any player ends it (`cancel`); `waiting`: the others not
+// back yet. The check is `check` in `map`, { id, by }, each press
 // `back-<key>`, apart from the next round's, which still counts after.
-export function useReadyCheck({ map, need, mine, starts, live }) {
+// Everyone standing up leaves it open, for the next to sit to press or end.
+export function useReadyCheck({ map, need, mine, starts }) {
   const me = useAuthStore((s) => s.currentUser);
   const check = map.get("check") ?? null;
   const close = useCallback(
@@ -165,11 +171,6 @@ export function useReadyCheck({ map, need, mine, starts, live }) {
     always: true,
   });
   const player = mine.some((k) => need.some((p) => p.key === k));
-  // no game to hold any more (back to waiting for its Start, a seat freed):
-  // the check's over
-  useEffect(() => {
-    if (check && !live && starts) close();
-  });
   // said on the table: a check someone else started, and its end, everyone
   // back or ended in ⋯; not as a page arrives
   const was = useRef(undefined);
@@ -203,18 +204,23 @@ export function useReadyCheck({ map, need, mine, starts, live }) {
     [map, me?.id, me?.name], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const open = !!check;
-  const canStart = !open && live && player && need.length > 1;
+  const canStart = !open && player && need.length > 1;
+  const waiting = need
+    .filter((p) => !together.ready.includes(p.key) && !mine.includes(p.key))
+    .map((p) => p.key)
+    .join();
   // the same object till something in it changes: Okey's context holds it
   return useMemo(
     () => ({
       open,
       ready: together.ready,
+      waiting: waiting ? waiting.split(",").map(Number) : [],
       pressed: together.pressed,
       press: open ? together.press : null,
       start: canStart ? begin : null,
       cancel: open && player ? close : null,
     }),
-    [open, together, canStart, begin, player, close],
+    [open, together, waiting, canStart, begin, player, close],
   );
 }
 

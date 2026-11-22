@@ -214,7 +214,24 @@ test("a crowded table fits", async ({ page }) => {
   await stages.play(page);
   await table(page, "crowd");
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  // a ready check's plate, over the melds on purpose: on the screen, and
+  // clear of your rack
+  await page.getByRole("button", { name: MENU }).click();
+  await page.getByRole("button", { name: CHECK }).click();
+  await plateClear(page);
 });
+
+// a ready check's plate, whole on the screen and above your rack, so the
+// rack stays yours to arrange while it waits
+async function plateClear(page) {
+  const box = (s) => page.locator(s).first().boundingBox();
+  const [plate, rack] = [await box(".ready-plate"), await box(".foot > .rack")];
+  const { width, height } = page.viewportSize();
+  expect(plate.x).toBeGreaterThanOrEqual(0);
+  expect(plate.y).toBeGreaterThanOrEqual(0);
+  expect(plate.x + plate.width).toBeLessThanOrEqual(width);
+  expect(plate.y + plate.height).toBeLessThanOrEqual(Math.min(rack.y, height));
+}
 
 // the table full while another plays: their tea glass and badges stay in
 // the row along the top, clear of the melds, and Call! for the latest
@@ -2278,7 +2295,7 @@ test("the next round waits for every player, never a bot, once the room says so"
   anySize(info);
   const room = await sitDown(page);
   await settings(page);
-  await page.getByRole("checkbox", { name: WAIT_ALL }).check();
+  await page.getByRole("combobox", { name: WAIT_ALL }).selectOption("all");
   await page.keyboard.press("Escape");
   await table(page, "start", 3);
   await table(page, "playToEnd");
@@ -2290,8 +2307,8 @@ test("the next round waits for every player, never a bot, once the room says so"
   await expect
     .poll(async () => (await state(page)).players.map((p) => p.user?.name))
     .toEqual(["Ayşe", "Bora", "Can", "Ece"]);
-  const kept = () => JSON.parse(localStorage.getItem("wait-all")).state.on;
-  await expect.poll(() => guest.evaluate(kept)).toBe(true);
+  const kept = () => JSON.parse(localStorage.getItem("wait-all")).state.wait;
+  await expect.poll(() => guest.evaluate(kept)).toBe("all");
   // Bora and Can bots, never waited for
   await page.evaluate(() => {
     const s = window.okey.get();
@@ -2362,6 +2379,15 @@ test("a ready check holds every move, a bot's too, till each player is back", as
   ).toBeVisible(NET);
   // her discard waits, once the deal's tiles have landed
   await page.waitForFunction(() => !document.querySelector(".flights > *"));
+  // her rack stays hers meanwhile: the plate clear of it, which says whom
+  // it waits for, and a tile moved along it lands
+  await plateClear(page);
+  await expect(page.locator(".ready-waiting")).toHaveText("Ece");
+  await expect(guest.locator(".ready-waiting")).toHaveText("Ayşe", NET);
+  const ids = await handIds(page);
+  const [from, to] = [ids.findIndex(Boolean), ids.indexOf(null)];
+  await drag(page, slot(page, from).locator(".tile"), slot(page, to));
+  await expect.poll(async () => (await handIds(page))[to]).toBe(ids[from]);
   const { discards } = await state(page);
   await drag(
     page,
@@ -2758,4 +2784,34 @@ test("a save code brings the game back, and can't be read", async ({
   await page.getByRole("button", { name: LOAD }).click();
   await page.locator(".dialog button.armed").click();
   await expect.poll(() => handIds(page)).toEqual(before);
+});
+
+// A browser with WebRTC turned off (Firefox's about:config), following a
+// link into a room someone's in: at the table at once, as there's no one
+// to wait to hear from, saying it can't play with others, till tapped, and
+// reaching for no one, so nothing throws (Sentry P2PGAMES-7).
+test("a browser without WebRTC says so, and throws nothing", async ({
+  page,
+  browser,
+}, info) => {
+  const { viewport, hasTouch, locale } = info.project.use;
+  const other = await browser.newContext({ viewport, hasTouch, locale });
+  const room = await sitDown(await other.newPage(), { name: "Bora" });
+  await page.addInitScript(() => {
+    delete window.RTCPeerConnection;
+    delete window.webkitRTCPeerConnection;
+  });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await sitDown(page, { room, sit: false });
+  // well inside the 6 s a page with WebRTC waits at most (root.jsx)
+  await expect(page.locator(".board")).toBeVisible({ timeout: 3000 });
+  const notice = page.getByText(
+    /^(This browser has WebRTC turned off|Bu tarayıcıda WebRTC kapalı)/,
+  );
+  await expect(notice).toBeVisible();
+  await page.waitForTimeout(2000);
+  await notice.click();
+  await expect(notice).toBeHidden();
+  expect(errors).toEqual([]);
 });

@@ -16,6 +16,7 @@ import { useKeyHints } from "../../hooks/useStore";
 import { useEscape, useKey } from "../../hooks/useKey";
 import { useKnockTaps } from "../knock";
 import { GlassDefs } from "./TeaGlass";
+import ReadyCheck from "../ReadyCheck";
 
 // The table is laid out in tile widths: --t, the width of a tile in your
 // rack, is as big as the box allows for the rack and the piles beside it
@@ -177,16 +178,9 @@ function NextStep() {
   } = useContext(OkeyContext);
   // Escape lets El aç go, as a tap on the felt does
   useEscape(picking && unselectAll);
-  // a ready check (⋯): each player's Ready in place of the next step
-  if (check.open && okeyState.gameState !== "start") {
-    return check.press ? (
-      <button aria-pressed={check.pressed} onClick={check.press}>
-        {t("Ready")}
-      </button>
-    ) : (
-      <p className="checking">{t("Ready check")}</p>
-    );
-  }
+  // a ready check (⋯): no next step till it's over, its Ready on the felt
+  // (Board); the lobby's settings stay, its Start refused meanwhile
+  if (check.open && okeyState.gameState !== "start") return null;
   switch (okeyState.gameState) {
     case "start":
       return <Lobby />;
@@ -359,7 +353,7 @@ function useTablePick() {
 }
 
 function Board() {
-  const { okeyState, me, knock } = useContext(OkeyContext);
+  const { okeyState, me, knock, check } = useContext(OkeyContext);
   // you first, then round the table: right, across, left
   const players = tableSeats(okeyState);
   const myIndex = players.findIndex((p) => p.id === me);
@@ -422,8 +416,16 @@ function Board() {
         </div>
         <div className="middle">
           <div className="left">{pileAside && <DrawPile />}</div>
-          <div className="center" ref={table}>
+          <div className="center" ref={table} data-middle="">
             <OnTheTable pile={!pileAside && <DrawPile />} />
+            {/* a ready check (⋯): on the felt, clear of your rack */}
+            <ReadyCheck
+              check={check}
+              name={(id) => {
+                const p = okeyState.players.find((p) => p.id === id);
+                return p?.user?.name ?? p?.awayName;
+              }}
+            />
           </div>
           <div className="side">
             <RoundInfo />

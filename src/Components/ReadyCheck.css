@@ -1,0 +1,83 @@
+/* a ready check's plate (ReadyCheck.jsx), on its Layer */
+.ready-plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  text-align: center;
+}
+
+.ready-plate button {
+  min-height: 48px;
+  padding: 0 28px;
+  border: none;
+  border-radius: 24px;
+  background: #fff;
+  color: #1b5e20;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+  animation: ready-pulse 1.6s ease-out infinite;
+}
+
+/* pressed: green, still; another tap takes it back */
+.ready-plate button[aria-pressed="true"] {
+  background: #2e7d32;
+  color: #fff;
+  animation: none;
+}
+
+/* a ring going out from it, a nudge that never hurries */
+@keyframes ready-pulse {
+  from {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  to {
+    box-shadow: 0 0 0 14px rgba(255, 255, 255, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ready-plate button {
+    animation: none;
+  }
+}
+
+.ready-title {
+  margin: 0;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* one line, the names that don't fit cut short */
+.ready-waiting {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* a short middle (a phone held sideways): the names beside Ready */
+@container layer (max-height: 140px) {
+  .ready-plate {
+    flex-direction: row;
+    gap: 10px;
+    padding: 6px 12px 6px 6px;
+    border-radius: 28px;
+  }
+
+  .ready-plate button {
+    min-height: 44px;
+    padding: 0 22px;
+    border-radius: 22px;
+    font-size: 18px;
+  }
+}

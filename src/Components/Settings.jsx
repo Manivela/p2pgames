@@ -10,7 +10,7 @@ import { Dialog } from "./Saves";
 export default function Settings({ device, everyone, onClose }) {
   const { volume, setVolume } = useVolume();
   const { hints, setHints } = useKeyHints();
-  const [waits, setWaits] = useWaitAll();
+  const [wait, setWait] = useWaitAll();
   return (
     <Dialog title={t("Settings")} className="prefs" onClose={onClose}>
       <h4>{t("This device")}</h4>
@@ -39,13 +39,14 @@ export default function Settings({ device, everyone, onClose }) {
       </div>
       <h4>{t("Everyone here")}</h4>
       <div className="group">
+        {/* whose presses start the next round (hooks/useRoom.js) */}
         <label>
-          <span>{t("Next round waits for everyone")}</span>
-          <input
-            type="checkbox"
-            checked={waits}
-            onChange={(e) => setWaits(e.target.checked)}
-          />
+          <span>{t("Next round waits for")}</span>
+          <select value={wait} onChange={(e) => setWait(e.target.value)}>
+            <option value="all">{t("Everyone")}</option>
+            <option value="half">{t("Half")}</option>
+            <option value="off">{t("No one")}</option>
+          </select>
         </label>
         {everyone}
       </div>

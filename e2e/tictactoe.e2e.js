@@ -83,15 +83,16 @@ test("X wins in a row: both pages, the score, then O starts", async ({
   await expect(x.locator(".tt-ink")).toHaveCount(0);
 });
 
-// The room waits for everyone (⋯ → Settings, switched on by one player
-// for all): the next game deals once both have tapped for it, each tap
-// shown by its player's name; ⋯ → New Game still deals at once.
+// The room waits for everyone (⋯ → Settings, picked by one player for
+// all): the next game deals once both have tapped for it, each tap shown
+// by its player's name; ⋯ → New Game still deals at once. Half: of two,
+// one tap.
 test("the next game waits for both players, once the room says so", async ({
   browser,
 }, info) => {
   const { x, o } = await twoPlayers(browser, info);
   await settings(x);
-  await x.getByRole("checkbox", { name: WAIT_ALL }).check();
+  await x.getByRole("combobox", { name: WAIT_ALL }).selectOption("all");
   await x.keyboard.press("Escape");
   // Bora hears of it, and his device keeps it
   await expect(
@@ -99,8 +100,8 @@ test("the next game waits for both players, once the room says so", async ({
       /^Ayşe: (next round waits for everyone|sonraki el herkesi bekler)$/,
     ),
   ).toBeVisible(NET);
-  const kept = () => JSON.parse(localStorage.getItem("wait-all")).state.on;
-  expect(await o.evaluate(kept)).toBe(true);
+  const kept = () => JSON.parse(localStorage.getItem("wait-all")).state.wait;
+  expect(await o.evaluate(kept)).toBe("all");
   // X wins along the top row
   for (const [page, i] of [
     [x, 0],
@@ -133,10 +134,37 @@ test("the next game waits for both players, once the room says so", async ({
   await x.getByRole("button", { name: NEW_GAME }).click();
   await x.locator(".tb-menu button.armed").click();
   await expect.poll(async () => (await game(x)).id).not.toBe(id);
+  // half the players: of two, one tap deals the next game
+  await settings(x);
+  await x.getByRole("combobox", { name: WAIT_ALL }).selectOption("half");
+  await x.keyboard.press("Escape");
+  await expect(
+    o.getByText(
+      /^Ayşe: (next round waits for half the players|sonraki el oyuncuların yarısını bekler)$/,
+    ),
+  ).toBeVisible(NET);
+  // whoever starts wins along the top row
+  const first = (await game(x)).turn;
+  const [starter, other] = first === 0 ? [x, o] : [o, x];
+  for (const [page, i] of [
+    [starter, 0],
+    [other, 3],
+    [starter, 1],
+    [other, 4],
+    [starter, 2],
+  ]) {
+    const seat = page === starter ? first : 1 - first;
+    await expect.poll(async () => (await game(page)).turn, NET).toBe(seat);
+    await cell(page, i).click();
+  }
+  await expect.poll(async () => (await game(o)).winner?.seat, NET).toBe(first);
+  const won = (await game(x)).id;
+  await next(o).click();
+  await expect.poll(async () => (await game(x)).id, NET).not.toBe(won);
   // and Ayşe's device brings it to the next room it opens, for good
   await x.goto(`/${room("ttt")}`);
   await settings(x);
-  await expect(x.getByRole("checkbox", { name: WAIT_ALL })).toBeChecked();
+  await expect(x.getByRole("combobox", { name: WAIT_ALL })).toHaveValue("half");
 });
 
 // A ready check after a break (⋯, either player's): no mark till both have
@@ -165,18 +193,18 @@ test("a ready check holds the game till both players are back", async ({
   await back(o).click();
   for (const page of [x, o]) {
     await expect(page.getByText(ALL_BACK)).toBeVisible(NET);
-    await expect(page.locator(".tb-check")).toHaveCount(0);
+    await expect(page.locator(".ready-plate")).toHaveCount(0);
   }
   await cell(x, 0).click();
   await expect.poll(async () => (await game(o)).turn, NET).toBe(1);
   // Bora's check, ended by Ayşe: play on
   await o.getByRole("button", { name: MENU }).click();
   await o.getByRole("button", { name: CHECK }).click();
-  await expect(x.locator(".tb-check")).toHaveCount(1, NET);
+  await expect(x.locator(".ready-plate")).toHaveCount(1, NET);
   await x.getByRole("button", { name: MENU }).click();
   await x.getByRole("button", { name: END_CHECK }).click();
   await expect(o.getByText(CHECK_ENDED)).toBeVisible(NET);
-  await expect(o.locator(".tb-check")).toHaveCount(0);
+  await expect(o.locator(".ready-plate")).toHaveCount(0);
   await cell(o, 4).click();
   await expect.poll(async () => (await game(x)).turn, NET).toBe(0);
 });
@@ -188,7 +216,7 @@ test("the next game goes on without a player who can't press, from ⋯", async (
 }, info) => {
   const { x, o } = await twoPlayers(browser, info);
   await settings(x);
-  await x.getByRole("checkbox", { name: WAIT_ALL }).check();
+  await x.getByRole("combobox", { name: WAIT_ALL }).selectOption("all");
   await x.keyboard.press("Escape");
   for (const [page, i] of [
     [x, 0],

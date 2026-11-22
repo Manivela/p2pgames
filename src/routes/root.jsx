@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useParams } from "react-router-dom";
 import { useDoc, useWebRtc } from "../vendor/y-react";
-import { signalingServers, peerOpts } from "../constants";
+import { signalingServers, peerOpts, webrtc } from "../constants";
 import Awareness from "../Components/Awareness";
 import HowToPlay, { RULES, usePlaying } from "../Components/HowToPlay";
 import Menu, { useRoomGame } from "../Components/Menu";
@@ -30,7 +30,8 @@ const GAMES = {
 // page has synced with everyone who answered (none picked: Okey), or no
 // one has within a second of reaching the signaling server (an empty
 // room: the game this tab was at, a reload alone, else Okey). A slow
-// network gets 6 s, then Okey till the room's comes.
+// network gets 6 s, then Okey till the room's comes. Without WebRTC there's
+// no one to hear: alone at once.
 // The room's first page doesn't wait: the login writes a new room's game,
 // and the e2e's say so, once (sessionStorage alone: the room's id).
 function useKnown() {
@@ -90,6 +91,11 @@ function useKnown() {
         // blocked or unreadable: Okey
       }
     };
+    // no WebRTC (constants.js): no one to hear, so alone at once
+    if (!webrtc) {
+      seed();
+      return done();
+    }
     let alone;
     const reached = () => {
       clearTimeout(alone);

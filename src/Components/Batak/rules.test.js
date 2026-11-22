@@ -3,8 +3,10 @@ import {
   bid,
   bidsOpen,
   dealNext,
+  endMatch,
   legal,
   newGame,
+  next,
   play,
   score,
   trump,
@@ -96,8 +98,10 @@ test("a deal over: the next seat deals the next one, the score kept", () => {
   assert.deepEqual(d.score, [3, -5, 2, 4]);
   assert.deepEqual(d.bids, [null, null, null, null]);
   d.hands.forEach((h) => assert.lengthOf(h, 13));
-  // an unknown length: 8 deals
+  // an unknown length: 8 deals; 32, or endless (0)
   assert.equal(newGame(null, IDS, "batak").deals, 8);
+  assert.equal(newGame(null, IDS, "32").deals, 32);
+  assert.equal(newGame(null, IDS, "0").deals, 0);
 });
 
 test("bidding: one over the highest, at least 5; the last in takes it", () => {
@@ -125,15 +129,16 @@ test("bidding: one over the highest, at least 5; the last in takes it", () => {
   assert.equal(s.turn, 3, "the bidder leads");
 });
 
-test("all pass: the dealer has to bid", () => {
+test("all pass: the dealer has to bid, 4 or more", () => {
   let s = newGame(null, IDS);
   for (const seat of [1, 2, 3]) s = bid(s, seat, 0);
   assert.equal(s.turn, 0);
-  assert.notInclude(bidsOpen(s), 0);
+  assert.deepEqual(bidsOpen(s), [4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
   assert.isUndefined(bid(s, 0, 0));
-  s = bid(s, 0, 5);
+  assert.isUndefined(bid(s, 0, 3));
+  s = bid(s, 0, 4);
   assert.equal(s.bidder, 0);
-  assert.equal(s.contract, 5);
+  assert.equal(s.contract, 4);
 });
 
 test("follow suit, higher while you can", () => {
@@ -268,6 +273,48 @@ test("the bidder down, less the bid; a tie for the most at the end wins it for b
   assert.deepEqual(t.score, [6, 6, 2, 1]);
   assert.isNull(t.turn);
   assert.deepEqual(t.winners, [0, 1]);
+  // an endless match, its 40th deal played: the next seat deals on
+  let e = inPlay(["AH", "2H", "3H", "4H"], [], { broken: true });
+  e = { ...e, deals: 0, rows: Array(39).fill(t.rows[0]) };
+  for (const [seat, card] of [
+    [0, "AH"],
+    [1, "2H"],
+    [2, "3H"],
+    [3, "4H"],
+  ]) {
+    e = play(e, seat, c(card));
+  }
+  assert.lengthOf(e.rows, 40);
+  assert.equal(e.turn, next(e.dealer));
+  assert.isNull(e.winners);
+  // ended in ⋯: whoever leads wins it, at once at a deal's end, or in one
+  // just dealt, its cards put away; never a match of a length, nor one with
+  // no deal played yet
+  const ended = endMatch({ ...e, score: [3, 9, 9, 1] });
+  assert.isNull(ended.turn);
+  assert.deepEqual(ended.winners, [1, 2]);
+  const fresh = dealNext(e, e.turn);
+  const dropped = endMatch({ ...fresh, score: [3, 9, 9, 1] });
+  assert.equal(dropped.phase, "over");
+  assert.deepEqual(dropped.winners, [1, 2]);
+  assert.deepEqual(dropped.hands, [[], [], [], []]);
+  assert.deepEqual(dropped.points, e.rows.at(-1).points);
+  assert.isUndefined(endMatch({ ...e, deals: 8 }));
+  assert.isUndefined(endMatch({ ...e, rows: [] }));
+  // once someone's bid, it ends after the deal, played out to the last trick
+  let m = bid(fresh, fresh.turn, 0);
+  m = endMatch(m);
+  assert.isTrue(m.ending);
+  assert.isNull(m.winners);
+  assert.isUndefined(endMatch(m), "ending already");
+  while (m.phase !== "over") m = bot.play(m, m.turn);
+  assert.lengthOf(m.rows, 41);
+  assert.isNull(m.turn);
+  const top = Math.max(...m.score);
+  assert.deepEqual(
+    m.winners,
+    [0, 1, 2, 3].filter((s) => m.score[s] === top),
+  );
 });
 
 test("a bot waits out the deal, then a trick's slide, before it plays", () => {

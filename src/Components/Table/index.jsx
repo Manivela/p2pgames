@@ -11,6 +11,7 @@ import {
 } from "../../hooks/useStore";
 import { MOD, useEscape, useKey } from "../../hooks/useKey";
 import { useReadyCheck, useTogether, WAIT_READY } from "../../hooks/useRoom";
+import ReadyCheck from "../ReadyCheck";
 import { signalingServers, peerOpts } from "../../constants";
 import { Confirm } from "../Confirm";
 import { usePlaying } from "../HowToPlay";
@@ -144,13 +145,7 @@ export function useTable(
     u && !u.bot ? [{ key: i, here: here.has(u.id) }] : [],
   );
   // a ready check after a break (⋯): moves, bots and the next game wait
-  const check = useReadyCheck({
-    map,
-    need,
-    mine,
-    starts: startsHere,
-    live: !!game && full,
-  });
+  const check = useReadyCheck({ map, need, mine, starts: startsHere });
   const together = useTogether({
     map,
     round: game && full ? `${game.id}/${game.last?.n}` : null,
@@ -439,6 +434,7 @@ function Menu({
   playBoth,
   free,
   newGame,
+  end,
   resetScore,
   saves,
   check,
@@ -516,6 +512,9 @@ function Menu({
               {newGame && (
                 <Confirm label={t("New Game")} onConfirm={then(newGame)} />
               )}
+              {end && (
+                <Confirm label={t("End the game")} onConfirm={then(end)} />
+              )}
               {resetScore && (
                 <Confirm
                   label={t("Reset score")}
@@ -548,7 +547,8 @@ function Menu({
 // seats its players round it itself (Batak) is a function, given each
 // seat's plate: `children(plate)`. A game played as a match keeps a score
 // sheet (`sheet`: its rounds' `rows`, ScoreSheet.jsx), above ⋯; its
-// totals are the rows', so the score isn't reset on its own.
+// totals are the rows', so the score isn't reset on its own. A game with
+// no end of its own (Batak's endless match) is ended from ⋯: `end`.
 export function Table({
   table,
   mark,
@@ -556,6 +556,7 @@ export function Table({
   device,
   everyone,
   sheet,
+  end,
   children,
 }) {
   const { seats, game, mine, seated, both, full, near, far, across } = table;
@@ -650,6 +651,7 @@ export function Table({
           saves={table.saves}
           check={table.check}
           force={table.force}
+          end={end}
           resetScore={
             !sheet &&
             table.hosts &&
@@ -658,23 +660,16 @@ export function Table({
           }
         />
       </div>
-      <div className="tb-wrap" data-felt="">
+      {/* the box a layer covers (Layer.jsx), a board seating its players
+          round it marking its own middle */}
+      <div
+        className="tb-wrap"
+        data-felt=""
+        data-middle={around ? undefined : ""}
+      >
         {around ? children(plate) : children}
-        {/* a ready check (⋯): each player's Ready, over the board */}
-        {table.check.open && (
-          <div className="tb-check">
-            {table.check.press ? (
-              <button
-                aria-pressed={table.check.pressed}
-                onClick={table.check.press}
-              >
-                {t("Ready")}
-              </button>
-            ) : (
-              <span>{t("Ready check")}</span>
-            )}
-          </div>
-        )}
+        {/* a ready check (⋯), on the board's middle */}
+        <ReadyCheck check={table.check} name={(k) => table.names[k]} />
       </div>
     </div>
   );

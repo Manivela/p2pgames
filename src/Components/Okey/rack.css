@@ -1034,7 +1034,7 @@ html:has(.fit) {
 }
 
 /* the table's buttons, dark see-through pills as every table's (index.css) */
-.board button:not(:where(.menu, .dialog) button, :where(.avatar)),
+.board button:not(:where(.menu, .dialog, .layer) button, :where(.avatar)),
 .scores > summary {
   height: calc(var(--t) * 0.7);
   padding: 0 calc(var(--t) * 0.3);
@@ -1047,12 +1047,6 @@ html:has(.fit) {
 }
 
 /* a ready check, to someone watching (Board.jsx) */
-.side .checking {
-  margin: 0;
-  font-size: calc(var(--t) * 0.34);
-  font-weight: 600;
-}
-
 /* El aç while a tap picks a whole group */
 .side button[aria-pressed="true"] {
   background: #fff;

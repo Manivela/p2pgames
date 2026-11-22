@@ -1,0 +1,27 @@
+/* A layer (Layer.jsx) over the box its table marks data-middle. Only its
+   buttons take a touch: everything round it, your hand above all, stays
+   yours. What it holds sizes itself to it with container queries on
+   `layer` (ReadyCheck.css), never the screen's media queries, and is
+   styled by its own CSS alone: a table's styles for its buttons leave
+   `.layer` out, as they do menus and dialogs. */
+[data-middle] {
+  position: relative;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  container: layer / size;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+
+.layer button {
+  pointer-events: auto;
+}

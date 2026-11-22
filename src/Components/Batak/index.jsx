@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useKey } from "../../hooks/useKey";
 import {
   Table,
@@ -18,6 +18,7 @@ import {
   bid,
   bidsOpen,
   dealNext,
+  endMatch,
   legal,
   newGame,
   play,
@@ -67,36 +68,39 @@ function info(state, s) {
 
 // The match's score sheet: a row a deal, each seat's points, the bidder's
 // with their trumps; the deal being played, its bidder's bid so far, and
-// those to come, blank; the most points leading
+// those to come, blank (an endless match's: none); the most points leading
 function sheetOf(state) {
   const { rows, deals, score, phase, bidder, contract, trump } = state;
   const running = phase === "over" ? -1 : rows.length;
   return {
-    rows: Array.from({ length: deals }, (_, i) => {
-      const r = rows[i];
-      const bid = (s) =>
-        i === running && s === bidder && trump !== null ? (
-          <>
-            <Suit suit={trump} /> {contract}
-          </>
-        ) : (
-          ""
-        );
-      return {
-        key: i,
-        label: i + 1,
-        className: r ? "" : i === running ? "running" : "later",
-        cells: [0, 1, 2, 3].map((s) =>
-          r ? (
+    rows: Array.from(
+      { length: deals || rows.length + (running < 0 ? 0 : 1) },
+      (_, i) => {
+        const r = rows[i];
+        const bid = (s) =>
+          i === running && s === bidder && trump !== null ? (
             <>
-              {s === r.bidder && <Suit suit={r.trump} />} {r.points[s]}
+              <Suit suit={trump} /> {contract}
             </>
           ) : (
-            bid(s)
+            ""
+          );
+        return {
+          key: i,
+          label: i + 1,
+          className: r ? "" : i === running ? "running" : "later",
+          cells: [0, 1, 2, 3].map((s) =>
+            r ? (
+              <>
+                {s === r.bidder && <Suit suit={r.trump} />} {r.points[s]}
+              </>
+            ) : (
+              bid(s)
+            ),
           ),
-        ),
-      };
-    }),
+        };
+      },
+    ),
     lead: score.some((v) => v !== score[0]) && Math.max(...score),
   };
 }
@@ -110,7 +114,7 @@ const GATHER_MS = 1000;
 
 // The middle of the table: the bid buttons or trumps to name when it's
 // yours to, the trick on the table, at a deal's end the next deal's tap
-// for its dealer, and at the match's end who won it and a new one's tap
+// for its players, and at the match's end who won it and a new one's tap
 // for its players. A card played comes from its player; a trick taken
 // lies 1 s,
 // its taking card lit, then slides to its taker: only as this page sees it
@@ -119,12 +123,10 @@ function Middle({ state, table, place, dealing, from }) {
   const { phase, turn, trick, lastTrick, last } = state;
   const yours = turn !== null && table.mine.includes(turn);
   const act = (next) => table.act(next);
-  // the next deal: its dealer's tap, or while the room waits for everyone,
-  // each player's (Table's useTable deals once all have)
-  const deal =
-    phase === "over" &&
-    turn !== null &&
-    (table.waits ? table.deal : yours && (() => act(dealNext(state, turn))));
+  // the next deal, from its dealer's seat: any player's tap, or while the
+  // room waits for everyone, each player's (Table's useTable deals once all
+  // have)
+  const deal = phase === "over" && turn !== null && table.deal;
   const next = phase === "over" && turn === null && table.deal;
   // a full table waits for a player's Start
   const start = phase === "none" && table.start;
@@ -155,8 +157,10 @@ function Middle({ state, table, place, dealing, from }) {
     );
   }
   if (phase === "none") return <p className="bk-note">{table.note}</p>;
-  // the bids once the cards are dealt (Cards/deal.js)
-  if (yours && phase === "bid" && !dealing) {
+  // the bids once the cards are dealt (Cards/deal.js), none while a ready
+  // check holds the table (its plate's over the middle)
+  const asked = yours && !table.check.open;
+  if (asked && phase === "bid" && !dealing) {
     return (
       <div className="bk-bids" role="group" aria-label={t("Bid")}>
         {bidsOpen(state).map((n) => (
@@ -167,7 +171,7 @@ function Middle({ state, table, place, dealing, from }) {
       </div>
     );
   }
-  if (yours && phase === "trump") {
+  if (asked && phase === "trump") {
     return (
       <div className="bk-bids suits" role="group" aria-label={t("Trumps")}>
         {[0, 1, 2, 3].map((s) => (
@@ -305,6 +309,11 @@ export default function Batak() {
   // where the card you just played was in your hand (Hand, Middle)
   const from = useRef(null);
   const g = table.game;
+  // ended in ⋯ mid-deal (endMatch): said at the table, as it plays on
+  const ending = !!g?.ending && g.turn !== null;
+  useEffect(() => {
+    if (ending) tell("The game ends after this deal");
+  }, [ending]);
   const dealtAt = useChangedAt(g && `${g.id}/${g.round}`, table.live);
   const [dealing, setDealing] = useState(false);
   useLayoutEffect(() => {
@@ -352,7 +361,7 @@ export default function Batak() {
             >
               {DEALS.map((n) => (
                 <option key={n} value={n}>
-                  {n}
+                  {n || "∞"}
                 </option>
               ))}
             </select>
@@ -360,6 +369,7 @@ export default function Batak() {
         )
       }
       sheet={g?.rows && sheetOf(g)}
+      end={g && table.hosts && endMatch(g) && (() => table.act(endMatch(g)))}
     >
       {(plate) => (
         // the felt, bare between the cards, knocks (Table)
@@ -374,7 +384,7 @@ export default function Batak() {
               {plate(s)}
             </div>
           ))}
-          <div className="bk-middle" data-felt="">
+          <div className="bk-middle" data-felt="" data-middle="">
             <Middle
               state={state}
               table={table}
