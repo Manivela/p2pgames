@@ -158,7 +158,14 @@ function Meld({ meld, index }) {
 const COLORS = ["red", "blue", "black", "yellow"];
 function Example({ melds }) {
   return (
-    <span className="example">
+    <span
+      className="example"
+      // how many tiles and groups, for a phone to fit them in one row
+      style={{
+        "--tiles": sum(melds.map(([, size]) => size)),
+        "--groups": melds.length,
+      }}
+    >
       {melds.map(([type, size], i) => (
         <span key={i}>
           {Array.from({ length: size }, (_, j) => {
@@ -200,7 +207,7 @@ export function RoundInfo() {
       {rounds.length > 1 && (
         <>
           {t(`Round ${round}/${rounds.length}`)}
-          <small>{t(rounds[round - 1].name)}</small>
+          <small className="name">{t(rounds[round - 1].name)}</small>
         </>
       )}
       {/* what opens the round, until everyone has */}
@@ -269,6 +276,10 @@ export function LastTurn() {
   );
 }
 
+// how far the melds shrink to fit before the table tries its tiles smaller,
+// a twentieth at a time, at most a fifth
+const CROWDED = 0.75;
+
 // the melds on the table, and under them while the draw pile is in the
 // middle (Board.jsx)
 export function Melds({ underPile }) {
@@ -294,6 +305,8 @@ export function Melds({ underPile }) {
 
   // every meld stays in view: they all shrink until they fit the band
   const band = useRef(null);
+  // the table's tiles given way this deal (below)
+  const give = useRef({});
   const layout = melds.map((m) => m.tiles.length).join();
   useLayoutEffect(() => {
     const el = band.current;
@@ -319,14 +332,50 @@ export function Melds({ underPile }) {
       // still too many: a finger scrolls the band (rack.css)
       el.style.touchAction =
         el.scrollHeight > el.clientHeight ? "pan-y pinch-zoom" : "";
+      return scale;
     };
-    fit();
+    // Shrunk past a quarter, the melds may come out bigger with the table's
+    // tiles a little smaller, the room those free going to the melds, or
+    // smaller, as the melds wrap in whole rows: the table tries a size
+    // smaller (Board.jsx useTileSize), keeps it while the melds come out
+    // bigger, and takes it back once they don't, done for the deal. A step
+    // each time the table changes size, as a turned phone does, in the
+    // frame after: its own resizing calls the observer back.
+    const box = el.closest(".fit");
+    const share = (detail) =>
+      requestAnimationFrame(() =>
+        box?.dispatchEvent(new CustomEvent("tileshare", { detail })),
+      );
+    const meld = () =>
+      el.querySelector(".meld .tile")?.getBoundingClientRect().width ?? 0;
+    const refit = () => {
+      const scale = fit();
+      if (give.current.deal !== okeyState.deal) {
+        give.current = { deal: okeyState.deal, share: 1 };
+      }
+      const g = give.current;
+      if (g.done) return;
+      if (g.trying) {
+        if (meld() > g.meld * 1.02) g.share = g.trying;
+        else {
+          g.done = true;
+          share(g.share);
+        }
+        g.trying = null;
+        if (g.done) return;
+      }
+      if (scale >= CROWDED || g.share <= 0.8) return;
+      g.meld = meld();
+      g.trying = Math.round((g.share - 0.05) * 100) / 100;
+      share(g.trying);
+    };
+    refit();
     // the table's size, not the band's: under the pile the band is as tall
     // as its melds, and refitting would resize what it watches
-    const observer = new ResizeObserver(fit);
+    const observer = new ResizeObserver(refit);
     observer.observe(el.parentElement);
     return () => observer.disconnect();
-  }, [layout, underPile, laying, okeyState.gameState]);
+  }, [layout, underPile, laying, okeyState.gameState, okeyState.deal]);
 
   return (
     <div

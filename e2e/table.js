@@ -107,6 +107,33 @@ export function playToEnd() {
   window.okey.set(s);
 }
 
+// a round over (playToEnd) as if seat 2 had finished it in a long last turn:
+// five moves listed (LastTurn), only shown, nobody's hand changed
+export function longLastTurn() {
+  const s = window.okey.get();
+  const ids = seat(s, 2)
+    .hand.filter(Boolean)
+    .map((t) => t.id);
+  const moves = ["drew", "laid", "added", "swapped", "finished"];
+  window.okey.set({
+    ...s,
+    message: `${seat(s, 2).user.name} finished!`,
+    turnMoves: moves.map((move, i) => ({ move, by: 2, tiles: [ids[i]] })),
+  });
+}
+
+// how far the side column stays above your rack and discard pile, the
+// pile's count included (negative: into them), in px
+export function sideClear() {
+  const under = document.querySelectorAll(
+    ".foot > .rack, .foot > .rack ~ .discardPile, .foot > .rack ~ .discardPile .count",
+  );
+  const floor = Math.min(
+    ...[...under].map((e) => e.getBoundingClientRect().top),
+  );
+  return floor - document.querySelector(".side").getBoundingClientRect().bottom;
+}
+
 // classic: everyone plays until the pile runs out, then it's seat 1's turn
 export function emptyPile() {
   let s = window.okey.get();

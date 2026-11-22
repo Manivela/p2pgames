@@ -22,20 +22,28 @@ import ReadyCheck from "../ReadyCheck";
 // rack, is as big as the box allows for the rack and the piles beside it
 // (`across`: a rack row and 3.8 more), for the seats along the top when
 // they're wider (four others or more, up to seven, long names) and for
-// the whole table (7.4 tiles down), up to 70px.
+// the whole table (7.7 tiles down: on a short phone, room in the middle
+// for the draw pile aside over Take and Call!), up to 70px; a little
+// smaller where that shows crowded melds bigger (Melds' "tileshare"), till
+// the deal.
 // It's set on the page, so the tiles that fly or are dragged (outside the
 // table) and the site's corner buttons (index.css) match.
-function useTileSize(across) {
+function useTileSize(across, deal) {
   const ref = useRef(null);
+  // the share of that size the table keeps this deal (Melds), all of it
+  // again at the next deal
+  const keep = useRef({ deal, share: 1 });
   // measured every render, like usePileAside: someone sitting down or the
   // score sheet's button widens the top without resizing the box
   useLayoutEffect(() => {
+    if (keep.current.deal !== deal) keep.current = { deal, share: 1 };
     const fit = ref.current;
     const head = fit.querySelector(".head");
     const page = document.documentElement.style;
     // set from the observer only: sized in the effect itself as well, a
     // lobby button's text sat a hair off in the Docker screenshots
-    const observer = new ResizeObserver(() => {
+    // `exact`: a share Melds tries, the size it calls for even a pixel up
+    const resize = (exact) => {
       // the top at its narrowest, in tiles (all of it is sized in --t): the
       // others along it and the board's padding (not the head's box: the
       // board widens to fit it)
@@ -49,17 +57,30 @@ function useTileSize(across) {
       // whole pixels, and never one more than now: measured at the size it
       // sets, a crowded top can call for a pixel more and then one less,
       // and the table would settle either way; more room grows it by two
-      const size = Math.floor(Math.min(width, fit.clientHeight / 7.4, 70));
+      const size = Math.floor(
+        Math.min(width, fit.clientHeight / 7.7, 70) * keep.current.share,
+      );
       // only when it changes: measured every render, not repainted
-      if (size !== t && size !== t + 1) page.setProperty("--t", `${size}px`);
+      if (size !== t && (exact === true || size !== t + 1)) {
+        page.setProperty("--t", `${size}px`);
+      }
       // the site's menu and fullscreen buttons (index.css) go where the
       // table keeps them a place, at the size just set
       const room = fit.querySelector(".corner-room").getBoundingClientRect();
       page.setProperty("--corner-top", `${room.top}px`);
       page.setProperty("--corner-left", `${room.left}px`);
-    });
+    };
+    const observer = new ResizeObserver(resize);
     observer.observe(fit);
-    return () => observer.disconnect();
+    const share = (e) => {
+      keep.current.share = e.detail;
+      resize(true);
+    };
+    fit.addEventListener("tileshare", share);
+    return () => {
+      observer.disconnect();
+      fit.removeEventListener("tileshare", share);
+    };
   });
   useLayoutEffect(
     () => () => {
@@ -106,6 +127,67 @@ function usePileAside(deal) {
     return () => observer.disconnect();
   });
   return [ref, aside];
+}
+
+// The side column stays clear of your rack and discard pile (its count
+// too): on a phone on its side the table is short, and the column's lines
+// (a claim, a message, how the round finished) can outgrow it. It rises
+// into the corner above it where the seats along the top leave that free
+// (fewer seats than the most), its bottom kept where it is so its button
+// stays put, and shrinks only past that, while the tiles in play keep their
+// size. Measured every render, like usePileAside: what it shows changes
+// with every move. Only read, in the layout usePileAside has just had
+// worked out, unless it's moved: then measured again in its place.
+function useSideFit() {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const side = ref.current;
+    const board = side.closest(".board");
+    const fit = () => {
+      if (side.style.zoom || side.style.marginTop) {
+        side.style.zoom = side.style.marginTop = side.style.alignSelf = "";
+      }
+      const t = parseFloat(
+        document.documentElement.style.getPropertyValue("--t"),
+      );
+      const top = (e) => e.getBoundingClientRect().top;
+      const under = board.querySelectorAll(
+        ".foot > .rack, .foot > .rack ~ .discardPile, .foot > .rack ~ .discardPile .count",
+      );
+      const floor = Math.min(...[...under].map(top)) - t * 0.1;
+      const r = side.getBoundingClientRect();
+      if (r.bottom <= floor) return;
+      // the corner: up to the board's padding, or to what's along the top
+      // over the column (a seat, a pile, a badge)
+      const above = [...board.querySelectorAll(".head *")]
+        .map((e) => e.getBoundingClientRect())
+        .filter((b) => b.width && b.right > r.left && b.left < r.right);
+      const ceiling = Math.min(
+        r.top,
+        Math.max(
+          board.getBoundingClientRect().top +
+            parseFloat(getComputedStyle(board).paddingTop),
+          ...above.map((b) => b.bottom + t * 0.1),
+        ),
+      );
+      // as high as it needs, as small as it then must
+      const zoom = Math.min(1, (floor - ceiling) / r.height);
+      const rise = Math.min(r.top - ceiling, r.bottom - floor);
+      if (zoom < 1) side.style.zoom = zoom;
+      if (rise > 0) {
+        side.style.alignSelf = "start";
+        // a zoomed column's margin is zoomed with it
+        side.style.marginTop = `${-rise / zoom}px`;
+      }
+    };
+    fit();
+    // the table's size, not the column's: moving it would resize what it
+    // watches
+    const observer = new ResizeObserver(fit);
+    observer.observe(side.parentElement);
+    return () => observer.disconnect();
+  });
+  return ref;
 }
 
 // the draw pile as a stack, its count, and the indicator beside it
@@ -364,8 +446,9 @@ function Board() {
   // left to right: the one before you first
   const others = rest.reverse();
   // your own rack's rows set the tiles' size (rowOf)
-  const fit = useTileSize(rowOf(okeyState, me) + 3.8);
+  const fit = useTileSize(rowOf(okeyState, me) + 3.8, okeyState.deal);
   const [table, pileAside] = usePileAside(okeyState.deal);
+  const side = useSideFit();
   useMoves();
   // on the felt, off anything to pick up or press, and the racks
   const onKnock = useKnockTaps(
@@ -427,7 +510,7 @@ function Board() {
               }}
             />
           </div>
-          <div className="side">
+          <div className="side" ref={side}>
             <RoundInfo />
             <LastTurn />
             <NextStep />

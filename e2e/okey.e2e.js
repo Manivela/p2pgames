@@ -141,10 +141,11 @@ async function drag(page, from, to) {
   await page.mouse.up();
 }
 
-// bare felt, at every size: just above my rack's left end
+// bare felt, at every size: just above my rack, a quarter along it, clear
+// of Take and Call! at its left end and of its name tab
 async function felt(page) {
   const r = await page.locator(".rack:not(.mini)").first().boundingBox();
-  return { x: r.x + 10, y: r.y - 15 };
+  return { x: r.x + r.width / 4, y: r.y - 15 };
 }
 
 // a menu item that takes a second tap
@@ -209,6 +210,57 @@ test("before you sit, everything fits", async ({ page }) => {
   await sitDown(page, { sit: false });
   expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
+
+// a phone on its side, short with the browser's bars (the shortest tables
+// for their width): Take stays clear of the draw pile aside and its
+// indicator, and the side column clear of your rack and discard pile,
+// under an example of two groups of four and a claim on the discard, and
+// at the round's end under a long last turn; and with every line it can
+// show at once (two claims, your takes, a wrong call), risen into the
+// corner the three others leave free, not shrunk
+for (const [width, height] of [
+  [800, 290],
+  [915, 330],
+]) {
+  test(`a short phone keeps the side column clear, ${width}×${height}`, async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "phone", "sizes of its own");
+    await page.setViewportSize({ width, height });
+    await sitDown(page);
+    await table(page, "start", 4);
+    await table(page, "toMyTurn", false);
+    await expect(page.locator(".discardPile .take")).toBeVisible();
+    expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+    // drawn from the pile: Deniz's discard is up for the others to claim
+    await table(page, "toMyTurn");
+    await page.evaluate(() =>
+      window.okey.set({ ...window.okey.get(), round: 8 }),
+    );
+    await table(page, "claim", 2);
+    await expect(page.locator(".round .claims")).toBeVisible();
+    await expect(page.getByRole("button", { name: OPEN })).toBeVisible();
+    expect(await table(page, "sideClear")).toBeGreaterThanOrEqual(0);
+    expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+    await table(page, "claim", 3);
+    await page.evaluate(() => {
+      const s = window.okey.get();
+      const message = "Can called wrongly: no calls until everyone has thrown";
+      window.okey.set({ ...s, takes: { 1: 1 }, message });
+    });
+    await expect(page.locator(".round small:visible")).toHaveCount(3);
+    const side = page.locator(".side");
+    expect(await side.evaluate((e) => e.style.zoom)).toBe("");
+    expect(await side.evaluate((e) => e.style.marginTop)).toMatch(/^-/);
+    expect(await table(page, "sideClear")).toBeGreaterThanOrEqual(0);
+    expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+    await table(page, "playToEnd");
+    await table(page, "longLastTurn");
+    await expect(page.getByRole("button", { name: NEXT })).toBeVisible();
+    expect(await table(page, "sideClear")).toBeGreaterThanOrEqual(0);
+    expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
+  });
+}
 
 test("a crowded table fits", async ({ page }) => {
   await sitDown(page);
@@ -642,6 +694,36 @@ test("eight at a table fit, in play and once the round is over", async ({
     offscreen: [],
   });
   await expect(page).toHaveScreenshot("eight-round-end.png");
+});
+
+// eight who've all opened, one just now, at a table crowded with melds:
+// every seat's badge stays in the row along the top, clear of the draw pile
+// and the melds; on a phone the table's tiles give a little way, where the
+// melds come out bigger for it (16.5px at the full 50)
+test("eight opened at a crowded table fit, the melds kept readable", async ({
+  page,
+}, info) => {
+  await sitDown(page);
+  await table(page, "start", 8, "americano", { seats: 8, tileSets: 4 });
+  await table(page, "toMyTurn");
+  await table(page, "openKut");
+  await page.evaluate(() => {
+    const s = window.okey.get();
+    const opened = Object.fromEntries(s.players.map((p) => [p.id, true]));
+    window.okey.set({ ...s, opened, justOpened: 5 });
+  });
+  await table(page, "crowd", 12);
+  await expect(page.locator(".seat .badges .badge")).toHaveCount(7);
+  const width = (selector) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((e) => e.getBoundingClientRect().width);
+  if (info.project.name === "phone") {
+    await expect.poll(() => width(".foot > .rack .tile")).toBeLessThan(50);
+    expect(await width(".meld .tile")).toBeGreaterThan(20);
+  }
+  expect(await table(page, "check")).toEqual({ overlaps: [], offscreen: [] });
 });
 
 // four played a round of rules with a fifth seat: someone arriving sees it

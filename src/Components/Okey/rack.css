@@ -80,7 +80,8 @@ html:has(.fit) {
 }
 
 /* on its left a newer version to reload for, over the draw pile when it's
-   aside; the pile clear of Take and Call!, which rise out of the row below */
+   aside; the pile clear of Take and Call!, which rise out of the row below,
+   and its count clear of the seats' badges above */
 .middle > .left {
   grid-column: 1;
   display: flex;
@@ -88,7 +89,7 @@ html:has(.fit) {
   align-items: flex-start;
   gap: calc(var(--t) * 0.2);
   min-height: 0;
-  padding-bottom: calc(var(--t) * 0.6);
+  padding: calc(var(--t) * 0.12) 0 calc(var(--t) * 0.45);
 }
 
 /* the site's menu and fullscreen buttons (index.css) go in the corner left
@@ -459,12 +460,12 @@ html:has(.fit) {
   background-color: #616161;
 }
 
-/* from under the avatar, clear of its tile count and the tea glass: room up
-   to the next pile, even past a short name */
+/* under the name, across it, out of the row: they come and go each turn */
 .seat .badges {
   position: absolute;
-  top: calc(100% + var(--t) * 0.09);
-  left: calc(var(--t) * 0.26);
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
   /* as tall as the badges or buttons in it, not the name's line */
   line-height: 1;
   white-space: nowrap;
@@ -474,12 +475,24 @@ html:has(.fit) {
   margin: 0 0.3em 0 0;
 }
 
-/* a seat: round avatar in the seat's colour, tiles left on a badge */
+/* a seat: round avatar in the seat's colour, tiles left on a badge, and
+   the name under it, so a seat is no wider than its name: seven others fit
+   along the top with tiles as big as four's (useTileSize) */
 .seat {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: calc(var(--t) * 0.12);
+  gap: calc(var(--t) * 0.02);
+}
+
+/* small enough that with the name under it a seat is about as tall as the
+   piles between seats: the row and its line of badges take no more of the
+   table than with the name beside it */
+.seat .avatar {
+  width: calc(var(--t) * 0.64);
+  height: calc(var(--t) * 0.64);
+  font-size: calc(var(--t) * 0.3);
 }
 
 .avatar {
@@ -754,6 +767,8 @@ html:has(.fit) {
    never too small to read on a phone */
 .round {
   --small-t: max(18px, calc(var(--t) * 0.32));
+  /* the side column at its widest (.side), in the table's tiles */
+  --side-width: calc(var(--t) * 4);
 }
 
 .round .example {
@@ -768,6 +783,25 @@ html:has(.fit) {
 
 .round .example > span {
   display: flex;
+}
+
+/* a phone's table is short: the round's name goes where its example draws
+   it, and once the round's over (how it finished under it, LastTurn); and
+   a second row of the example would push the next step down under your
+   discard pile, so its tiles (--tiles, in --groups: Example) shrink till
+   they fit the column in one */
+@media (max-height: 500px) {
+  .round:is(:has(> .example), :has(+ .moves)) > .name {
+    display: none;
+  }
+
+  .round .example {
+    --t: min(
+      var(--small-t),
+      calc(var(--side-width) / (var(--tiles) + (var(--groups) - 1) * 0.25))
+    );
+    flex-wrap: nowrap;
+  }
 }
 
 /* how the round finished (LastTurn): each move's number, what it was, its
@@ -820,6 +854,12 @@ html:has(.fit) {
   }
 
   .moves .said {
+    display: none;
+  }
+
+  /* and only the last three, their numbers kept: more go to a second row,
+     which pushes the next step down under the round's hands */
+  .moves li:nth-last-child(n + 4) {
     display: none;
   }
 }
@@ -991,6 +1031,18 @@ html:has(.fit) {
   zoom: 0.36;
 }
 
+/* and on a phone on its side, from six, the whole list smaller still:
+   risen over the table, it would cover the round's next step */
+@media (max-height: 500px) {
+  .rack > .hands:has(> :nth-child(6)) {
+    zoom: 0.8;
+  }
+
+  .rack > .hands:has(> :nth-child(7)) {
+    zoom: 0.7;
+  }
+}
+
 /* a caught discard (işler taş) can't be taken */
 .caught .tile {
   outline: 3px solid #e53935;
@@ -1121,7 +1173,8 @@ html:has(.fit) {
   --mini-t: calc(var(--t) * 0.36);
   position: absolute;
   z-index: 5;
-  bottom: calc(100% + var(--t) * 0.3);
+  /* clear of the pile's count, close under the draw pile when it's aside */
+  bottom: calc(100% + var(--t) * 0.15);
   display: flex;
   align-items: center;
   gap: calc(var(--t) * 0.08);
