@@ -87,6 +87,7 @@ export const RULES = {
         "Bid in turn the tricks you'll take, at least 5 and more than the last bid, or pass, out for the deal. The last one in names trumps and leads; if everyone passes, the dealer has to bid, 4 or more.",
         "Follow the suit led, higher than the highest of it on the table if you can. With none of it, trump, higher than a trump on the table if you can; with neither, play anything.",
         "No trump is led till one's been played. The highest trump takes the trick, or with none, the highest of the suit led; whoever takes it leads the next.",
+        "Tap a card before your turn and it's played once your turn comes, if it may be; tap it again to keep it.",
         "Each trick is a point. A bidder short of their bid, or anyone else who takes none, goes down: they lose the bid instead.",
         "A game is 8 deals, or 4, 12, 16, 32 or endless (∞, till someone ends it in ⋯), as picked in ⋯ before it starts, each dealing in turn. The most points at the end wins.",
       ],

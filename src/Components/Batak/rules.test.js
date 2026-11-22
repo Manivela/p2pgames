@@ -10,6 +10,7 @@ import {
   play,
   score,
   trump,
+  undo,
   whyNot,
 } from "./rules";
 import bot from "./bot";
@@ -139,6 +140,34 @@ test("all pass: the dealer has to bid, 4 or more", () => {
   s = bid(s, 0, 4);
   assert.equal(s.bidder, 0);
   assert.equal(s.contract, 4);
+});
+
+test("a bid taken back by its maker, till the next one speaks or trumps are named", () => {
+  const s = bid(newGame(null, IDS), 1, 6);
+  assert.isUndefined(undo(s, 2), "not theirs");
+  const back = undo(s, 1);
+  assert.deepEqual(back.bids, [null, null, null, null]);
+  assert.equal(back.turn, 1);
+  assert.isNull(back.back);
+  assert.isUndefined(undo(back, 1), "once");
+  assert.isUndefined(undo(bid(s, 2, 0), 1), "the next has spoken");
+  // the pass that ends the bidding, back to it, a game's end asked since kept
+  let end = bid(bid(bid(s, 2, 0), 3, 0), 0, 0);
+  assert.equal(end.phase, "trump");
+  end = undo({ ...end, ending: true }, 0);
+  assert.equal(end.phase, "bid");
+  assert.isNull(end.bidder);
+  assert.equal(end.turn, 0);
+  assert.isTrue(end.ending);
+  // the dealer's forced bid, till trumps are named
+  let forced = newGame(null, IDS);
+  for (const seat of [1, 2, 3, 0]) forced = bid(forced, seat, seat ? 0 : 7);
+  assert.equal(forced.bidder, 0);
+  assert.deepEqual(
+    bidsOpen(undo(forced, 0)),
+    [4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+  );
+  assert.isUndefined(undo(trump(forced, 0, 2), 0));
 });
 
 test("follow suit, higher while you can", () => {

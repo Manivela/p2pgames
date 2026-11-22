@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useKey } from "../../hooks/useKey";
 import {
   Table,
+  Undo,
   tell,
   useChangedAt,
   useClap,
@@ -11,6 +12,7 @@ import {
 import { Card, Suit } from "../Cards/Card";
 import { useCardSounds } from "../Cards/sounds";
 import { dealCards } from "../Cards/deal";
+import { usePick } from "../Cards/pick";
 import { t } from "../../i18n";
 import bot from "./bot";
 import {
@@ -23,6 +25,7 @@ import {
   newGame,
   play,
   trump,
+  undo,
   whyNot,
 } from "./rules";
 import "./batak.css";
@@ -228,15 +231,14 @@ function CardKey({ k, press }) {
 
 // the viewer's hand, along the bottom, sorted by suit: a tap plays a card
 // when it's their turn, the ones they can't play dimmed, the ones they can
-// a number key each (KEYS)
+// a number key each (KEYS); before it, picks one to play once it is
 function Hand({ state, table, seat, from }) {
   const cards = state.hands[seat] ?? [];
   const turn = state.phase === "play" && state.turn === seat;
   const ok = turn ? legal(state, seat) : cards;
   const playable = turn ? cards.filter((c) => ok.includes(c)) : [];
   const hand = useRef(null);
-  const tap = (card) => {
-    if (!turn) return;
+  const throwIt = (card) => {
     const why = whyNot(state, seat, card);
     if (why) return tell(why);
     // where it was, for it to fly from to the trick (Middle)
@@ -246,6 +248,18 @@ function Hand({ state, table, seat, from }) {
     from.current = r && { card, x: r.left, y: r.top };
     table.act(play(state, seat, card));
   };
+  // a card picked ahead goes once the one before it has landed, or once
+  // the trick you took has slid to you (GATHER_MS)
+  const open = state.phase === "play";
+  const [picked, tap] = usePick({
+    deal: `${state.id}/${state.round}`,
+    turn,
+    open,
+    wait: !state.trick.length && state.lastTrick ? GATHER_MS + 400 : 400,
+    held: table.check.open,
+    n: state.last?.n,
+    play: throwIt,
+  });
   return (
     <div
       className="bk-hand"
@@ -258,8 +272,14 @@ function Hand({ state, table, seat, from }) {
           <Card
             key={card}
             card={card}
-            className={turn ? (ok.includes(card) ? "ok" : "no") : ""}
+            className={[
+              turn && (ok.includes(card) ? "ok" : "no"),
+              card === picked && "picked",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             data-legal={turn && ok.includes(card) ? "" : undefined}
+            aria-pressed={open && !turn ? card === picked : undefined}
             onClick={() => tap(card)}
           >
             {k && <CardKey k={k} press={() => tap(card)} />}
@@ -315,6 +335,9 @@ export default function Batak() {
     if (ending) tell("The game ends after this deal");
   }, [ending]);
   const dealtAt = useChangedAt(g && `${g.id}/${g.round}`, table.live);
+  // your last bid, yours to take back till the next one speaks (rules.js),
+  // by your name; not under a ready check's plate
+  const back = g?.back && table.mine.includes(g.back.seat) && !table.check.open;
   const [dealing, setDealing] = useState(false);
   useLayoutEffect(() => {
     const g = table.game;
@@ -382,6 +405,12 @@ export default function Batak() {
               data-felt=""
             >
               {plate(s)}
+              {back && s === g.back.seat && (
+                <Undo
+                  className="bk-undo"
+                  onClick={() => table.act(undo(g, s))}
+                />
+              )}
             </div>
           ))}
           <div className="bk-middle" data-felt="" data-middle="">

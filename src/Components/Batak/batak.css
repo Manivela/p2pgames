@@ -34,6 +34,26 @@
   max-width: 200px;
 }
 
+/* your last bid's undo, beside your name, or under it at the side */
+.bk-seat {
+  position: relative;
+}
+
+.bk-undo {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  translate: 0 -50%;
+  width: 36px;
+  height: 36px;
+}
+
+.bk-seat:is(.left, .right) .bk-undo {
+  left: 50%;
+  top: calc(100% + 8px);
+  translate: -50% 0;
+}
+
 /* the bidder's trumps by their name: the suit on white, as on a card, big
    enough to read across the table, black suits as well as red */
 .bk-seat .tb-mark:has(.cd-suit) {
@@ -328,4 +348,10 @@
 
 .bk-hand .cd-card.no {
   filter: brightness(0.72);
+}
+
+/* a card picked ahead, played once it's your turn (Cards/pick.js) */
+.bk-hand .cd-card.picked {
+  translate: 0 calc(var(--cw) * -0.2);
+  box-shadow: 0 0 0 3px #ffd54f;
 }

@@ -482,3 +482,112 @@ test("two at the table: each sees only their own hand, the other's card across",
   }
   throw new Error("Ayşe never led or followed early in a trick");
 });
+
+// Ayşe's bid: a pass, or the least she may when she can't pass
+async function bidOnce(page) {
+  const bids = page.locator(".bk-bids button");
+  await expect(bids.first()).toBeVisible();
+  const pass = page.locator(".bk-bids").getByRole("button", { name: PASS });
+  await ((await pass.count()) ? pass : bids.first()).click();
+}
+
+test("a bid taken back by its bidder, till the next one speaks", async ({
+  browser,
+}, info) => {
+  const page = await withBots(browser, info);
+  // the bots speak first (Ayşe deals the first deal); the one after her
+  // slow to answer
+  await expect
+    .poll(async () => {
+      const s = await game(page);
+      return s.phase === "bid" && s.turn === 0;
+    }, NET)
+    .toBe(true);
+  await page.evaluate(() => sessionStorage.setItem("botPace", "60000"));
+  const before = (await game(page)).bids;
+  await bidOnce(page);
+  const undo = page.locator(".bk-undo");
+  await expect(undo).toBeVisible();
+  expect((await game(page)).bids[0]).not.toBeNull();
+  // back as it was, hers to bid again
+  await undo.click();
+  await expect.poll(async () => (await game(page)).bids).toEqual(before);
+  expect((await game(page)).turn).toBe(0);
+  await expect(undo).toHaveCount(0);
+  // once the next one's spoken (or she's named trumps), hers to keep
+  await page.evaluate(() => sessionStorage.setItem("botPace", "100"));
+  await bidOnce(page);
+  const s = await game(page);
+  if (s.phase === "trump" && s.turn === 0) {
+    await expect(undo).toBeVisible();
+    await page.locator(".bk-bids.suits button").first().click();
+  }
+  await expect(undo).toHaveCount(0);
+});
+
+// a card by its name: "AS" the ace of spades, "10H", "2C", "QD"
+const SUITS = { S: 0, H: 1, C: 2, D: 3 };
+const RANKS = { J: 11, Q: 12, K: 13, A: 14 };
+const card = (name) =>
+  SUITS[name.at(-1)] * 13 +
+  (RANKS[name.slice(0, -1)] ?? +name.slice(0, -1)) -
+  2;
+const ranks = (from, suit) =>
+  Array.from({ length: 15 - from }, (_, i) => card(`${from + i}${suit}`));
+
+test("a card picked before your turn is played once it comes, if it may be", async ({
+  browser,
+}, info) => {
+  const page = await withBots(browser, info);
+  // seat 1 bid, spades trumps, its lead; Ayşe holds hearts and the two of
+  // clubs, seat 1 the other clubs and the two of hearts, seat 2 diamonds,
+  // seat 3 spades: seat 1 leads the ace of clubs, Ayşe has to follow
+  await page.evaluate(() => sessionStorage.setItem("botPace", "1500"));
+  const hands = [
+    [...ranks(3, "H"), card("2C")],
+    [...ranks(3, "C"), card("2H")],
+    ranks(2, "D"),
+    ranks(2, "S"),
+  ];
+  await page.evaluate((hands) => {
+    const g = window.batak.get();
+    window.batak.set({
+      ...g,
+      phase: "play",
+      bids: [0, 5, 0, 0],
+      bidder: 1,
+      contract: 5,
+      trump: 0,
+      hands,
+      turn: 1,
+      back: null,
+      last: { n: g.last.n + 1, kind: "trump", seat: 1, suit: 0 },
+    });
+  }, hands);
+  const at = (name) => page.locator(`.bk-hand [data-card="${card(name)}"]`);
+  // one card picked: a tap again puts it back, another changes it
+  await at("KH").click();
+  await expect(at("KH")).toHaveAttribute("aria-pressed", "true");
+  await at("KH").click();
+  await expect(at("KH")).toHaveAttribute("aria-pressed", "false");
+  await at("AH").click();
+  await at("QH").click();
+  await expect(page.locator('.bk-hand [aria-pressed="true"]')).toHaveCount(1);
+  await expect(at("QH")).toHaveAttribute("aria-pressed", "true");
+  // her turn: a heart may not go on the clubs led; said, and it goes back
+  await expect(page.getByRole("status")).toHaveText(
+    /^(Follow the suit led|Yerdeki rengi takip et)$/,
+    { timeout: 10000 },
+  );
+  const s = await game(page);
+  expect([s.turn, s.trick.length]).toEqual([0, 3]);
+  await expect(at("QH")).not.toHaveClass(/picked/);
+  await at("2C").click();
+  // seat 3 trumped it and leads: the jack picked meanwhile goes after it
+  await expect.poll(async () => (await game(page)).turn).toBe(3);
+  await at("JH").click();
+  await expect
+    .poll(async () => (await game(page)).last, { timeout: 10000 })
+    .toMatchObject({ seat: 0, card: card("JH") });
+  expect((await game(page)).trick.map((p) => p.seat)).toEqual([3, 0]);
+});

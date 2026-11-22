@@ -123,6 +123,10 @@ const TR = [
       "Koz çıkmadan koz açılmaz. Eli en büyük koz alır, koz yoksa yerdeki rengin en büyüğü; eli alan sonrakini açar.",
     ],
     [
+      "Tap a card before your turn and it's played once your turn comes, if it may be; tap it again to keep it.",
+      "Sıran gelmeden bir karta dokun, sıran gelince atılabiliyorsa atılır; vazgeçmek için yine dokun.",
+    ],
+    [
       "Each trick is a point. A bidder short of their bid, or anyone else who takes none, goes down: they lose the bid instead.",
       "Her el bir puan. İhaleyi alan söylediği kadar, ya da başka biri hiç el alamazsa batar: ihale kadar puan kaybeder.",
     ],

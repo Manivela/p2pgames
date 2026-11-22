@@ -36,6 +36,8 @@ import { deal, suitOf, takes } from "../Cards/cards";
 //   no one's, the match won by `winners`, the seats with the most
 // - turn: who bids, names trumps, plays or deals next, null once the match
 //   is over
+// - back: { seat, was }, the last bid and the bidding before it, its
+//   maker's to take back (undo) till the next one speaks or trumps are named
 // - last: { n, kind, seat… }, what happened last, for the bots and sounds
 export const MIN_BID = 5;
 export const FORCED_BID = 4;
@@ -118,6 +120,7 @@ function dealt(state, dealer) {
     taken: [0, 0, 0, 0],
     points: null,
     turn: next(dealer),
+    back: null,
     last: { n: state.last.n + 1, kind: "new" },
   };
 }
@@ -140,6 +143,16 @@ export function bid(state, seat, n) {
   if (!bidsOpen(state).includes(n)) return;
   const bids = state.bids.with(seat, n);
   const last = { n: state.last.n + 1, kind: "bid", seat, bid: n };
+  const back = {
+    seat,
+    was: {
+      bids: state.bids,
+      phase: "bid",
+      turn: seat,
+      bidder: null,
+      contract: null,
+    },
+  };
   const left = [0, 1, 2, 3].filter((s) => bids[s] !== 0);
   if (left.length === 1 && highest(bids) > 0) {
     const [bidder] = left;
@@ -150,12 +163,23 @@ export function bid(state, seat, n) {
       bidder,
       contract: bids[bidder],
       turn: bidder,
+      back,
       last,
     };
   }
   let turn = next(seat);
   while (bids[turn] === 0) turn = next(turn);
-  return { ...state, bids, turn, last };
+  return { ...state, bids, turn, back, last };
+}
+
+export function undo(state, seat) {
+  if (state.back?.seat !== seat) return;
+  return {
+    ...state,
+    ...state.back.was,
+    back: null,
+    last: { n: state.last.n + 1, kind: "undo" },
+  };
 }
 
 export function trump(state, seat, suit) {
@@ -165,6 +189,7 @@ export function trump(state, seat, suit) {
     ...state,
     phase: "play",
     trump: suit,
+    back: null,
     last: { n: state.last.n + 1, kind: "trump", seat, suit },
   };
 }
