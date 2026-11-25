@@ -11,6 +11,8 @@ test("every message the rules return has a Turkish version", () => {
     "Backgammon/rules.js",
     "TicTacToe/rules.js",
     "Go/rules.js",
+    "Gomoku/rules.js",
+    "FourInARow/rules.js",
     "Checkers/rules.js",
     "Batak/rules.js",
   ]

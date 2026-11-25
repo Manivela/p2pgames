@@ -20,6 +20,9 @@ demo: <https://p2p.yunusgulcu.com/>
   - a picked checker shows where each die takes it and, in one go, where both do (3-2 also shows 5)
   - both dice have to be played when they can, and when only one can, the higher one; a move the rules rule out says why
   - a mars (the other has borne nothing off) counts two, and the score carries from game to game
+  - a die each decides who starts the first game; its winner starts the next, rolling both
+  - dice with only one way to play them play themselves
+  - two quick taps on a checker and the game moves it, by the better die
   - a tap on the dice rolls them, and starts the next game once one's won
   - ⋯ has the home on the left for those who play so
   - the back of the case is a checkerboard: American checkers or Turkish dama, picked on the board between games, against each other or a bot
@@ -32,6 +35,8 @@ demo: <https://p2p.yunusgulcu.com/>
   - counted as the [Tromp-Taylor rules](https://tromp.github.io/go.html) count: two passes in a row end the game and count it, every stone on the board alive (capture dead stones first: it costs nothing), white 7.5 more for moving second; no suicide, and plain ko
   - after a pass the board shows whose each empty point would count for
   - check [wikipedia](https://en.wikipedia.org/wiki/Rules_of_Go) for the rules
+- play Four in a row: discs dropped down the columns of a rack, four of yours in a line wins; a bot plays too
+- play Five in a row on the Go board, 15×15: five or more of yours in a line wins; a bot plays too
 - play Batak, four at the table, each on their own: bid the tricks you'll take, name trumps, follow suit
   - a match of 8 deals, or 4, 12, 16, 32 or endless (ended from ⋯), picked before it starts, with its score sheet a row a deal
   - 🤖 on an empty seat puts a bot in it

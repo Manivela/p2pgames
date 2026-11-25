@@ -14,7 +14,7 @@ function Credits({ game }) {
     );
   }
   // the stones: backgammon's wooden toks
-  if (game === "go") {
+  if (["go", "gomoku", "fourinarow"].includes(game)) {
     return (
       <div style={{ flexDirection: "column" }}>
         {t("Sound Effects from")}{" "}

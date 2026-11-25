@@ -1,0 +1,180 @@
+/* A wooden rack standing on the felt, seven columns of six places, black
+   and white discs in them, a strip over it for the disc about to drop and one
+   under it for a word and Undo. In --u,
+   a place's width, as Board.jsx draws. Names start with fr-, clear of
+   Bootstrap 3's. */
+.fr-scene {
+  --u: min(100cqw / 7.6, 100cqh / 9);
+  display: grid;
+  /* room over the rack for the disc about to drop */
+  grid-template-rows: calc(var(--u) * 1.2) calc(var(--u) * 6.4) calc(
+      var(--u) * 1.4
+    );
+  justify-items: center;
+}
+
+.fr-rack {
+  grid-row: 2;
+  position: relative;
+  width: calc(var(--u) * 7.4);
+  height: calc(var(--u) * 6.4);
+  border-radius: calc(var(--u) * 0.3);
+  background:
+    repeating-linear-gradient(
+      91deg,
+      rgba(120, 70, 20, 0.07) 0 calc(var(--u) * 0.04),
+      transparent 0 calc(var(--u) * 0.25)
+    ),
+    radial-gradient(ellipse at 30% 20%, #f1cd8a, #dcae64 60%, #c99a52);
+  box-shadow:
+    inset 0 0 0 calc(var(--u) * 0.05) rgba(255, 255, 255, 0.25),
+    0 calc(var(--u) * 0.08) calc(var(--u) * 0.3) rgba(0, 0, 0, 0.5);
+}
+
+/* a place: a hole through the rack, or the disc in it */
+.fr-place {
+  position: absolute;
+  left: calc(var(--u) * (var(--x) + 0.3));
+  top: calc(var(--u) * (var(--y) + 0.3));
+  width: calc(var(--u) * 0.8);
+  height: calc(var(--u) * 0.8);
+  border-radius: 50%;
+  background: #4a2c14;
+  box-shadow: inset 0 calc(var(--u) * 0.06) calc(var(--u) * 0.1)
+    rgba(0, 0, 0, 0.6);
+}
+
+:is(.fr-place, .fr-dot, .fr-col).black {
+  --disc: radial-gradient(circle at 35% 30%, #6a6a6a, #1c1c1c 45%, #050505);
+}
+
+:is(.fr-place, .fr-dot, .fr-col).white {
+  --disc: radial-gradient(circle at 35% 30%, #fff, #eeebe3 55%, #c8c3b6);
+}
+
+.fr-dot {
+  border-radius: 50%;
+}
+
+:is(.fr-place, .fr-dot):is(.black, .white) {
+  background: var(--disc);
+}
+
+.fr-place:is(.black, .white) {
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.07) rgba(128, 128, 128, 0.25);
+}
+
+/* dropped, seen: it falls from the rack's top */
+.fr-place.fresh {
+  animation: fr-fall 0.25s ease-in backwards;
+}
+
+@keyframes fr-fall {
+  from {
+    translate: 0 calc(var(--u) * -1 * (var(--y) + 1));
+  }
+}
+
+/* the line that won: a ring on each */
+.fr-place.won::after {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border: calc(var(--u) * 0.07) solid #c62828;
+  border-radius: 50%;
+}
+
+/* a column, its whole height a tap; the disc to drop shown over it when
+   it's yours and a pointer's on it */
+.fr-col {
+  position: absolute;
+  left: calc(var(--u) * (var(--x) + 0.2));
+  top: 0;
+  width: var(--u);
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.fr-col:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+
+.fr-col.open {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .fr-col.open:hover::before {
+    content: "";
+    position: absolute;
+    left: 10%;
+    top: calc(var(--u) * -0.9);
+    width: 80%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--disc);
+    opacity: 0.8;
+    /* over the far side's strip: its Undo still takes the tap */
+    pointer-events: none;
+  }
+}
+
+/* the game's over: the rack glows, a tap on it starts the next */
+.fr-rack.ready::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 calc(var(--u) * 0.5) calc(var(--u) * 0.15) #ffd54f;
+  animation: tb-call 1.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.fr-next {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.fr-next:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+
+.fr-side {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: calc(var(--u) * 0.3);
+  width: 100%;
+}
+
+.fr-said {
+  margin: 0;
+  color: #fff;
+  font-size: max(calc(var(--u) * 0.4), 12px);
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.fr-undo {
+  flex: none;
+  width: max(calc(var(--u) * 0.9), 32px);
+  height: max(calc(var(--u) * 0.9), 32px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fr-place.fresh,
+  .fr-rack.ready::after {
+    animation: none;
+  }
+}

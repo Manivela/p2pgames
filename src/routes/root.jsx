@@ -25,6 +25,8 @@ const GAMES = {
   tictactoe: lazy(() => import("../Components/TicTacToe")),
   backgammon: lazy(() => import("../Components/Backgammon")),
   go: lazy(() => import("../Components/Go")),
+  gomoku: lazy(() => import("../Components/Gomoku")),
+  fourinarow: lazy(() => import("../Components/FourInARow")),
   batak: lazy(() => import("../Components/Batak")),
 };
 

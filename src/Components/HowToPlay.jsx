@@ -41,10 +41,11 @@ export const RULES = {
       title: "Backgammon",
       lines: [
         "Race your 15 checkers round to your home, the last six points, then bear them off. The first to bear off all 15 wins.",
-        "Tap the dice to roll. Each die moves a checker that many points; a double moves four times. Every die that can be played must be.",
+        "Tap the dice to roll. Each die moves a checker that many points; a double moves four times. Every die that can be played must be. With nothing to choose, they play themselves.",
+        "Tap a checker, then where it goes, or drag it there; two quick taps on it and the game moves it.",
         "Two or more of the other's checkers close a point. A lone one is a blot: land on it to hit it, and it goes to the bar.",
         "A checker on the bar comes back in on the other's home board before anything else moves.",
-        "A win is a point; a mars, the other having borne none off, is two.",
+        "A win is a point; a mars, the other having borne none off, is two. A die each decides who starts the first game; its winner starts the next.",
       ],
     },
     checkers: {
@@ -76,6 +77,26 @@ export const RULES = {
         "Two passes in a row end the game. Each side counts its stones on the board and the empty points only its stones surround; white gets 7.5 more for going second.",
         "Every stone left counts, so capture the other's dead stones before you pass. After a pass the board shows whose each empty point would be.",
         "The higher count wins the game and a point.",
+      ],
+    },
+  },
+  fourinarow: {
+    fourinarow: {
+      title: "Four in a row",
+      lines: [
+        "Take turns dropping a disc down a column, where it rests on the ones under it. Black starts; the other starts the next game.",
+        "Four or more of yours in a line, across, down or diagonally, wins the game and a point.",
+        "A full rack with no line is a draw.",
+      ],
+    },
+  },
+  gomoku: {
+    gomoku: {
+      title: "Five in a row",
+      lines: [
+        "Take turns putting a stone on an empty point of the 15×15 board. Black starts; the other starts the next game.",
+        "Five or more of yours in a line, across, down or diagonally, wins the game and a point.",
+        "A full board with no line is a draw.",
       ],
     },
   },

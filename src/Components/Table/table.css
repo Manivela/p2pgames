@@ -365,7 +365,7 @@ html:has(.tb-fit) {
 }
 
 /* the next game's tap is the whole board: inside its corner */
-.tb-fit :is(.ck-next, .go-next, .tt-next) kbd {
+.tb-fit :is(.ck-next, .go-next, .tt-next, .fr-next) kbd {
   top: 8px;
   right: 8px;
 }

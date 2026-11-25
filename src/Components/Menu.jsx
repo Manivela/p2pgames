@@ -229,6 +229,44 @@ export const PLAYS = [
       </>
     ),
   },
+  {
+    game: "fourinarow",
+    name: t("Four in a row"),
+    icon: (
+      <>
+        <rect width="40" height="40" fill="#dcb06b" />
+        {[7, 20, 33].flatMap((x) =>
+          [7, 20, 33].map((y) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="5" fill="#4a2c14" />
+          )),
+        )}
+        <circle cx="7" cy="33" r="5" fill="#1c1c1c" />
+        <circle cx="20" cy="33" r="5" fill="#f7f5ee" />
+        <circle cx="20" cy="20" r="5" fill="#1c1c1c" />
+        <circle cx="33" cy="33" r="5" fill="#f7f5ee" />
+      </>
+    ),
+  },
+  // on Go's board
+  {
+    game: "gomoku",
+    name: t("Five in a row"),
+    icon: (
+      <>
+        <rect width="40" height="40" fill="#dcb06b" />
+        <path
+          d="M4 0v40M12 0v40M20 0v40M28 0v40M36 0v40M0 4h40M0 12h40M0 20h40M0 28h40M0 36h40"
+          stroke="#7a5626"
+          strokeWidth="0.6"
+        />
+        {[4, 12, 20, 28, 36].map((p) => (
+          <circle key={p} cx={p} cy={40 - p} r="3.6" fill="#1c1c1c" />
+        ))}
+        <circle cx="12" cy="20" r="3.6" fill="#f7f5ee" stroke="#bbb" />
+        <circle cx="28" cy="28" r="3.6" fill="#f7f5ee" stroke="#bbb" />
+      </>
+    ),
+  },
 ];
 
 // The room's game, the same for everyone in it, in the room's Yjs map

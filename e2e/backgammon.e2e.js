@@ -312,3 +312,31 @@ test("the room's game, picked in the menu, goes for everyone", async ({
   await pick(bora, /^Go$/);
   await expect(bora.locator(".go-scene")).toBeVisible();
 });
+
+test("two quick taps on a checker: the game moves it, hitting the blot", async ({
+  browser,
+}, info) => {
+  const { white, black } = await twoPlayers(browser, info);
+  // black's blot on white's 11 (its own 14), a 2 away
+  await setUp(white, { 13: 1, 6: 14 }, { 14: 1, 1: 14 }, [3, 2]);
+  await expect.poll(async () => (await game(black)).left, NET).toEqual([3, 2]);
+  await point(white, 13).dblclick();
+  await expect
+    .poll(async () => (await game(black)).checkers[1][25], NET)
+    .toBe(1);
+  const g = await game(white);
+  expect(g.checkers[0][11]).toBe(1);
+  expect(g.left).toEqual([3]);
+});
+
+test("dice with one way to play them play themselves", async ({
+  browser,
+}, info) => {
+  const { white, black } = await twoPlayers(browser, info);
+  // a lone checker: 3 and 2, either first, end on 8
+  await setUp(white, { 13: 1, 0: 14 }, { 1: 15 }, [3, 2]);
+  await expect
+    .poll(async () => (await game(black)).checkers[0][8], NET)
+    .toBe(1);
+  expect((await game(black)).turn).toBe(1);
+});

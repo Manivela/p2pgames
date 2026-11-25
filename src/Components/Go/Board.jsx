@@ -1,7 +1,7 @@
 import { Undo, tell, useChangedAt } from "../Table";
 import { t } from "../../i18n";
 import { useKey } from "../../hooks/useKey";
-import { count, pass, play, sizeOf, undo, whyNot } from "./rules";
+import * as go from "./rules";
 
 // The board on the table, each player's bowl of stones at their side of it
 // (go.css lays them out). The board is in --u, the lines' spacing: the
@@ -11,6 +11,7 @@ const MARGIN = 0.9;
 const STARS = {
   9: [2, 6],
   13: [3, 9],
+  15: [3, 11],
   19: [3, 9, 15],
 };
 const stars = (size) => {
@@ -59,8 +60,10 @@ function Side({ seat, far, over, said, onUndo, onPass }) {
 // a stone on a free point, or passes at their bowl; the last move is its
 // maker's to take back; after a pass, and once it's over, each empty
 // point shows whose it would count for; then a tap on the board starts the
-// next game.
-export default function Board({ state, table }) {
+// next game. `rules`: another game's on this board (Five in a row's),
+// with no pass and no count, won by a line.
+export default function Board({ state, table, rules = go }) {
+  const { count, pass, play, undo, whyNot } = rules;
   const { live, mine, near, far, across, names, note, act, deal } = table;
   const me = mine.includes(state.turn) ? state.turn : mine[0];
   const playing = me !== undefined && state.turn === me;
@@ -68,7 +71,7 @@ export default function Board({ state, table }) {
   const seenAt = useChangedAt(state.last.n, live);
   const fresh = Date.now() - seenAt < DROP_MS;
   const { last, winner } = state;
-  const size = sizeOf(state.stones);
+  const size = go.sizeOf(state.stones);
   const spot = (i) => ({
     "--x": MARGIN + (i % size),
     "--y": MARGIN + Math.floor(i / size),
@@ -84,17 +87,22 @@ export default function Board({ state, table }) {
   };
 
   // whose each empty point would be, counted now
-  const counted = winner || state.passes ? count(state.stones).owner : [];
+  const counted =
+    count && (winner || state.passes) ? count(state.stones).owner : [];
   const over = state.turn === null && !note;
   const said =
     note ??
-    (winner ? (
+    (winner?.line ? (
+      t(`${names[winner.seat]} wins!`)
+    ) : winner ? (
       <>
         {t(`${names[winner.seat]} wins by ${winner.by}`)}
         <small>
           {names[0]} {state.area[0]} · {names[1]} {state.area[1]}
         </small>
       </>
+    ) : table.game && state.turn === null ? (
+      t("Draw")
     ) : state.passes ? (
       t(`${names[1 - state.turn]} passed`)
     ) : me !== undefined && !playing ? (
@@ -114,7 +122,9 @@ export default function Board({ state, table }) {
           ? () => act(undo(state, seat))
           : null
       }
-      onPass={playing && me === seat ? () => act(pass(state, seat)) : null}
+      onPass={
+        pass && playing && me === seat ? () => act(pass(state, seat)) : null
+      }
     />
   );
   // stones taken by the last move, going
@@ -153,7 +163,7 @@ export default function Board({ state, table }) {
             seat !== null && (
               <i
                 key={i}
-                className={`go-stone ${COLOR[seat]}${last.at === i && last.kind === "stone" ? " last" : ""}${fresh && last.kind === "stone" && last.at === i ? " fresh" : ""}`}
+                className={`go-stone ${COLOR[seat]}${(winner?.line ? winner.line.includes(i) : last.at === i && last.kind === "stone") ? " last" : ""}${fresh && last.kind === "stone" && last.at === i ? " fresh" : ""}`}
                 style={spot(i)}
               />
             ),

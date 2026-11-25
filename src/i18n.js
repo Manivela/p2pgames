@@ -107,6 +107,36 @@ const TR = [
     ["Checkers", "Amerikan daması"],
     ["Dama", "Dama"],
     [
+      "Tap a checker, then where it goes, or drag it there; two quick taps on it and the game moves it.",
+      "Bir pula, sonra gideceği yere dokun ya da pulu oraya sürükle; pula art arda iki kez dokunursan oyun onu oynar.",
+    ],
+    ["Five in a row", "Sırada beş"],
+    ["Four in a row", "Sırada dört"],
+    [
+      "Take turns dropping a disc down a column, where it rests on the ones under it. Black starts; the other starts the next game.",
+      "Sırayla bir sütuna pul bırakın; pul alttakilerin üstüne oturur. Siyah başlar; sonraki oyunu öteki başlatır.",
+    ],
+    [
+      "Four or more of yours in a line, across, down or diagonally, wins the game and a point.",
+      "Yatay, dikey ya da çapraz bir sırada dört ya da daha çok pulun oyunu ve bir puanı kazanır.",
+    ],
+    [
+      "A full rack with no line is a draw.",
+      "Sıra olmadan dolan çerçeve berabere.",
+    ],
+    [
+      "Take turns putting a stone on an empty point of the 15×15 board. Black starts; the other starts the next game.",
+      "15×15 tahtada sırayla boş bir noktaya taş koyun. Siyah başlar; sonraki oyunu öteki başlatır.",
+    ],
+    [
+      "Five or more of yours in a line, across, down or diagonally, wins the game and a point.",
+      "Yatay, dikey ya da çapraz bir sırada beş ya da daha çok taşın oyunu ve bir puanı kazanır.",
+    ],
+    [
+      "A full board with no line is a draw.",
+      "Sıra olmadan dolan tahta berabere.",
+    ],
+    [
       "Four players, each on their own, 13 cards each, the ace high.",
       "Dört oyuncu, herkes kendi için; herkese 13 kart, en büyüğü as.",
     ],
@@ -158,8 +188,8 @@ const TR = [
       "15 pulunu evine, son altı haneye getir, sonra topla. 15 pulunu ilk toplayan kazanır.",
     ],
     [
-      "Tap the dice to roll. Each die moves a checker that many points; a double moves four times. Every die that can be played must be.",
-      "Zar atmak için zarlara dokun. Her zar bir pulu o kadar hane götürür; çift gelirse dört kez oynanır. Oynanabilen her zar oynanmalı.",
+      "Tap the dice to roll. Each die moves a checker that many points; a double moves four times. Every die that can be played must be. With nothing to choose, they play themselves.",
+      "Zar atmak için zarlara dokun. Her zar bir pulu o kadar hane götürür; çift gelirse dört kez oynanır. Oynanabilen her zar oynanmalı. Seçenek yoksa zarlar kendiliğinden oynanır.",
     ],
     [
       "Two or more of the other's checkers close a point. A lone one is a blot: land on it to hit it, and it goes to the bar.",
@@ -170,8 +200,8 @@ const TR = [
       "Bardaki pul, başka bir pul oynamadan önce ötekinin evinden içeri girer.",
     ],
     [
-      "A win is a point; a mars, the other having borne none off, is two.",
-      "Kazanmak bir puan; mars, öteki hiç pul toplamamışken, iki puan.",
+      "A win is a point; a mars, the other having borne none off, is two. A die each decides who starts the first game; its winner starts the next.",
+      "Kazanmak bir puan; mars, öteki hiç pul toplamamışken, iki puan. İlk oyuna kimin başlayacağını birer zar belirler; sonrakine kazanan başlar.",
     ],
     [
       "Men step diagonally forward on the dark squares; black moves first.",
@@ -753,6 +783,9 @@ const TR = [
   // Backgammon (tavla)
   [/^White$/, "Beyaz"],
   [/^Black$/, "Siyah"],
+  // Four in a row
+  [/^Column (\d)$/, "$1. sütun"],
+  [/^That column is full$/, "O sütun dolu"],
   [/^Roll$/, "Zar at"],
   [/^Undo$/, "Geri al"],
   [/^Score$/, "Skor"],

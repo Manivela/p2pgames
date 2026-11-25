@@ -7,6 +7,8 @@
 // `checkers[seat][n]` is how many of the seat's checkers are on its point n,
 // with 25 the bar and 0 borne off; a seat's point n is the other's 25 - n.
 
+import { value } from "./bot";
+
 export const BAR = 25;
 export const OFF = 0;
 
@@ -20,7 +22,8 @@ function startingCheckers() {
   return seat;
 }
 
-// one die each, again on a tie: the higher starts, playing both
+// one die each, again on a tie: the higher starts the first game, playing
+// both
 export function openingRoll() {
   for (;;) {
     const dice = [d6(), d6()];
@@ -29,9 +32,32 @@ export function openingRoll() {
 }
 
 // `ids` are the seated players' ids: the score carries over while the same
-// two sit in the same seats, and starts again at 0-0 when either changes
-export function newGame(prev, ids, opening = openingRoll()) {
+// two sit in the same seats, and starts again at 0-0 when either changes.
+// Who starts: the first game's opening roll decides; after that, between
+// the same two, the winner of the last game, rolling both dice (the
+// loser's last ones lie on the board till then, a tap on them the roll)
+export function newGame(prev, ids, opening) {
   const same = prev?.players?.[0] === ids[0] && prev?.players?.[1] === ids[1];
+  // (not after a game of checkers on the back of the case: no dice there)
+  if (same && prev.winner && prev.dice?.length === 2 && !opening) {
+    const { seat } = prev.winner;
+    return {
+      checkers: [startingCheckers(), startingCheckers()],
+      players: ids,
+      score: prev.score,
+      turn: seat,
+      opening: null,
+      dice: prev.dice,
+      by: 1 - seat,
+      left: [],
+      undo: [],
+      winner: null,
+      last: { n: prev.last.n + 1, kind: "new" },
+      // the dice lie as they were: not tossed again
+      rolled: prev.rolled,
+    };
+  }
+  opening ??= openingRoll();
   const seat = opening[0] > opening[1] ? 0 : 1;
   const n = (prev?.last?.n ?? 0) + 1;
   return {
@@ -137,6 +163,27 @@ export function plays(state) {
   return known.get(state);
 }
 
+// The step to play when there's nothing to choose: every way to play the
+// dice leaves the same board (one way only, or the order changes nothing,
+// as bearing off often); undefined while there's a choice. The board plays
+// it by itself (Board.jsx).
+const only = new WeakMap();
+export function forced(state) {
+  if (!only.has(state)) {
+    const all = plays(state);
+    const end = (seq) =>
+      String(
+        seq.reduce((c, step) => apply(c, state.turn, step), state.checkers),
+      );
+    const first = all.length && end(all[0]);
+    only.set(
+      state,
+      all.every((seq) => end(seq) === first) ? all[0]?.[0] : undefined,
+    );
+  }
+  return only.get(state);
+}
+
 // the points (or the bar) the player to move can move a checker from
 export function sources(state) {
   return [...new Set(plays(state).map((s) => s[0].from))];
@@ -146,24 +193,48 @@ export function sources(state) {
 // take it there: one die, or several in a row (3-2 also reaches 5) when the
 // points between are open. A checker passing over a blot hits it; of two
 // ways to the same point, the one that hits more, then the one with fewer
-// dice, leaving the others to play (2-5 on 3 and 1 bears both off)
-export function targets(state, from) {
+// dice, leaving the others to play (2-5 on 3 and 1 bears both off), then
+// the one that can leave the player best placed once the turn's played
+// (the bot's `value`: of two blots on the way, the one further on is hit),
+// so the player never picks a die
+function ranked(state, from) {
   const found = new Map();
+  const seat = state.turn;
   for (const seq of plays(state)) {
+    if (seq[0].from !== from) continue;
+    const worth = value(
+      seq.reduce((c, step) => apply(c, seat, step), state.checkers),
+      seat,
+    );
     let at = from;
     for (let i = 0; i < seq.length && seq[i].from === at; i++) {
       at = seq[i].to;
       const steps = seq.slice(0, i + 1);
-      const hits = (s) => s.filter((x) => x.hit).length;
-      const was = found.get(at);
-      const more = was && hits(steps) - hits(was);
-      if (!was || more > 0 || (more === 0 && steps.length < was.length)) {
-        found.set(at, steps);
-      }
+      // most hits, then fewest dice, then the best it can come to
+      const rank = [steps.filter((x) => x.hit).length, -steps.length, worth];
+      const was = found.get(at)?.rank;
+      const by = was && rank.map((r, k) => r - was[k]).find(Boolean);
+      if (!was || by > 0) found.set(at, { steps, rank });
       if (at === OFF) break;
     }
   }
   return found;
+}
+
+export const targets = (state, from) =>
+  new Map([...ranked(state, from)].map(([to, { steps }]) => [to, steps]));
+
+// where the game would move the checker on `from` (a double tap on it,
+// Board.jsx): on the way to the best the turn can come to, a die at a
+// time; undefined when it can't move
+export function best(state, from) {
+  let top;
+  for (const [to, { steps, rank }] of ranked(state, from)) {
+    const by =
+      top && (rank[2] - top.rank[2] || top.steps.length - steps.length);
+    if (!top || by > 0) top = { to, steps, rank };
+  }
+  return top?.to;
 }
 
 // Why the checker on `from` can't move (to `to`, when given) though a die

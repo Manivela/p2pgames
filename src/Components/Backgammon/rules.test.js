@@ -8,6 +8,8 @@ import {
   roll,
   sources,
   targets,
+  best,
+  forced,
   undo,
   whyNot,
 } from "./rules";
@@ -105,6 +107,45 @@ test("of two ways to the same spot, the one with fewer dice", () => {
   assert.deepEqual(after.left, [2]);
 });
 
+test("of two ways hitting as much, the game picks the better die first", () => {
+  // black blots on white's 10 and 11 (its own 15 and 14): 13 to 8 hits
+  // one on the way either die first; the one further on costs black more
+  const s = position({ 13: 1, 6: 14 }, { 15: 1, 14: 1, 1: 13 }, [3, 2]);
+  assert.deepEqual(
+    targets(s, 13)
+      .get(8)
+      .map((x) => x.die),
+    [2, 3],
+  );
+  const after = move(s, 0, 13, 8);
+  assert.equal(after.checkers[1][14], 0);
+  assert.equal(after.checkers[1][15], 1);
+});
+
+test("a double tap's move: a die at a time, toward the best the turn comes to", () => {
+  // 13 to 11 with the 2 hits black's blot there (its 14); the 3 hits none
+  const s = position({ 13: 1, 6: 14 }, { 14: 1, 1: 14 }, [3, 2]);
+  assert.equal(best(s, 13), 11);
+  // nothing to move from an empty point
+  assert.isUndefined(best(s, 20));
+});
+
+test("forced: one way to play, or every way leaving the same board", () => {
+  // a lone checker: 3 then 2 or 2 then 3, the same board
+  const lone = position({ 13: 1, [OFF]: 14 }, { 1: 15 }, [3, 2]);
+  assert.deepEqual(forced(lone).from, 13);
+  // a blot on the way one die first: a choice
+  const blot = position({ 13: 1, [OFF]: 14 }, { 14: 1, 1: 14 }, [3, 2]);
+  assert.isUndefined(forced(blot));
+  // two checkers: a choice
+  assert.isUndefined(forced(position({ 13: 1, 6: 14 }, { 1: 15 }, [3, 2])));
+  // bearing off the last two, either first
+  const off = position({ 2: 1, 1: 1, [OFF]: 13 }, { 24: 15 }, [6, 5]);
+  assert.equal(forced(off).to, OFF);
+  // nothing rolled: nothing forced
+  assert.isUndefined(forced({ ...lone, left: [] }));
+});
+
 test("both dice must be played when they can", () => {
   // black holds white's 6 and 3: 13 -1-> 12 leaves the 6 unplayable, so
   // the 1 is played from 9 or after the 6
@@ -193,5 +234,25 @@ test("bearing off the last checker wins once: mars counts two", () => {
   assert.deepEqual(plain.winner, { seat: 0, points: 1 });
   // the score carries over to the next game with the same pair only
   assert.deepEqual(newGame(won, IDS).score, [2, 0]);
+  // and its winner starts it, with a roll of both dice
+  const next = newGame(won, IDS);
+  assert.equal(next.turn, 0);
+  assert.deepEqual(next.left, []);
+  assert.isNull(next.winner);
+  assert.equal(pips(next.checkers[1]), 167);
+  assert.deepEqual(roll(next, 0, [3, 1]).left, [3, 1]);
+  assert.isOk(newGame(won, ["a", "c"]).opening, "new players: an opening roll");
+  // nothing else of the last game's comes along (the table's `touched`)
+  assert.isUndefined(newGame({ ...won, touched: true }, IDS).touched);
+  // after checkers on the back of the case, no dice lying: an opening roll
+  const checkers = {
+    players: IDS,
+    score: [1, 0],
+    winner: { seat: 0 },
+    mode: "checkers",
+    last: { n: 9, kind: "hop" },
+  };
+  assert.lengthOf(newGame(checkers, IDS).dice, 2);
+  assert.isOk(newGame(checkers, IDS).opening);
   assert.deepEqual(newGame(won, ["a", "c"]).score, [0, 0]);
 });

@@ -56,6 +56,8 @@ const FIRST = {
   tictactoe: /^(Tic-tac-toe Classic|XOX Klasik)$/,
   backgammon: /^(Backgammon|Tavla)$/,
   go: /^Go$/,
+  gomoku: /^(Five in a row|Sırada beş)$/,
+  fourinarow: /^(Four in a row|Sırada dört)$/,
   batak: /^Batak$/,
 };
 const made = new Set();

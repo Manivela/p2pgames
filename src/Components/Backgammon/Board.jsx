@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSound from "use-sound";
 import { useVolume } from "../../hooks/useStore";
 import {
@@ -9,6 +9,8 @@ import {
   roll,
   sources,
   targets,
+  best,
+  forced,
   undo,
   whyNot,
 } from "./rules";
@@ -354,6 +356,10 @@ const THROWS = {
 
 // how a dragged checker follows the pointer before it counts as a drag
 const SLOP = 6;
+// two taps on a checker this close together move it
+const TWICE_MS = 400;
+// a forced move waits for the dice to land (they tumble for up to 1.5 s)
+const FORCED_MS = 1800;
 
 // `mine`: the seats this page plays, both on one device, the one to move
 // playing. `across`: the two playing on it sit face to face, the board
@@ -386,6 +392,7 @@ export default function Board({
   const [picked, setPicked] = useState(null);
   const [drag, setDrag] = useState(null);
   const dragged = useRef(false);
+  const tapped = useRef({});
   const scene = useRef();
   // the move this page put down by hand: it goes where it's dropped
   const dropped = useRef(null);
@@ -425,10 +432,40 @@ export default function Board({
       (from.length === 1 ? from[0] : null))
     : null;
   const to = sel === null ? new Map() : targets(state, sel);
+  // nothing to choose from the roll on: the dice play themselves, a step
+  // at a time, once they've landed. Not what's left after a move the
+  // player chose (the turn would pass, and Undo with it, before they'd
+  // looked), nor after an undo, which leaves it to the player
+  const [first] = state.undo;
+  const atRoll = useMemo(
+    () => (first ? { ...state, ...first } : state),
+    // as rolled: the state itself till a move's made, then its first undo
+    [first ?? state], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const step =
+    playing && state.last.kind !== "undo" && forced(atRoll) && forced(state);
+  useEffect(() => {
+    if (!step) return;
+    const timer = setTimeout(
+      () => act(move(state, me, step.from, step.to)),
+      state.last.kind === "roll" ? FORCED_MS : STOP_MS + SLIDE_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [state.last.n, !!step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tap = (pos) => {
     if (!playing) return;
-    if (sel !== null && to.has(pos)) {
+    // two quick taps on a checker: the game moves it (`best`)
+    const twice =
+      tapped.current.pos === pos && Date.now() < tapped.current.till;
+    tapped.current = { pos, till: Date.now() + TWICE_MS };
+    if (twice && from.includes(pos)) {
+      tapped.current = {};
+      act(move(state, me, pos, best(state, pos)));
+      setPicked(null);
+    } else if (sel !== null && to.has(pos)) {
+      // not the first of two taps on the checker it just put there
+      tapped.current = {};
       act(move(state, me, sel, pos));
       setPicked(null);
     } else if (pos !== sel && from.includes(pos)) {

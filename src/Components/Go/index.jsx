@@ -7,7 +7,7 @@ import "./go.css";
 
 // Everyone hears a stone put down, and the ones it takes, each a tok,
 // dropped in the lid one after another. A new level is heard as a stone.
-function useStoneSounds(game) {
+export function useStoneSounds(game) {
   const tok = useTok();
   useHeard(
     game?.last,
